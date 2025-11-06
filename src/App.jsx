@@ -1,21 +1,25 @@
-import React, { useState, useRef, useEffect } from 'react';
-import Papa from 'papaparse';
-import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, doc, setDoc, getDoc, onSnapshot } from 'firebase/firestore';
+import React, { useState, useEffect } from "react";
+import Papa from "papaparse";
+import { initializeApp } from "firebase/app";
+import { getFirestore, doc, onSnapshot, setDoc, deleteDoc } from "firebase/firestore";
+import "./App.css";
 
-// --- Firebase config ---
+// --- Firebase Config ---
 const firebaseConfig = {
   apiKey: "AIzaSyDbGd7qUUDgLo3HsrbsCbK8GySajQeKFu0",
   authDomain: "tote-calculator.firebaseapp.com",
   projectId: "tote-calculator",
   storageBucket: "tote-calculator.firebasestorage.app",
   messagingSenderId: "256755403923",
-  appId: "1:256755403923:web:1931c6e83190d77eaa1166"
+  appId: "1:256755403923:web:1931c6e83190d77eaa1166",
 };
+
+// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const DATA_DOC = doc(db, "totes", "data");
 
-// --- Header Component ---
+// --- Header ---
 function Header() {
   return (
     <header className="header">
@@ -24,226 +28,241 @@ function Header() {
   );
 }
 
-// --- Main App Component ---
+// --- Helpers ---
+function parseToteCell(cell) {
+  if (!cell && cell !== 0) return 0;
+  const str = String(cell).trim();
+  if (str === "") return 0;
+  const matches = str.match(/-?\d+/g);
+  if (!matches) return 0;
+  const nums = matches.map((n) => parseInt(n, 10)).filter((n) => !Number.isNaN(n));
+  return nums.length ? Math.max(...nums.map(Math.abs)) : 0;
+}
+
+function getColumnKeys(headers) {
+  const pickCol = (pattern) => headers.find((h) => new RegExp(pattern, "i").test(h));
+  return {
+    consignmentKey: pickCol("Consignment") || pickCol("consignment"),
+    ambientKey: pickCol("Completed\\s*Totes.*Ambient") || pickCol("ambient"),
+    chilledKey: pickCol("Completed\\s*Totes.*Chill") || pickCol("chill|chilled"),
+    freezerKey: pickCol("Completed\\s*Totes.*Freezer") || pickCol("freezer"),
+    shipmentKey: pickCol("Shipment") || pickCol("shipment"),
+    dispatchKey: pickCol("Dispatch time") || pickCol("dispatch time") || pickCol("Dispatch Time"),
+  };
+}
+
+function getRouteName(row, shipmentKey, dispatchKey) {
+  const shipment = row[shipmentKey] || "";
+  const dispatch = row[dispatchKey] || "";
+
+  if (/route-/i.test(shipment)) return "Vans"; // Explicit Vans
+
+  const timeMatch = dispatch.match(/(\d{1,2}:\d{2})/);
+  const dispatchTime = timeMatch ? timeMatch[1] : null;
+
+  if (!dispatchTime) return "Spoke";
+
+  if (["11:15", "11:16", "11:17"].includes(dispatchTime)) return "Ottawa";
+  if (dispatchTime === "2:30") return "Etobicoke 1";
+  if (dispatchTime === "3:00") return "Etobicoke 2";
+  if (dispatchTime === "5:30") return "Etobicoke 3";
+  if (dispatchTime === "8:45") return "Etobicoke 4";
+  if (dispatchTime === "9:15") return "Etobicoke 5";
+
+  return "Spoke"; // default
+}
+
+// --- Main App ---
 export default function App() {
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [consignmentSet, setConsignmentSet] = useState(new Set());
   const [routesInfo, setRoutesInfo] = useState({});
   const [grandTotals, setGrandTotals] = useState({ ambient: 0, chilled: 0, freezer: 0, total: 0 });
-  const [duplicateWarning, setDuplicateWarning] = useState('');
-  const globalConsignments = useRef(new Set());
+  const [duplicateMessage, setDuplicateMessage] = useState("");
 
-  // --- Bagged Totes State ---
-  const [bagged, setBagged] = useState({
-    ambientReceived: '',
-    chilledReceived: '',
-    currentAmbient: '',
-    currentChilled: '',
+  // Bagged Totes state
+  const [baggedData, setBaggedData] = useState({
+    ambientReceived: 0,
+    chilledReceived: 0,
+    currentAmbient: 0,
+    currentChilled: 0,
     baggedAmbient: 0,
-    baggedChilled: 0
+    baggedChilled: 0,
   });
 
-  // --- Parse cell helper ---
-  const parseToteCell = (cell) => {
-    if (!cell && cell !== 0) return 0;
-    const str = String(cell).trim();
-    if (!str) return 0;
-    const nums = (str.match(/-?\d+/g) || []).map(n => parseInt(n, 10));
-    return nums.length ? Math.max(...nums.map(Math.abs)) : 0;
-  };
+  // Firestore real-time sync
+  useEffect(() => {
+    const unsubscribe = onSnapshot(DATA_DOC, (docSnap) => {
+      if (docSnap.exists()) {
+        const savedRows = docSnap.data().rows || [];
+        setRows(savedRows);
+        setConsignmentSet(new Set(savedRows.map((r) => r.consignment)));
 
-  // --- Determine route ---
-  const getRouteName = (row) => {
-    const dispatch = row['Dispatch time'] || row['dispatch time'] || row['Dispatch Time'] || '';
-    if (['11:15', '11:16', '11:17'].includes(dispatch)) return 'Ottawa';
-    if (dispatch === '2:30') return 'Etobicoke 1';
-    if (dispatch === '3:00') return 'Etobicoke 2';
-    if (dispatch === '5:30') return 'Etobicoke 3';
-    if (dispatch === '8:45') return 'Etobicoke 4';
-    if (dispatch === '9:15') return 'Etobicoke 5';
-    return 'Vans';
-  };
+        const routeMap = {};
+        let grand = { ambient: 0, chilled: 0, freezer: 0, total: 0 };
 
-  // --- Compute totals from rows ---
-  const computeTotalsFromRows = (rows, seenGlobal) => {
-    let ambient = 0, chilled = 0, freezer = 0, duplicateCount = 0;
-    const processedRows = [];
-    const seenConsignments = new Set();
+        savedRows.forEach((r) => {
+          if (!routeMap[r.route])
+            routeMap[r.route] = { totals: { ambient: 0, chilled: 0, freezer: 0, total: 0 }, rows: [] };
+          routeMap[r.route].totals.ambient += r.ambient;
+          routeMap[r.route].totals.chilled += r.chilled;
+          routeMap[r.route].totals.freezer += r.freezer;
+          routeMap[r.route].totals.total += r.ambient + r.chilled + r.freezer;
+          routeMap[r.route].rows.push(r);
 
-    rows.forEach(r => {
-      const consignment = (r['Consignment'] || '').trim();
-      if (!consignment) return;
-      if (seenConsignments.has(consignment) || seenGlobal.has(consignment)) {
-        duplicateCount++;
-        return;
+          grand.ambient += r.ambient;
+          grand.chilled += r.chilled;
+          grand.freezer += r.freezer;
+        });
+        grand.total = grand.ambient + grand.chilled + grand.freezer;
+
+        setRoutesInfo(routeMap);
+        setGrandTotals(grand);
+      } else {
+        setRows([]);
+        setConsignmentSet(new Set());
+        setRoutesInfo({});
+        setGrandTotals({ ambient: 0, chilled: 0, freezer: 0, total: 0 });
       }
-      seenConsignments.add(consignment);
-      seenGlobal.add(consignment);
-      processedRows.push(r);
+      setLoading(false);
     });
+    return () => unsubscribe();
+  }, []);
 
-    if (!processedRows.length) return { ambient: 0, chilled: 0, freezer: 0, total: 0, duplicateCount };
-
-    const headers = Object.keys(processedRows[0]);
-    const pickCol = (pattern) => headers.find(h => new RegExp(pattern, 'i').test(h));
-    const ambientKey = pickCol('Completed\\s*Totes.*Ambient') || pickCol('ambient');
-    const chilledKey = pickCol('Completed\\s*Totes.*Chilled') || pickCol('chill|chilled');
-    const freezerKey = pickCol('Completed\\s*Totes.*Freezer') || pickCol('freezer');
-
-    processedRows.forEach(r => {
-      ambient += ambientKey ? parseToteCell(r[ambientKey]) : 0;
-      chilled += chilledKey ? parseToteCell(r[chilledKey]) : 0;
-      freezer += freezerKey ? parseToteCell(r[freezerKey]) : 0;
-    });
-
-    return { ambient, chilled, freezer, total: ambient + chilled + freezer, duplicateCount };
-  };
-
-  // --- Handle File Upload ---
+  // Handle CSV upload
   const handleFiles = (files) => {
-    let duplicates = 0;
-    Array.from(files).forEach(file => {
+    Array.from(files).forEach((file) => {
       Papa.parse(file, {
         header: true,
         skipEmptyLines: true,
+        transformHeader: (h) => h.trim(),
         complete: async (results) => {
-          const rows = results.data;
-          const newRoutesInfo = { ...routesInfo };
+          const dataRows = results.data;
+          if (!dataRows.length) return;
 
-          const routeGroups = {};
-          rows.forEach(r => {
-            const route = getRouteName(r);
-            if (!routeGroups[route]) routeGroups[route] = [];
-            routeGroups[route].push(r);
+          const headers = Object.keys(dataRows[0]);
+          const { consignmentKey, ambientKey, chilledKey, freezerKey, shipmentKey, dispatchKey } = getColumnKeys(
+            headers
+          );
+
+          const newRows = [];
+          const newConsignments = new Set(consignmentSet);
+          let duplicatesDetected = 0;
+
+          dataRows.forEach((r) => {
+            const consignment = (r[consignmentKey] || "").trim();
+            if (!consignment || newConsignments.has(consignment)) {
+              if (consignment) duplicatesDetected++;
+              return;
+            }
+            newConsignments.add(consignment);
+
+            const route = getRouteName(r, shipmentKey, dispatchKey);
+            newRows.push({
+              consignment,
+              route,
+              ambient: ambientKey ? parseToteCell(r[ambientKey]) : 0,
+              chilled: chilledKey ? parseToteCell(r[chilledKey]) : 0,
+              freezer: freezerKey ? parseToteCell(r[freezerKey]) : 0,
+            });
           });
 
-          for (const [route, rowsForRoute] of Object.entries(routeGroups)) {
-            const totals = computeTotalsFromRows(rowsForRoute, globalConsignments.current);
-            duplicates += totals.duplicateCount;
-
-            // Merge totals
-            if (!newRoutesInfo[route]) {
-              newRoutesInfo[route] = { totals: { ...totals }, consignments: rowsForRoute.length };
-            } else {
-              newRoutesInfo[route].totals.ambient += totals.ambient;
-              newRoutesInfo[route].totals.chilled += totals.chilled;
-              newRoutesInfo[route].totals.freezer += totals.freezer;
-              newRoutesInfo[route].totals.total += totals.total;
-              newRoutesInfo[route].totals.duplicateCount += totals.duplicateCount;
-              newRoutesInfo[route].consignments += rowsForRoute.length;
-            }
-
-            // --- Save only optimized data to Firestore ---
-            const batchDoc = doc(collection(db, 'totes'), route);
-            await setDoc(batchDoc, {
-              consignments: newRoutesInfo[route].consignments,
-              ambient: newRoutesInfo[route].totals.ambient,
-              chilled: newRoutesInfo[route].totals.chilled,
-              freezer: newRoutesInfo[route].totals.freezer,
-              total: newRoutesInfo[route].totals.total
-            });
+          if (duplicatesDetected > 0) {
+            setDuplicateMessage(`${duplicatesDetected} duplicate line${duplicatesDetected > 1 ? "s" : ""} ignored`);
+            setTimeout(() => setDuplicateMessage(""), 5000);
           }
 
-          setRoutesInfo(newRoutesInfo);
-          setDuplicateWarning(duplicates > 0 ? `${duplicates} duplicate lines detected` : '');
-
-          // Compute grand totals
-          const newGrand = Object.values(newRoutesInfo).reduce((acc, cur) => {
-            acc.ambient += cur.totals.ambient;
-            acc.chilled += cur.totals.chilled;
-            acc.freezer += cur.totals.freezer;
-            acc.total += cur.totals.total;
-            return acc;
-          }, { ambient: 0, chilled: 0, freezer: 0, total: 0 });
-          setGrandTotals(newGrand);
-        }
+          if (newRows.length) {
+            try {
+              await setDoc(DATA_DOC, { rows: [...rows, ...newRows] });
+            } catch (err) {
+              console.error("Firestore upload error:", err);
+            }
+          }
+        },
       });
     });
   };
 
   const onFileChange = (e) => {
-    if (!e.target.files.length) return;
-    handleFiles(e.target.files);
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    handleFiles(files);
     e.target.value = null;
   };
 
   const clearAll = async () => {
-    setRoutesInfo({});
-    setGrandTotals({ ambient: 0, chilled: 0, freezer: 0, total: 0 });
-    setDuplicateWarning('');
-    globalConsignments.current.clear();
-
-    // Clear Firestore
-    const totesRef = collection(db, 'totes');
-    const snapshot = await getDoc(doc(db, 'totes', 'dummy')); // dummy call to ensure connection
-    // For simplicity, user can manually delete docs or implement batch delete if needed
+    try {
+      await deleteDoc(DATA_DOC);
+    } catch (err) {
+      console.error("Firestore clear error:", err);
+    }
   };
 
-  // --- Bagged Tote Calculation ---
-  const calculateBagged = () => {
-    const baggedAmbient =
-      Number(bagged.currentAmbient || 0) + grandTotals.ambient - Number(bagged.ambientReceived || 0);
-    const baggedChilled =
-      Number(bagged.currentChilled || 0) + grandTotals.chilled - Number(bagged.chilledReceived || 0);
-    setBagged({ ...bagged, baggedAmbient, baggedChilled });
-  };
-
-  const handleBaggedChange = (e) => {
-    setBagged({ ...bagged, [e.target.name]: e.target.value });
-  };
-
-  // --- Load Firestore Data on Mount ---
+  // --- Bagged Totals Calculation ---
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, 'totes'), (snapshot) => {
-      const data = {};
-      snapshot.forEach(doc => {
-        const d = doc.data();
-        data[doc.id] = {
-          totals: {
-            ambient: d.ambient || 0,
-            chilled: d.chilled || 0,
-            freezer: d.freezer || 0,
-            total: d.total || 0,
-            duplicateCount: 0
-          },
-          consignments: d.consignments || 0
-        };
-      });
-      setRoutesInfo(data);
+    const usedAmbient = grandTotals.ambient;
+    const usedChilled = grandTotals.chilled;
+    const { ambientReceived, chilledReceived, currentAmbient, currentChilled } = baggedData;
 
-      // Compute grand totals
-      const newGrand = Object.values(data).reduce((acc, cur) => {
-        acc.ambient += cur.totals.ambient;
-        acc.chilled += cur.totals.chilled;
-        acc.freezer += cur.totals.freezer;
-        acc.total += cur.totals.total;
-        return acc;
-      }, { ambient: 0, chilled: 0, freezer: 0, total: 0 });
-      setGrandTotals(newGrand);
-    });
-    return () => unsub();
-  }, []);
+    setBaggedData((prev) => ({
+      ...prev,
+      baggedAmbient: currentAmbient + usedAmbient - ambientReceived,
+      baggedChilled: currentChilled + usedChilled - chilledReceived,
+    }));
+  }, [grandTotals, baggedData.ambientReceived, baggedData.chilledReceived, baggedData.currentAmbient, baggedData.currentChilled]);
+
+  if (loading) return <p style={{ marginTop: 120, textAlign: "center" }}>Loading...</p>;
 
   return (
     <div className="app-container">
       <Header />
       <div className="content">
-        {/* Left Card: Totes Used */}
-        <div className="data-card">
+        {/* --- Totes Used Card --- */}
+        <section className="data-card adaptive-card">
           <h2 className="data-title">Totes Used</h2>
           <div className="file-controls">
             <input type="file" accept=".csv" multiple onChange={onFileChange} />
-            <button className="clear-btn" onClick={clearAll} disabled={!Object.keys(routesInfo).length}>
+            <button onClick={clearAll} disabled={rows.length === 0} className="clear-btn">
               Clear uploaded data
             </button>
           </div>
-          {duplicateWarning && <p className="duplicate-warning">{duplicateWarning}</p>}
-          <div className="table-container">
-            {Object.keys(routesInfo).length ? (
-              <>
+          {duplicateMessage && <p className="duplicate-warning">{duplicateMessage}</p>}
+          {Object.keys(routesInfo).length === 0 ? (
+            <p className="no-data">No data available yet.</p>
+          ) : (
+            <div className="table-container">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Route</th>
+                    <th>Consignments</th>
+                    <th>Ambient</th>
+                    <th>Chilled</th>
+                    <th>Freezer</th>
+                    <th>Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Object.entries(routesInfo).map(([route, data], i) => (
+                    <tr key={i}>
+                      <td>{route}</td>
+                      <td>{data.rows.length}</td>
+                      <td>{data.totals.ambient}</td>
+                      <td>{data.totals.chilled}</td>
+                      <td>{data.totals.freezer}</td>
+                      <td className="bold">{data.totals.total}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              <div className="grand-totals">
+                <h3>Grand Totals</h3>
                 <table className="data-table">
                   <thead>
                     <tr>
-                      <th>Route</th>
-                      <th>Consignments</th>
                       <th>Ambient</th>
                       <th>Chilled</th>
                       <th>Freezer</th>
@@ -251,77 +270,62 @@ export default function App() {
                     </tr>
                   </thead>
                   <tbody>
-                    {Object.entries(routesInfo).map(([route, data], i) => (
-                      <tr key={i}>
-                        <td>{route}</td>
-                        <td>{data.consignments}</td>
-                        <td>{data.totals.ambient}</td>
-                        <td>{data.totals.chilled}</td>
-                        <td>{data.totals.freezer}</td>
-                        <td className="bold">{data.totals.total}</td>
-                      </tr>
-                    ))}
+                    <tr>
+                      <td>{grandTotals.ambient}</td>
+                      <td>{grandTotals.chilled}</td>
+                      <td>{grandTotals.freezer}</td>
+                      <td className="bold">{grandTotals.total}</td>
+                    </tr>
                   </tbody>
                 </table>
-                <div className="grand-totals">
-                  <h3>Grand Totals</h3>
-                  <table className="data-table">
-                    <thead>
-                      <tr>
-                        <th>Ambient</th>
-                        <th>Chilled</th>
-                        <th>Freezer</th>
-                        <th>Total</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr>
-                        <td>{grandTotals.ambient}</td>
-                        <td>{grandTotals.chilled}</td>
-                        <td>{grandTotals.freezer}</td>
-                        <td className="bold">{grandTotals.total}</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </>
-            ) : (
-              <p className="no-data">No data available yet.</p>
-            )}
-          </div>
-        </div>
+              </div>
+            </div>
+          )}
+        </section>
 
-        {/* Right Card: Bagged Totes */}
-        <div className="data-card" style={{ marginLeft: '32px', maxWidth: '500px' }}>
+        {/* --- Bagged Totes Card --- */}
+        <section className="data-card adaptive-card">
           <h2 className="data-title">Bagged Totes</h2>
-          <div className="file-controls">
-            <label>
-              Ambient Totes Received:
-              <input type="number" name="ambientReceived" value={bagged.ambientReceived} onChange={handleBaggedChange} />
-            </label>
-            <br />
-            <label>
-              Chilled Totes Received:
-              <input type="number" name="chilledReceived" value={bagged.chilledReceived} onChange={handleBaggedChange} />
-            </label>
-            <br />
-            <label>
-              Current Totes in Hive (Ambient):
-              <input type="number" name="currentAmbient" value={bagged.currentAmbient} onChange={handleBaggedChange} />
-            </label>
-            <br />
-            <label>
-              Current Totes in Hive (Chilled):
-              <input type="number" name="currentChilled" value={bagged.currentChilled} onChange={handleBaggedChange} />
-            </label>
-            <br />
-            <button className="clear-btn" onClick={calculateBagged}>Calculate Bagged Totes</button>
+          <div className="bagged-fields">
+            <div className="bagged-row">
+              <label>Ambient totes received:</label>
+              <input
+                type="number"
+                value={baggedData.ambientReceived}
+                onChange={(e) => setBaggedData((prev) => ({ ...prev, ambientReceived: Number(e.target.value) }))}
+              />
+            </div>
+            <div className="bagged-row">
+              <label>Chill totes received:</label>
+              <input
+                type="number"
+                value={baggedData.chilledReceived}
+                onChange={(e) => setBaggedData((prev) => ({ ...prev, chilledReceived: Number(e.target.value) }))}
+              />
+            </div>
+            <div className="bagged-row">
+              <label>Current totes in Hive (Bagged Ambient):</label>
+              <input
+                type="number"
+                value={baggedData.currentAmbient}
+                onChange={(e) => setBaggedData((prev) => ({ ...prev, currentAmbient: Number(e.target.value) }))}
+              />
+            </div>
+            <div className="bagged-row">
+              <label>Current totes in Hive (Bagged Chill):</label>
+              <input
+                type="number"
+                value={baggedData.currentChilled}
+                onChange={(e) => setBaggedData((prev) => ({ ...prev, currentChilled: Number(e.target.value) }))}
+              />
+            </div>
+
+            <div className="bagged-result">
+              <p>Bagged Ambient Totes: {baggedData.baggedAmbient}</p>
+              <p>Bagged Chill Totes: {baggedData.baggedChilled}</p>
+            </div>
           </div>
-          <div style={{ marginTop: '16px' }}>
-            <p>Bagged Ambient: <strong>{bagged.baggedAmbient}</strong></p>
-            <p>Bagged Chilled: <strong>{bagged.baggedChilled}</strong></p>
-          </div>
-        </div>
+        </section>
       </div>
     </div>
   );
