@@ -46,14 +46,32 @@ function Header() {
   );
 }
 
+// --- Route Calculation ---
+function getRouteName(row) {
+  let dispatch = row["Dispatch time"] || row["dispatch time"] || row["Dispatch Time"] || "";
+  const shipment = row["Shipment"] || row["shipment"] || "";
+  if (/route-/i.test(shipment)) return "Vans";
+  const timeMatch = dispatch.match(/(\d{1,2}:\d{2})/);
+  const dispatchTime = timeMatch ? timeMatch[1] : null;
+  if (!dispatchTime) return "Spoke";
+  if (["11:15", "11:16", "11:17"].includes(dispatchTime)) return "Ottawa Spoke";
+  if (dispatchTime === "2:30") return "Etobicoke Spoke 1";
+  if (dispatchTime === "3:00") return "Etobicoke Spoke 2";
+  if (dispatchTime === "5:30") return "Etobicoke Spoke 3";
+  if (dispatchTime === "8:45") return "Etobicoke Spoke 4";
+  if (dispatchTime === "9:15") return "Etobicoke Spoke 5";
+  return "Spoke";
+}
+
 // --- Main App ---
 export default function App() {
-  const [rows, setRows] = useState([]); // each row: {consignment, ambient, chilled, freezer}
+  const [rows, setRows] = useState([]); // {consignment, route, ambient, chilled, freezer}
   const [loading, setLoading] = useState(true);
-  const [grandTotals, setGrandTotals] = useState({ ambient: 0, chilled: 0, freezer: 0, total: 0 });
   const [consignmentSet, setConsignmentSet] = useState(new Set());
+  const [routesInfo, setRoutesInfo] = useState({});
+  const [grandTotals, setGrandTotals] = useState({ ambient: 0, chilled: 0, freezer: 0, total: 0 });
 
-  // --- Parse totes from cell
+  // --- Parse tote cells
   const parseToteCell = (cell) => {
     if (!cell && cell !== 0) return 0;
     const str = String(cell).trim();
@@ -64,50 +82,58 @@ export default function App() {
     return nums.length ? Math.max(...nums.map(Math.abs)) : 0;
   };
 
-  // --- Get CSV column keys
   const getColumnKeys = (headers) => {
     const pickCol = (pattern) => headers.find((h) => new RegExp(pattern, "i").test(h));
     return {
+      consignmentKey: pickCol("Consignment") || pickCol("consignment"),
       ambientKey: pickCol("Completed\\s*Totes.*Ambient") || pickCol("ambient"),
       chilledKey: pickCol("Completed\\s*Totes.*Chill") || pickCol("chill|chilled"),
       freezerKey: pickCol("Completed\\s*Totes.*Freezer") || pickCol("freezer"),
-      consignmentKey: pickCol("Consignment") || pickCol("consignment"),
     };
   };
 
-  // --- Real-time Firestore listener ---
+  // --- Real-time Firestore sync
   useEffect(() => {
     const unsubscribe = onSnapshot(DATA_DOC, (docSnap) => {
       if (docSnap.exists()) {
-        const data = docSnap.data();
-        const savedRows = data.rows || [];
+        const savedRows = docSnap.data().rows || [];
         setRows(savedRows);
         setConsignmentSet(new Set(savedRows.map((r) => r.consignment)));
 
-        // Calculate totals
-        const totals = { ambient: 0, chilled: 0, freezer: 0, total: 0 };
+        // Build route-wise totals
+        const routeMap = {};
+        let grand = { ambient: 0, chilled: 0, freezer: 0, total: 0 };
+
         savedRows.forEach((r) => {
-          totals.ambient += r.ambient;
-          totals.chilled += r.chilled;
-          totals.freezer += r.freezer;
+          if (!routeMap[r.route]) routeMap[r.route] = { totals: { ambient: 0, chilled: 0, freezer: 0, total: 0 }, rows: [] };
+          routeMap[r.route].totals.ambient += r.ambient;
+          routeMap[r.route].totals.chilled += r.chilled;
+          routeMap[r.route].totals.freezer += r.freezer;
+          routeMap[r.route].totals.total += r.ambient + r.chilled + r.freezer;
+          routeMap[r.route].rows.push(r);
+
+          grand.ambient += r.ambient;
+          grand.chilled += r.chilled;
+          grand.freezer += r.freezer;
         });
-        totals.total = totals.ambient + totals.chilled + totals.freezer;
-        setGrandTotals(totals);
+        grand.total = grand.ambient + grand.chilled + grand.freezer;
+
+        setRoutesInfo(routeMap);
+        setGrandTotals(grand);
       } else {
         setRows([]);
         setConsignmentSet(new Set());
+        setRoutesInfo({});
         setGrandTotals({ ambient: 0, chilled: 0, freezer: 0, total: 0 });
       }
       setLoading(false);
     });
-
     return () => unsubscribe();
   }, []);
 
-  // --- Handle CSV Upload ---
+  // --- Handle CSV upload
   const handleFiles = (files) => {
-    const arr = Array.from(files);
-    arr.forEach((file) => {
+    Array.from(files).forEach((file) => {
       Papa.parse(file, {
         header: true,
         skipEmptyLines: true,
@@ -117,7 +143,7 @@ export default function App() {
           if (!dataRows.length) return;
 
           const headers = Object.keys(dataRows[0]);
-          const { ambientKey, chilledKey, freezerKey, consignmentKey } = getColumnKeys(headers);
+          const { consignmentKey, ambientKey, chilledKey, freezerKey } = getColumnKeys(headers);
 
           const newRows = [];
           const newConsignments = new Set(consignmentSet);
@@ -127,8 +153,10 @@ export default function App() {
             if (!consignment || newConsignments.has(consignment)) return;
 
             newConsignments.add(consignment);
+            const route = getRouteName(r);
             newRows.push({
               consignment,
+              route,
               ambient: ambientKey ? parseToteCell(r[ambientKey]) : 0,
               chilled: chilledKey ? parseToteCell(r[chilledKey]) : 0,
               freezer: freezerKey ? parseToteCell(r[freezerKey]) : 0,
@@ -136,9 +164,8 @@ export default function App() {
           });
 
           if (newRows.length) {
-            const updatedRows = [...rows, ...newRows];
             try {
-              await setDoc(DATA_DOC, { rows: updatedRows });
+              await setDoc(DATA_DOC, { rows: [...rows, ...newRows] });
             } catch (err) {
               console.error("Firestore upload error:", err);
             }
@@ -193,33 +220,30 @@ export default function App() {
             </button>
           </div>
 
-          {rows.length === 0 ? (
+          {Object.keys(routesInfo).length === 0 ? (
             <p style={{ color: "#777" }}>No data available yet.</p>
           ) : (
             <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
                   <tr style={{ background: "#f3f4f6" }}>
-                    <th style={{ padding: 8 }}>Consignment</th>
+                    <th style={{ padding: 8 }}>Route</th>
                     <th style={{ padding: 8 }}>Ambient</th>
                     <th style={{ padding: 8 }}>Chilled</th>
                     <th style={{ padding: 8 }}>Freezer</th>
                     <th style={{ padding: 8 }}>Total</th>
+                    <th style={{ padding: 8 }}>Rows</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((r, i) => (
-                    <tr
-                      key={i}
-                      style={{ background: i % 2 === 0 ? "#fafafa" : "#fff" }}
-                    >
-                      <td style={{ padding: 8 }}>{r.consignment}</td>
-                      <td style={{ padding: 8 }}>{r.ambient}</td>
-                      <td style={{ padding: 8 }}>{r.chilled}</td>
-                      <td style={{ padding: 8 }}>{r.freezer}</td>
-                      <td style={{ padding: 8, fontWeight: 600 }}>
-                        {r.ambient + r.chilled + r.freezer}
-                      </td>
+                  {Object.entries(routesInfo).map(([route, data], i) => (
+                    <tr key={i} style={{ background: i % 2 === 0 ? "#fafafa" : "#fff" }}>
+                      <td style={{ padding: 8 }}>{route}</td>
+                      <td style={{ padding: 8 }}>{data.totals.ambient}</td>
+                      <td style={{ padding: 8 }}>{data.totals.chilled}</td>
+                      <td style={{ padding: 8 }}>{data.totals.freezer}</td>
+                      <td style={{ padding: 8, fontWeight: 600 }}>{data.totals.total}</td>
+                      <td style={{ padding: 8 }}>{data.rows.length}</td>
                     </tr>
                   ))}
                 </tbody>
