@@ -87,7 +87,8 @@ export default function App() {
         let grand = { ambient: 0, chilled: 0, freezer: 0, total: 0 };
 
         savedRows.forEach((r) => {
-          if (!routeMap[r.route]) routeMap[r.route] = { totals: { ambient: 0, chilled: 0, freezer: 0, total: 0 }, rows: [] };
+          if (!routeMap[r.route])
+            routeMap[r.route] = { totals: { ambient: 0, chilled: 0, freezer: 0, total: 0 }, rows: [] };
           routeMap[r.route].totals.ambient += r.ambient;
           routeMap[r.route].totals.chilled += r.chilled;
           routeMap[r.route].totals.freezer += r.freezer;
@@ -205,22 +206,22 @@ export default function App() {
                 <thead>
                   <tr>
                     <th>Route</th>
+                    <th>Consignments</th>
                     <th>Ambient</th>
                     <th>Chilled</th>
                     <th>Freezer</th>
                     <th>Total</th>
-                    <th>Rows</th>
                   </tr>
                 </thead>
                 <tbody>
                   {Object.entries(routesInfo).map(([route, data], i) => (
                     <tr key={i}>
                       <td>{route}</td>
+                      <td>{data.rows.length}</td>
                       <td>{data.totals.ambient}</td>
                       <td>{data.totals.chilled}</td>
                       <td>{data.totals.freezer}</td>
                       <td className="bold">{data.totals.total}</td>
-                      <td>{data.rows.length}</td>
                     </tr>
                   ))}
                 </tbody>
