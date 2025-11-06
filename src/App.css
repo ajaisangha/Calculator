@@ -37,7 +37,6 @@
 /* Card */
 .data-card {
   flex: 1;
-  max-width: 700px;
   display: flex;
   flex-direction: column;
   background: linear-gradient(145deg, #ffffff, #f0f0f0); /* floating card gradient */
