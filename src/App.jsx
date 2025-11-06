@@ -28,23 +28,7 @@ function Header() {
   );
 }
 
-// --- Helper Functions ---
-function getRouteName(row) {
-  let dispatch = row["Dispatch time"] || row["dispatch time"] || row["Dispatch Time"] || "";
-  const shipment = row["Shipment"] || row["shipment"] || "";
-  if (/route-/i.test(shipment)) return "Vans";
-  const timeMatch = dispatch.match(/(\d{1,2}:\d{2})/);
-  const dispatchTime = timeMatch ? timeMatch[1] : null;
-  if (!dispatchTime) return "Spoke";
-  if (["11:15", "11:16", "11:17"].includes(dispatchTime)) return "Ottawa Spoke";
-  if (dispatchTime === "2:30") return "Etobicoke Spoke 1";
-  if (dispatchTime === "3:00") return "Etobicoke Spoke 2";
-  if (dispatchTime === "5:30") return "Etobicoke Spoke 3";
-  if (dispatchTime === "8:45") return "Etobicoke Spoke 4";
-  if (dispatchTime === "9:15") return "Etobicoke Spoke 5";
-  return "Spoke";
-}
-
+// --- Helpers ---
 function parseToteCell(cell) {
   if (!cell && cell !== 0) return 0;
   const str = String(cell).trim();
@@ -62,7 +46,30 @@ function getColumnKeys(headers) {
     ambientKey: pickCol("Completed\\s*Totes.*Ambient") || pickCol("ambient"),
     chilledKey: pickCol("Completed\\s*Totes.*Chill") || pickCol("chill|chilled"),
     freezerKey: pickCol("Completed\\s*Totes.*Freezer") || pickCol("freezer"),
+    shipmentKey: pickCol("Shipment") || pickCol("shipment"),
+    dispatchKey: pickCol("Dispatch time") || pickCol("dispatch time") || pickCol("Dispatch Time"),
   };
+}
+
+function getRouteName(row, shipmentKey, dispatchKey) {
+  const shipment = row[shipmentKey] || "";
+  const dispatch = row[dispatchKey] || "";
+
+  if (/route-/i.test(shipment)) return "Vans"; // Explicit vans
+
+  const timeMatch = dispatch.match(/(\d{1,2}:\d{2})/);
+  const dispatchTime = timeMatch ? timeMatch[1] : null;
+
+  if (!dispatchTime) return "Spoke";
+
+  if (["11:15", "11:16", "11:17"].includes(dispatchTime)) return "Ottawa";
+  if (dispatchTime === "2:30") return "Etobicoke 1";
+  if (dispatchTime === "3:00") return "Etobicoke 2";
+  if (dispatchTime === "5:30") return "Etobicoke 3";
+  if (dispatchTime === "8:45") return "Etobicoke 4";
+  if (dispatchTime === "9:15") return "Etobicoke 5";
+
+  return "Spoke"; // default for any other
 }
 
 // --- Main App ---
@@ -74,7 +81,7 @@ export default function App() {
   const [grandTotals, setGrandTotals] = useState({ ambient: 0, chilled: 0, freezer: 0, total: 0 });
   const [duplicateMessage, setDuplicateMessage] = useState("");
 
-  // --- Firestore real-time sync
+  // Firestore real-time sync
   useEffect(() => {
     const unsubscribe = onSnapshot(DATA_DOC, (docSnap) => {
       if (docSnap.exists()) {
@@ -82,7 +89,6 @@ export default function App() {
         setRows(savedRows);
         setConsignmentSet(new Set(savedRows.map((r) => r.consignment)));
 
-        // Build route-wise totals
         const routeMap = {};
         let grand = { ambient: 0, chilled: 0, freezer: 0, total: 0 };
 
@@ -114,7 +120,7 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // --- Handle CSV Upload
+  // Handle CSV upload
   const handleFiles = (files) => {
     Array.from(files).forEach((file) => {
       Papa.parse(file, {
@@ -126,7 +132,9 @@ export default function App() {
           if (!dataRows.length) return;
 
           const headers = Object.keys(dataRows[0]);
-          const { consignmentKey, ambientKey, chilledKey, freezerKey } = getColumnKeys(headers);
+          const { consignmentKey, ambientKey, chilledKey, freezerKey, shipmentKey, dispatchKey } = getColumnKeys(
+            headers
+          );
 
           const newRows = [];
           const newConsignments = new Set(consignmentSet);
@@ -138,9 +146,9 @@ export default function App() {
               if (consignment) duplicatesDetected++;
               return;
             }
-
             newConsignments.add(consignment);
-            const route = getRouteName(r);
+
+            const route = getRouteName(r, shipmentKey, dispatchKey);
             newRows.push({
               consignment,
               route,
