@@ -3,7 +3,7 @@ import Papa from "papaparse";
 import { initializeApp } from "firebase/app";
 import { getFirestore, doc, onSnapshot, setDoc, deleteDoc } from "firebase/firestore";
 import "./App.css";
-
+import CurrentBaggedTotesCard from "./CurrentBaggedTotesCard";
 import TotesUsedCard from "./TotesUsedCard";
 import BaggedTotesCard from "./BaggedTotesCard";
 
@@ -206,6 +206,7 @@ export default function App() {
           baggedChill={baggedChill}
           totalBagged={totalBagged}
         />
+        <CurrentBaggedTotesCard />
       </div>
     </div>
   );
