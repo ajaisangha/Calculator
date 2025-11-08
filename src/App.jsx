@@ -8,7 +8,7 @@ import TotesUsedCard from "./TotesUsedCard";
 import BaggedTotesCard from "./BaggedTotesCard";
 import PickCalculatorCard from "./PickCalculatorCard";
 import PickAndBaggedCombinedCard from "./PickAndBaggedCombinedCard";
-
+import ShiftEOSCard from "./ShiftEOSCard";
 
 // --- Firebase Config ---
 const firebaseConfig = {
@@ -210,6 +210,7 @@ export default function App() {
           totalBagged={totalBagged}
         />
         <PickAndBaggedCombinedCard />
+        <ShiftEOSCard />
 
       </div>
     </div>
