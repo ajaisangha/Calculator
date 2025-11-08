@@ -1,28 +1,14 @@
 import React, { useState, useEffect } from "react";
 import Papa from "papaparse";
-import { initializeApp } from "firebase/app";
-import { getFirestore, doc, onSnapshot, setDoc, deleteDoc } from "firebase/firestore";
+import { doc, onSnapshot, setDoc, deleteDoc } from "firebase/firestore";
+import { db } from "./firebase";
 import "./App.css";
-import CurrentBaggedTotesCard from "./CurrentBaggedTotesCard";
 import TotesUsedCard from "./TotesUsedCard";
 import BaggedTotesCard from "./BaggedTotesCard";
-import PickCalculatorCard from "./PickCalculatorCard";
 import PickAndBaggedCombinedCard from "./PickAndBaggedCombinedCard";
 import ShiftEOSCard from "./ShiftEOSCard";
 
-// --- Firebase Config ---
-const firebaseConfig = {
-  apiKey: "AIzaSyDbGd7qUUDgLo3HsrbsCbK8GySajQeKFu0",
-  authDomain: "tote-calculator.firebaseapp.com",
-  projectId: "tote-calculator",
-  storageBucket: "tote-calculator.firebasestorage.app",
-  messagingSenderId: "256755403923",
-  appId: "1:256755403923:web:1931c6e83190d77eaa1166",
-};
-
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+// Firestore doc for Totes Used
 const DATA_DOC = doc(db, "totes", "data");
 
 // --- Header ---
@@ -91,22 +77,22 @@ export default function App() {
   // Firestore real-time sync
   useEffect(() => {
     const unsubscribe = onSnapshot(DATA_DOC, (docSnap) => {
-      if(docSnap.exists()){
+      if (docSnap.exists()) {
         const savedRows = docSnap.data().rows || [];
         setRows(savedRows);
-        setConsignmentSet(new Set(savedRows.map(r=>r.consignment)));
+        setConsignmentSet(new Set(savedRows.map(r => r.consignment)));
         const routeMap = {};
         let grand={ambient:0,chilled:0,freezer:0,total:0};
-        savedRows.forEach(r=>{
-          if(!routeMap[r.route]) routeMap[r.route]={totals:{ambient:0,chilled:0,freezer:0,total:0}, rows:[]};
+        savedRows.forEach(r => {
+          if (!routeMap[r.route]) routeMap[r.route] = { totals:{ambient:0,chilled:0,freezer:0,total:0}, rows:[] };
           routeMap[r.route].totals.ambient += r.ambient;
           routeMap[r.route].totals.chilled += r.chilled;
           routeMap[r.route].totals.freezer += r.freezer;
-          routeMap[r.route].totals.total += r.ambient+r.chilled+r.freezer;
+          routeMap[r.route].totals.total += r.ambient + r.chilled + r.freezer;
           routeMap[r.route].rows.push(r);
-          grand.ambient+=r.ambient;
-          grand.chilled+=r.chilled;
-          grand.freezer+=r.freezer;
+          grand.ambient += r.ambient;
+          grand.chilled += r.chilled;
+          grand.freezer += r.freezer;
         });
         grand.total = grand.ambient + grand.chilled + grand.freezer;
         setRoutesInfo(routeMap);
@@ -115,32 +101,32 @@ export default function App() {
         setRows([]);
         setConsignmentSet(new Set());
         setRoutesInfo({});
-        setGrandTotals({ambient:0,chilled:0,freezer:0,total:0});
+        setGrandTotals({ ambient:0, chilled:0, freezer:0, total:0 });
       }
       setLoading(false);
     });
-    return ()=>unsubscribe();
-  },[]);
+    return () => unsubscribe();
+  }, []);
 
   // CSV upload
-  const handleFiles = (files)=>{
-    Array.from(files).forEach(file=>{
-      Papa.parse(file,{
-        header:true,
-        skipEmptyLines:true,
-        transformHeader:(h)=>h.trim(),
-        complete: async (results)=>{
+  const handleFiles = (files) => {
+    Array.from(files).forEach(file => {
+      Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        transformHeader: h => h.trim(),
+        complete: async (results) => {
           const dataRows = results.data;
-          if(!dataRows.length) return;
+          if (!dataRows.length) return;
           const headers = Object.keys(dataRows[0]);
           const { consignmentKey, ambientKey, chilledKey, freezerKey, shipmentKey, dispatchKey } = getColumnKeys(headers);
-          const newRows=[];
+          const newRows = [];
           const newConsignments = new Set(consignmentSet);
-          let duplicatesDetected=0;
-          dataRows.forEach(r=>{
+          let duplicatesDetected = 0;
+          dataRows.forEach(r => {
             const consignment = (r[consignmentKey]||"").trim();
-            if(!consignment || newConsignments.has(consignment)){
-              if(consignment) duplicatesDetected++;
+            if (!consignment || newConsignments.has(consignment)) {
+              if (consignment) duplicatesDetected++;
               return;
             }
             newConsignments.add(consignment);
@@ -148,41 +134,41 @@ export default function App() {
             newRows.push({
               consignment,
               route,
-              ambient: ambientKey?parseToteCell(r[ambientKey]):0,
-              chilled: chilledKey?parseToteCell(r[chilledKey]):0,
-              freezer: freezerKey?parseToteCell(r[freezerKey]):0,
+              ambient: ambientKey ? parseToteCell(r[ambientKey]) : 0,
+              chilled: chilledKey ? parseToteCell(r[chilledKey]) : 0,
+              freezer: freezerKey ? parseToteCell(r[freezerKey]) : 0,
             });
           });
-          if(duplicatesDetected>0){
-            setDuplicateMessage(`${duplicatesDetected} duplicate line${duplicatesDetected>1?"s":""} ignored`);
-            setTimeout(()=>setDuplicateMessage(""),5000);
+          if (duplicatesDetected > 0) {
+            setDuplicateMessage(`${duplicatesDetected} duplicate line${duplicatesDetected > 1 ? "s" : ""} ignored`);
+            setTimeout(() => setDuplicateMessage(""), 5000);
           }
-          if(newRows.length){
-            try{await setDoc(DATA_DOC,{rows:[...rows,...newRows]});}
-            catch(err){console.error("Firestore upload error:",err);}
+          if (newRows.length) {
+            try { await setDoc(DATA_DOC, { rows: [...rows, ...newRows] }); }
+            catch(err) { console.error("Firestore upload error:", err); }
           }
         }
       });
     });
   };
 
-  const onFileChange=(e)=>{
+  const onFileChange = (e) => {
     const files = e.target.files;
-    if(!files || files.length===0) return;
+    if (!files || files.length === 0) return;
     handleFiles(files);
-    e.target.value=null;
+    e.target.value = null;
   };
 
-  const clearAll=async()=>{
-    try{await deleteDoc(DATA_DOC);}catch(err){console.error("Firestore clear error:",err);}
+  const clearAll = async () => {
+    try { await deleteDoc(DATA_DOC); } catch (err) { console.error("Firestore clear error:", err); }
   };
 
   // Bagged Totes calculations
-  const baggedAmbient = (parseInt(currentAmbient,10)||0)+(grandTotals.ambient||0)-(parseInt(receivedAmbient,10)||0);
-  const baggedChill = (parseInt(currentChill,10)||0)+(grandTotals.chilled||0)-(parseInt(receivedChill,10)||0);
+  const baggedAmbient = (parseInt(currentAmbient,10)||0) + (grandTotals.ambient||0) - (parseInt(receivedAmbient,10)||0);
+  const baggedChill = (parseInt(currentChill,10)||0) + (grandTotals.chilled||0) - (parseInt(receivedChill,10)||0);
   const totalBagged = baggedAmbient + baggedChill;
 
-  if(loading) return <p style={{marginTop:120,textAlign:"center"}}>Loading...</p>;
+  if (loading) return <p style={{ marginTop:120, textAlign:"center" }}>Loading...</p>;
 
   return (
     <div className="app-container">
@@ -211,7 +197,6 @@ export default function App() {
         />
         <PickAndBaggedCombinedCard />
         <ShiftEOSCard />
-
       </div>
     </div>
   );

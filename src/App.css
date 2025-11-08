@@ -259,3 +259,29 @@
   flex-direction: column;
   gap: 24px;
 }
+
+/* Input widths for Pick Calculator */
+.picker-input {
+  width: 40px;   /* 2 digits */
+}
+.uph-input {
+  width: 60px;   /* 3 digits */
+}
+.outstanding-input {
+  width: 100px;  /* 6 digits */
+}
+
+/* Add borders between columns */
+.pick-table th, .pick-table td {
+  border-right: 1px solid #ccc;
+  padding: 4px 6px;
+}
+
+.pick-table th:last-child, .pick-table td:last-child {
+  border-right: none;
+}
+
+.pick-table {
+  border-collapse: collapse;
+  width: 100%;
+}

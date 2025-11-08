@@ -1,5 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { doc, onSnapshot, setDoc, deleteDoc } from "firebase/firestore";
+import { db } from "./App"; // make sure db export exists
 import "./App.css";
+
+const BAGGED_DOC = doc(db, "totes", "currentBaggedTotes");
 
 export default function CurrentBaggedTotesCard() {
   const [currentAmbient, setCurrentAmbient] = useState("");
@@ -9,64 +13,65 @@ export default function CurrentBaggedTotesCard() {
   const [resultAmbient, setResultAmbient] = useState(null);
   const [resultChill, setResultChill] = useState(null);
 
-  const calculateTotes = () => {
+  // Load data from Firestore
+  useEffect(() => {
+    const unsubscribe = onSnapshot(BAGGED_DOC, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setCurrentAmbient(data.currentAmbient || "");
+        setCurrentChill(data.currentChill || "");
+        setNeededAmbient(data.neededAmbient || "");
+        setNeededChill(data.neededChill || "");
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const calculateTotes = async () => {
     const ambient = (parseInt(currentAmbient, 10) || 0) - (parseInt(neededAmbient, 10) || 0);
     const chill = (parseInt(currentChill, 10) || 0) - (parseInt(neededChill, 10) || 0);
     setResultAmbient(ambient);
     setResultChill(chill);
+
+    // Save to Firestore
+    await setDoc(BAGGED_DOC, { currentAmbient, currentChill, neededAmbient, neededChill });
   };
 
-  const clearFields = () => {
+  const clearFields = async () => {
     setCurrentAmbient("");
     setCurrentChill("");
     setNeededAmbient("");
     setNeededChill("");
     setResultAmbient(null);
     setResultChill(null);
+    try { await deleteDoc(BAGGED_DOC); } catch (err) { console.error(err); }
   };
 
   return (
     <section className="data-card bagged-card">
       <h2 className="data-title">Current Bagged Totes</h2>
-
       <div className="bagged-fields">
         <div className="bagged-row">
           <span>Current totes ambient:</span>
-          <input
-            type="number"
-            value={currentAmbient}
-            onChange={(e) => setCurrentAmbient(e.target.value)}
-          />
+          <input type="number" value={currentAmbient} onChange={(e) => setCurrentAmbient(e.target.value)} />
         </div>
         <div className="bagged-row">
           <span>Current totes chill:</span>
-          <input
-            type="number"
-            value={currentChill}
-            onChange={(e) => setCurrentChill(e.target.value)}
-          />
+          <input type="number" value={currentChill} onChange={(e) => setCurrentChill(e.target.value)} />
         </div>
         <div className="bagged-row">
           <span>Totes needed ambient:</span>
-          <input
-            type="number"
-            value={neededAmbient}
-            onChange={(e) => setNeededAmbient(e.target.value)}
-          />
+          <input type="number" value={neededAmbient} onChange={(e) => setNeededAmbient(e.target.value)} />
         </div>
         <div className="bagged-row">
           <span>Totes needed chill:</span>
-          <input
-            type="number"
-            value={neededChill}
-            onChange={(e) => setNeededChill(e.target.value)}
-          />
+          <input type="number" value={neededChill} onChange={(e) => setNeededChill(e.target.value)} />
         </div>
       </div>
 
       <div style={{ marginTop: 16 }}>
         <button onClick={calculateTotes} className="clear-btn" style={{ marginRight: 8 }}>
-          Calculate
+          Calculate & Save
         </button>
         <button onClick={clearFields} className="clear-btn">
           Clear
