@@ -7,11 +7,11 @@ import TotesUsedCard from "./TotesUsedCard";
 import BaggedTotesCard from "./BaggedTotesCard";
 import PickAndBaggedCombinedCard from "./PickAndBaggedCombinedCard";
 import ShiftEOSCard from "./ShiftEOSCard";
+import { Carousel } from "react-responsive-carousel";
+import "react-responsive-carousel/lib/styles/carousel.min.css";
 
-// Firestore doc for Totes Used
 const DATA_DOC = doc(db, "totes", "data");
 
-// --- Header ---
 function Header() {
   return (
     <header className="header">
@@ -20,7 +20,6 @@ function Header() {
   );
 }
 
-// --- Helpers ---
 function parseToteCell(cell) {
   if (!cell && cell !== 0) return 0;
   const str = String(cell).trim();
@@ -59,7 +58,6 @@ function getRouteName(row, shipmentKey, dispatchKey) {
   return "Spoke";
 }
 
-// --- Main App ---
 export default function App() {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -67,14 +65,13 @@ export default function App() {
   const [routesInfo, setRoutesInfo] = useState({});
   const [grandTotals, setGrandTotals] = useState({ ambient:0, chilled:0, freezer:0, total:0 });
   const [duplicateMessage, setDuplicateMessage] = useState("");
+  const [slideIndex, setSlideIndex] = useState(0);
 
-  // Bagged Totes state
   const [receivedAmbient, setReceivedAmbient] = useState("");
   const [receivedChill, setReceivedChill] = useState("");
   const [currentAmbient, setCurrentAmbient] = useState("");
   const [currentChill, setCurrentChill] = useState("");
 
-  // Firestore real-time sync
   useEffect(() => {
     const unsubscribe = onSnapshot(DATA_DOC, (docSnap) => {
       if (docSnap.exists()) {
@@ -108,7 +105,6 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // CSV upload
   const handleFiles = (files) => {
     Array.from(files).forEach(file => {
       Papa.parse(file, {
@@ -163,7 +159,6 @@ export default function App() {
     try { await deleteDoc(DATA_DOC); } catch (err) { console.error("Firestore clear error:", err); }
   };
 
-  // Bagged Totes calculations
   const baggedAmbient = (parseInt(currentAmbient,10)||0) + (grandTotals.ambient||0) - (parseInt(receivedAmbient,10)||0);
   const baggedChill = (parseInt(currentChill,10)||0) + (grandTotals.chilled||0) - (parseInt(receivedChill,10)||0);
   const totalBagged = baggedAmbient + baggedChill;
@@ -173,30 +168,57 @@ export default function App() {
   return (
     <div className="app-container">
       <Header />
-      <div className="content">
-        <TotesUsedCard
-          rows={rows}
-          routesInfo={routesInfo}
-          grandTotals={grandTotals}
-          duplicateMessage={duplicateMessage}
-          onFileChange={onFileChange}
-          clearAll={clearAll}
-        />
-        <BaggedTotesCard
-          receivedAmbient={receivedAmbient}
-          receivedChill={receivedChill}
-          currentAmbient={currentAmbient}
-          currentChill={currentChill}
-          setReceivedAmbient={setReceivedAmbient}
-          setReceivedChill={setReceivedChill}
-          setCurrentAmbient={setCurrentAmbient}
-          setCurrentChill={setCurrentChill}
-          baggedAmbient={baggedAmbient}
-          baggedChill={baggedChill}
-          totalBagged={totalBagged}
-        />
-        <PickAndBaggedCombinedCard />
-        <ShiftEOSCard />
+
+      {/* Navigation Links */}
+      <nav className="carousel-links">
+        <button onClick={() => setSlideIndex(0)} className={slideIndex===0 ? "active" : ""}>Totes Used</button>
+        <button onClick={() => setSlideIndex(1)} className={slideIndex===1 ? "active" : ""}>Bagged + Pick</button>
+        <button onClick={() => setSlideIndex(2)} className={slideIndex===2 ? "active" : ""}>Shift EOS</button>
+      </nav>
+
+      <div className="carousel-container">
+        <Carousel
+          selectedItem={slideIndex}
+          onChange={(i) => setSlideIndex(i)}
+          showThumbs={false}
+          showStatus={false}
+          showIndicators={false}
+          showArrows={true}
+          infiniteLoop={false}
+          swipeable
+        >
+          <div className="carousel-slide">
+            <TotesUsedCard
+              rows={rows}
+              routesInfo={routesInfo}
+              grandTotals={grandTotals}
+              duplicateMessage={duplicateMessage}
+              onFileChange={onFileChange}
+              clearAll={clearAll}
+            />
+          </div>
+          <div className="carousel-slide">
+            <div className="two-card-layout">
+              <BaggedTotesCard
+                receivedAmbient={receivedAmbient}
+                receivedChill={receivedChill}
+                currentAmbient={currentAmbient}
+                currentChill={currentChill}
+                setReceivedAmbient={setReceivedAmbient}
+                setReceivedChill={setReceivedChill}
+                setCurrentAmbient={setCurrentAmbient}
+                setCurrentChill={setCurrentChill}
+                baggedAmbient={baggedAmbient}
+                baggedChill={baggedChill}
+                totalBagged={totalBagged}
+              />
+              <PickAndBaggedCombinedCard />
+            </div>
+          </div>
+          <div className="carousel-slide">
+            <ShiftEOSCard />
+          </div>
+        </Carousel>
       </div>
     </div>
   );

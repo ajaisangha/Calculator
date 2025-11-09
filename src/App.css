@@ -5,16 +5,6 @@
   min-height: 100vh;
 }
 
-.content {
-  display: flex;
-  flex-wrap: wrap;
-  flex: 1;
-  margin-top: 80px;
-  justify-content: flex-start;
-  gap: 24px;
-  padding: 0 32px 32px 32px;
-}
-
 /* --- Header --- */
 .header {
   position: fixed;
@@ -60,12 +50,6 @@
 .bagged-card {
   flex: 2; /* wider than Totes Used card */
   max-width: 1000px;
-}
-
-/* --- Titles --- */
-.data-title {
-  font-size: 24px;
-  margin-bottom: 16px;
 }
 
 /* --- File Controls --- */
@@ -127,22 +111,6 @@
   background-color: #e6f0ff;
 }
 
-.bold {
-  font-weight: 600;
-}
-
-.duplicate-warning {
-  color: orange;
-}
-
-.no-data {
-  color: #777;
-}
-
-.grand-totals {
-  margin-top: 24px;
-}
-
 /* --- Bagged Totes --- */
 .bagged-fields {
   display: flex;
@@ -154,7 +122,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 12px; /* space between text and input */
+  gap: 12px;
 }
 
 .bagged-row span {
@@ -186,7 +154,7 @@
   font-size: 16px;
 }
 
-/* --- Pick Calculator Table Enhancements --- */
+/* --- Pick Calculator --- */
 .pick-card .data-table {
   border-collapse: separate;
   border-spacing: 0;
@@ -208,34 +176,13 @@
   border-right: none;
 }
 
-.pick-card .data-table thead th {
-  background-color: #f2f6fd;
-  color: #333;
-  font-weight: 600;
-}
-
-.pick-card .data-table tbody tr:nth-child(even) {
-  background-color: #f9fbff;
-}
-
-.pick-card .data-table tbody tr:nth-child(odd) {
-  background-color: #ffffff;
-}
-
-.pick-card .data-table tbody tr:hover {
-  background-color: #e9f2ff;
-  transition: background-color 0.2s ease;
-}
-
-/* --- Pick Calculator Inputs Smaller --- */
 .pick-card input {
-  width: 80px;          /* reduced from 100% to fixed smaller width */
-  padding: 4px 6px;     /* smaller padding */
   border: 1px solid #c9d1e0;
   border-radius: 6px;
   background-color: #fafcff;
-  font-size: 13px;      /* slightly smaller font */
-  text-align: right;    /* numbers align right for better readability */
+  font-size: 13px;
+  text-align: right;
+  padding: 4px 6px;
 }
 
 .pick-card input:focus {
@@ -244,44 +191,89 @@
   box-shadow: 0 0 3px rgba(74,144,226,0.4);
 }
 
-.pick-card .button-row {
+/* --- Pick Calculator Column Sizes --- */
+.picker-input { width: 40px; }      /* 2 digits */
+.uph-input { width: 60px; }         /* 3 digits */
+.outstanding-input { width: 100px; } /* 6 digits */
+
+/* --- Carousel Navigation Links --- */
+.carousel-links {
   display: flex;
-  justify-content: flex-end;
-  margin-top: 14px;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 90px;
+  margin-bottom: 16px;
 }
 
-.pick-bagged-card {
-  max-width: 1000px;
+.carousel-links button {
+  background: none;
+  border: 2px solid #007bff;
+  color: #007bff;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
 }
 
-.pick-bagged-section {
+.carousel-links button.active,
+.carousel-links button:hover {
+  background: #007bff;
+  color: white;
+}
+
+/* --- Carousel Container --- */
+.carousel-container {
+  margin-top: 10px;
+  height: calc(100vh - 180px);
   display: flex;
-  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  overflow: hidden;
+}
+
+.carousel-slide {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 20px;
+  min-height: 500px; /* reduced from 600px */
+  padding: 16px;
+}
+
+.two-card-layout {
+  display: flex;
+  flex-wrap: wrap;
   gap: 24px;
-}
-
-/* Input widths for Pick Calculator */
-.picker-input {
-  width: 40px;   /* 2 digits */
-}
-.uph-input {
-  width: 60px;   /* 3 digits */
-}
-.outstanding-input {
-  width: 100px;  /* 6 digits */
-}
-
-/* Add borders between columns */
-.pick-table th, .pick-table td {
-  border-right: 1px solid #ccc;
-  padding: 4px 6px;
-}
-
-.pick-table th:last-child, .pick-table td:last-child {
-  border-right: none;
-}
-
-.pick-table {
-  border-collapse: collapse;
+  justify-content: center;
+  align-items: flex-start;
   width: 100%;
+  max-width: 1200px;
+}
+
+/* --- Carousel Arrows Always Visible --- */
+.carousel .control-arrow {
+  opacity: 1 !important;          /* always visible */
+  visibility: visible !important; /* override hidden on non-hover */
+  background: #4a90e2 !important; /* match header gradient color */
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  top: 50% !important;
+  transform: translateY(-50%);
+  z-index: 1000;
+  transition: none !important;    /* remove fade-in transition */
+}
+
+.carousel .control-arrow:before {
+  border: solid white;
+  border-width: 0 3px 3px 0;
+  padding: 8px;
+}
+
+.carousel .control-prev { left: 10px; }
+.carousel .control-next { right: 10px; }
+
+.carousel .control-dots {
+  display: none; /* hide default dots */
 }

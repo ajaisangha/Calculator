@@ -96,39 +96,9 @@ export default function PickAndBaggedCombinedCard() {
 
   return (
     <section className="data-card pick-bagged-card">
-      <h2 className="data-title">Pick Calculator & Bagged Totes</h2>
-
-      {/* --- Bagged Totes --- */}
-      <div className="bagged-fields">
-        {[
-          { label: "Current totes ambient:", value: currentAmbient, setter: setCurrentAmbient },
-          { label: "Current totes chill:", value: currentChill, setter: setCurrentChill },
-          { label: "Totes needed ambient:", value: neededAmbient, setter: setNeededAmbient },
-          { label: "Totes needed chill:", value: neededChill, setter: setNeededChill },
-        ].map((field, i) => (
-          <div key={i} className="bagged-row">
-            <span>{field.label}</span>
-            <input type="number" value={field.value} onChange={e => field.setter(e.target.value)} className="bagged-input" />
-          </div>
-        ))}
-        <div style={{ marginTop: 8 }}>
-          <button className="calculate-btn" onClick={calculateBaggedTotes}>Calculate & Save Bagged Totes</button>
-          <button className="clear-btn" onClick={clearBaggedTotes}>Clear Bagged Totes</button>
-        </div>
-
-        {resultAmbient !== null && resultChill !== null && (
-          <div className="bagged-result">
-            <div className="result-line">
-              <span>Ambient after pick:</span> <span>{resultAmbient}</span>
-            </div>
-            <div className="result-line">
-              <span>Chill after pick:</span> <span>{resultChill}</span>
-            </div>
-          </div>
-        )}
-      </div>
 
       {/* --- Pick Calculator --- */}
+      <h2 className="data-title">Pick Calculator</h2>
       <div className="table-container" style={{ marginTop: 24 }}>
         <table className="data-table pick-table">
           <thead>
@@ -162,6 +132,38 @@ export default function PickAndBaggedCombinedCard() {
           <button className="clear-btn" onClick={clearPickCalculator}>Clear Pick Calculator</button>
         </div>
       </div>
+
+      <h2 className="data-title">Bagged Totes</h2>
+      {/* --- Bagged Totes --- */}
+      <div className="bagged-fields">
+        {[
+          { label: "Current totes ambient:", value: currentAmbient, setter: setCurrentAmbient },
+          { label: "Current totes chill:", value: currentChill, setter: setCurrentChill },
+          { label: "Totes needed ambient:", value: neededAmbient, setter: setNeededAmbient },
+          { label: "Totes needed chill:", value: neededChill, setter: setNeededChill },
+        ].map((field, i) => (
+          <div key={i} className="bagged-row">
+            <span>{field.label}</span>
+            <input type="number" value={field.value} onChange={e => field.setter(e.target.value)} className="bagged-input" />
+          </div>
+        ))}
+        <div style={{ marginTop: 8 }}>
+          <button className="calculate-btn" onClick={calculateBaggedTotes}>Calculate & Save Bagged Totes</button>
+          <button className="clear-btn" onClick={clearBaggedTotes}>Clear Bagged Totes</button>
+        </div>
+        
+        {resultAmbient !== null && resultChill !== null && (
+          <div className="bagged-result">
+            <div className="result-line">
+              <span>Ambient after pick:</span> <span>{resultAmbient}</span>
+            </div>
+            <div className="result-line">
+              <span>Chill after pick:</span> <span>{resultChill}</span>
+            </div>
+          </div>
+        )}
+      </div>
+
     </section>
   );
 }
