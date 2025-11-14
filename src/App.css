@@ -280,9 +280,16 @@
 
 /* ShiftEOSCard adjustments to prevent scrolling */
 .shift-eos-card {
-  max-width: 700px;  /* reduced width to fit page */
-  margin: 0 auto;    /* center horizontally */
+  max-width: 1600px;
+  width: 100%;
+  margin: 0 auto;
   padding: 16px;
+}
+
+@media (max-width: 1100px) {
+  .shift-eos-flex {
+    flex-direction: column; /* Stacks automatically on smaller screens */
+  }
 }
 
 .shift-eos-table input {
@@ -327,4 +334,37 @@
   min-width: 350px;
   max-width: 450px;
   overflow-x: auto;
+}
+
+.shift-eos-flex {
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.shift-subcard {
+  flex: 1;
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 6px 14px rgba(0,0,0,0.1);
+}
+
+.subcard-title {
+  margin-bottom: 12px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.compact-table td,
+.compact-table th {
+  padding: 6px 8px !important;
+}
+
+.tiny-input {
+  width: 70px;
+  padding: 4px 6px;
+  font-size: 14px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
 }
