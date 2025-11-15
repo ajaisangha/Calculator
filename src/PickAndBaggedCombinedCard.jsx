@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { db } from "./firebase";
-import { doc, onSnapshot, setDoc, deleteDoc } from "firebase/firestore";
+import { doc, onSnapshot, setDoc } from "firebase/firestore";
 import "./App.css";
 
 const PICK_BAGGED_DOC = doc(db, "totes", "pickAndBagged");
@@ -22,7 +22,11 @@ export default function PickAndBaggedCombinedCard() {
   const [ambientOutstanding, setAmbientOutstanding] = useState("");
   const [chillOutstanding, setChillOutstanding] = useState("");
 
-  // Load data from Firestore
+  // --- Toast Notifications ---
+  const [baggedToast, setBaggedToast] = useState({ show: false, message: "" });
+  const [pickCalcToast, setPickCalcToast] = useState({ show: false, message: "" });
+
+  // --- Load data from Firestore ---
   useEffect(() => {
     const unsubscribe = onSnapshot(PICK_BAGGED_DOC, (docSnap) => {
       if (docSnap.exists()) {
@@ -31,8 +35,8 @@ export default function PickAndBaggedCombinedCard() {
         setCurrentChill(data.currentChill || "");
         setNeededAmbient(data.neededAmbient || "");
         setNeededChill(data.neededChill || "");
-        setResultAmbient(data.resultAmbient || null);
-        setResultChill(data.resultChill || null);
+        setResultAmbient(data.resultAmbient ?? null);
+        setResultChill(data.resultChill ?? null);
 
         setAmbientPickers(data.ambientPickers || "");
         setChillPickers(data.chillPickers || "");
@@ -49,49 +53,36 @@ export default function PickAndBaggedCombinedCard() {
   const calculateProjected = (uph, pickers) => (parseFloat(uph) || 0) * (parseFloat(pickers) || 0);
 
   const calculateFinishTime = (outstanding, projected) => {
-  if (!projected || projected === 0) return "-";
+    if (!projected || projected === 0) return "-";
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth();
+    const day = now.getDate();
+    const time225 = new Date(year, month, day, 2, 25, 0);
+    const time310 = new Date(year, month, day, 3, 10, 0);
+    const hoursNeeded = outstanding / projected;
+    let finishTime;
+    if (now < time225) finishTime = new Date(now.getTime() + hoursNeeded * 3600000 + 45 * 60000);
+    else if (now > time310) finishTime = new Date(now.getTime() + hoursNeeded * 3600000);
+    else finishTime = new Date(time310.getTime() + hoursNeeded * 3600000);
+    const hours = finishTime.getHours();
+    const minutes = finishTime.getMinutes();
+    const ampm = hours >= 12 ? "PM" : "AM";
+    const displayHours = hours % 12 === 0 ? 12 : hours % 12;
+    const displayMinutes = minutes.toString().padStart(2, "0");
+    return `${displayHours}:${displayMinutes} ${ampm}`;
+  };
 
-  const now = new Date();
+  // --- Toast Helpers ---
+  const showBaggedToast = (msg) => {
+    setBaggedToast({ show: true, message: msg });
+    setTimeout(() => setBaggedToast({ show: false, message: "" }), 2000);
+  };
 
-  // Extract today's date parts
-  const year = now.getFullYear();
-  const month = now.getMonth();
-  const day = now.getDate();
-
-  // Create today's 2:25 AM and 3:10 AM timestamps
-  const time225 = new Date(year, month, day, 2, 25, 0);
-  const time310 = new Date(year, month, day, 3, 10, 0);
-
-  // Calculate hours needed
-  const hoursNeeded = outstanding / projected; // no buffer yet
-
-  let finishTime;
-
-  // BEFORE 2:25 AM → add 45 minutes buffer
-  if (now < time225) {
-    finishTime = new Date(now.getTime() + hoursNeeded * 3600000 + 45 * 60000);
-  }
-
-  // AFTER 3:10 AM → no buffer
-  else if (now > time310) {
-    finishTime = new Date(now.getTime() + hoursNeeded * 3600000);
-  }
-
-  // BETWEEN 2:25 and 3:10 → lock start time at 3:10 AM
-  else {
-    finishTime = new Date(time310.getTime() + hoursNeeded * 3600000);
-  }
-
-  // Format AM/PM display
-  const hours = finishTime.getHours();
-  const minutes = finishTime.getMinutes();
-  const ampm = hours >= 12 ? "PM" : "AM";
-  const displayHours = hours % 12 === 0 ? 12 : hours % 12;
-  const displayMinutes = minutes.toString().padStart(2, "0");
-
-  return `${displayHours}:${displayMinutes} ${ampm}`;
-};
-
+  const showPickCalcToast = (msg) => {
+    setPickCalcToast({ show: true, message: msg });
+    setTimeout(() => setPickCalcToast({ show: false, message: "" }), 2000);
+  };
 
   // --- Bagged Totes Actions ---
   const calculateBaggedTotes = async () => {
@@ -100,6 +91,7 @@ export default function PickAndBaggedCombinedCard() {
     setResultAmbient(ambient);
     setResultChill(chill);
     await setDoc(PICK_BAGGED_DOC, { currentAmbient, currentChill, neededAmbient, neededChill, resultAmbient: ambient, resultChill: chill }, { merge: true });
+    showBaggedToast("Bagged Totes Saved");
   };
 
   const clearBaggedTotes = async () => {
@@ -111,6 +103,7 @@ export default function PickAndBaggedCombinedCard() {
   // --- Pick Calculator Actions ---
   const calculatePickCalculator = async () => {
     await setDoc(PICK_BAGGED_DOC, { ambientPickers, chillPickers, ambientUPH, chillUPH, ambientOutstanding, chillOutstanding }, { merge: true });
+    showPickCalcToast("Pick Calculator Saved");
   };
 
   const clearPickCalculator = async () => {
@@ -127,8 +120,7 @@ export default function PickAndBaggedCombinedCard() {
   const chillFinish = calculateFinishTime(parseFloat(chillOutstanding) || 0, chillProjected);
 
   return (
-    <section className="data-card pick-bagged-card">
-
+    <section className="data-card pick-bagged-card" style={{ position: "relative" }}>
       {/* --- Pick Calculator --- */}
       <h2 className="data-title">Pick Calculator</h2>
       <div className="table-container" style={{ marginTop: 24 }}>
@@ -159,7 +151,7 @@ export default function PickAndBaggedCombinedCard() {
             ))}
           </tbody>
         </table>
-        <div style={{ marginTop: 8 }}>
+        <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
           <button className="calculate-btn" onClick={calculatePickCalculator}>Save Pick Calculator</button>
           <button className="clear-btn" onClick={clearPickCalculator}>Clear Pick Calculator</button>
         </div>
@@ -168,8 +160,7 @@ export default function PickAndBaggedCombinedCard() {
       <h2 className="data-title">Current Bagged Totes</h2>
       {/* --- Bagged Totes --- */}
       <div className="bagged-fields">
-        {[
-          { label: "Current totes ambient:", value: currentAmbient, setter: setCurrentAmbient },
+        {[{ label: "Current totes ambient:", value: currentAmbient, setter: setCurrentAmbient },
           { label: "Current totes chill:", value: currentChill, setter: setCurrentChill },
           { label: "Totes needed ambient:", value: neededAmbient, setter: setNeededAmbient },
           { label: "Totes needed chill:", value: neededChill, setter: setNeededChill },
@@ -179,23 +170,25 @@ export default function PickAndBaggedCombinedCard() {
             <input type="number" value={field.value} onChange={e => field.setter(e.target.value)} className="bagged-input" />
           </div>
         ))}
-        <div style={{ marginTop: 8 }}>
+        <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
           <button className="calculate-btn" onClick={calculateBaggedTotes}>Calculate & Save Bagged Totes</button>
           <button className="clear-btn" onClick={clearBaggedTotes}>Clear Bagged Totes</button>
         </div>
-        
         {resultAmbient !== null && resultChill !== null && (
           <div className="bagged-result">
-            <div className="result-line">
-              <span>Ambient after pick:</span> <span>{resultAmbient}</span>
-            </div>
-            <div className="result-line">
-              <span>Chill after pick:</span> <span>{resultChill}</span>
-            </div>
+            <div className="result-line"><span>Ambient after pick:</span> <span>{resultAmbient}</span></div>
+            <div className="result-line"><span>Chill after pick:</span> <span>{resultChill}</span></div>
           </div>
         )}
       </div>
 
+      {/* --- Toast Notifications --- */}
+      {baggedToast.show && (
+        <div className="toast-notification-center">{baggedToast.message}</div>
+      )}
+      {pickCalcToast.show && (
+        <div className="toast-notification-center">{pickCalcToast.message}</div>
+      )}
     </section>
   );
 }

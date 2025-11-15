@@ -15,7 +15,10 @@ export default function BaggedTotesCard() {
   const [baggedChill, setBaggedChill] = useState(null);
   const [totalBagged, setTotalBagged] = useState(null);
 
-  // Load data from Firestore
+  // --- Toast Notification ---
+  const [toast, setToast] = useState({ show: false, message: "" });
+
+  // --- Load data from Firestore ---
   useEffect(() => {
     const unsubscribe = onSnapshot(BAGGED_TOTES_DOC, (docSnap) => {
       if (docSnap.exists()) {
@@ -31,6 +34,12 @@ export default function BaggedTotesCard() {
     });
     return () => unsubscribe();
   }, []);
+
+  // --- Toast Helper ---
+  const showToast = (msg) => {
+    setToast({ show: true, message: msg });
+    setTimeout(() => setToast({ show: false, message: "" }), 2000);
+  };
 
   // --- Actions ---
   const calculateBaggedTotes = async () => {
@@ -53,6 +62,8 @@ export default function BaggedTotesCard() {
       },
       { merge: true }
     );
+
+    showToast("Bagged Totes Saved");
   };
 
   const clearBaggedTotes = async () => {
@@ -80,45 +91,28 @@ export default function BaggedTotesCard() {
   };
 
   return (
-    <section className="data-card bagged-card">
+    <section className="data-card bagged-card" style={{ position: "relative" }}>
       <h2 className="data-title">Bagged Totes</h2>
 
       <div className="bagged-fields">
-        <div className="bagged-row">
-          <span>Ambient totes received:</span>
-          <input
-            type="number"
-            value={receivedAmbient}
-            onChange={(e) => setReceivedAmbient(e.target.value)}
-          />
-        </div>
-        <div className="bagged-row">
-          <span>Chill totes received:</span>
-          <input
-            type="number"
-            value={receivedChill}
-            onChange={(e) => setReceivedChill(e.target.value)}
-          />
-        </div>
-        <div className="bagged-row">
-          <span>Current totes in hive bagged ambient:</span>
-          <input
-            type="number"
-            value={currentAmbient}
-            onChange={(e) => setCurrentAmbient(e.target.value)}
-          />
-        </div>
-        <div className="bagged-row">
-          <span>Current totes in hive bagged chill:</span>
-          <input
-            type="number"
-            value={currentChill}
-            onChange={(e) => setCurrentChill(e.target.value)}
-          />
-        </div>
+        {[
+          { label: "Ambient totes received:", value: receivedAmbient, setter: setReceivedAmbient },
+          { label: "Chill totes received:", value: receivedChill, setter: setReceivedChill },
+          { label: "Current totes in hive bagged ambient:", value: currentAmbient, setter: setCurrentAmbient },
+          { label: "Current totes in hive bagged chill:", value: currentChill, setter: setCurrentChill },
+        ].map((field, i) => (
+          <div key={i} className="bagged-row">
+            <span>{field.label}</span>
+            <input
+              type="number"
+              value={field.value}
+              onChange={(e) => field.setter(e.target.value)}
+            />
+          </div>
+        ))}
       </div>
 
-      <div style={{ marginTop: 8 }}>
+      <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
         <button className="calculate-btn" onClick={calculateBaggedTotes}>
           Calculate & Save Bagged Totes
         </button>
@@ -139,6 +133,11 @@ export default function BaggedTotesCard() {
             <span>Total Bagged Totes:</span> <span>{totalBagged}</span>
           </div>
         </div>
+      )}
+
+      {/* Toast Notification */}
+      {toast.show && (
+        <div className="toast-notification-center">{toast.message}</div>
       )}
     </section>
   );

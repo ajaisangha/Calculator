@@ -19,6 +19,10 @@ export default function TotesUsedCard({
   const [dolliesEmpty, setDolliesEmpty] = useState(0);
   const [dolliesResult, setDolliesResult] = useState(null);
 
+  // --- Notification State ---
+  const [notification, setNotification] = useState(""); // Added / Updated
+  const [showToast, setShowToast] = useState(false);
+
   // --- Load Dollies data from Firestore ---
   useEffect(() => {
     const unsubscribe = onSnapshot(TOTES_DOC, (docSnap) => {
@@ -36,13 +40,22 @@ export default function TotesUsedCard({
   // --- Dollies Actions ---
   const calculateDollies = async () => {
     const result = (parseInt(dolliesUsed, 10) || 0) + (parseInt(dolliesEmpty, 10) || 0) - (parseInt(dolliesReceived, 10) || 0);
+
+    // Determine notification
+    setNotification(dolliesResult === null ? "Added" : "Updated");
+    setShowToast(true);
+
     setDolliesResult(result);
+
     await setDoc(TOTES_DOC, {
       dolliesReceived,
       dolliesUsed,
       dolliesEmpty,
       dolliesResult: result
     }, { merge: true });
+
+    // Remove toast after animation (2.5s)
+    setTimeout(() => setShowToast(false), 2500);
   };
 
   const clearDollies = async () => {
@@ -50,6 +63,8 @@ export default function TotesUsedCard({
     setDolliesUsed(0);
     setDolliesEmpty(0);
     setDolliesResult(null);
+    setNotification("");
+    setShowToast(false);
     await setDoc(TOTES_DOC, {
       dolliesReceived: 0,
       dolliesUsed: 0,
@@ -178,6 +193,13 @@ export default function TotesUsedCard({
               <div className="result-line">
                 <span>Dollies Dekitted:</span>
                 <span style={{ fontWeight: "bold", marginLeft: "8px" }}>{dolliesResult}</span>
+              </div>
+            )}
+
+            {/* Animated Toast */}
+            {showToast && (
+              <div className="toast-notification-center">
+                {notification}
               </div>
             )}
           </div>

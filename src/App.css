@@ -385,3 +385,27 @@
   border-radius: 6px;
   border: 1px solid #ccc;
 }
+
+/* --- Centered Toast Notification --- */
+.toast-notification-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: #4a90e2;
+  color: white;
+  font-weight: 600;
+  padding: 10px 20px;
+  border-radius: 10px;
+  box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+  opacity: 0;
+  z-index: 999;
+  animation: slideFadeCenter 2s forwards;
+}
+
+@keyframes slideFadeCenter {
+  0% { opacity: 0; transform: translate(-50%, 30%); }
+  10% { opacity: 1; transform: translate(-50%, -50%); }
+  90% { opacity: 1; transform: translate(-50%, -50%); }
+  100% { opacity: 0; transform: translate(-50%, -60%); }
+}

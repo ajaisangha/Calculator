@@ -27,6 +27,14 @@ export default function ShiftEOSCard() {
   const [chillPick, setChillPick] = useState("0");
   const [freezerPick, setFreezerPick] = useState("0");
 
+  // --- Toast Notifications ---
+  const [toast, setToast] = useState({ show: false, message: "" });
+
+  const showToast = (message) => {
+    setToast({ show: true, message });
+    setTimeout(() => setToast({ show: false, message: "" }), 2000);
+  };
+
   // --- Load Firestore Data ---
   useEffect(() => {
     const unsubscribe = onSnapshot(SHIFT_EOS_DOC, (docSnap) => {
@@ -42,14 +50,13 @@ export default function ShiftEOSCard() {
         setFreezerPick(data.freezerPick?.toString() || "0");
       }
     });
-
     return () => unsubscribe();
   }, []);
 
   // --- Shift Table Handlers ---
   const handleShiftChange = (idx, field, value) => {
     const updated = [...shiftData];
-    updated[idx][field] = value === "" ? "" : value; // allow empty string while typing
+    updated[idx][field] = value === "" ? "" : value;
     setShiftData(updated);
   };
 
@@ -71,7 +78,6 @@ export default function ShiftEOSCard() {
 
   // --- Firestore Actions ---
   const saveShiftStaffing = async () => {
-    // convert empty strings to 0 before saving
     const numericShiftData = shiftData.map(row => ({
       department: row.department,
       present: parseInt(row.present) || 0,
@@ -81,6 +87,7 @@ export default function ShiftEOSCard() {
     }));
 
     await setDoc(SHIFT_EOS_DOC, { shiftData: numericShiftData }, { merge: true });
+    showToast("Shift Staffing Saved");
   };
 
   const saveInboundOutbound = async () => {
@@ -93,6 +100,7 @@ export default function ShiftEOSCard() {
       chillPick: parseFloat(chillPick) || 0,
       freezerPick: parseFloat(freezerPick) || 0,
     }, { merge: true });
+    showToast("Inbound/Outbound Saved");
   };
 
   const clearShiftStaffing = async () => {
@@ -121,7 +129,7 @@ export default function ShiftEOSCard() {
   };
 
   return (
-    <section className="data-card shift-eos-card">
+    <section className="data-card shift-eos-card" style={{ position: "relative" }}>
       <h2 className="data-title">Shift EOS Calculator</h2>
 
       <div className="shift-eos-flex">
@@ -237,6 +245,11 @@ export default function ShiftEOSCard() {
         </div>
 
       </div>
+
+      {/* Toast Notification */}
+      {toast.show && (
+        <div className="toast-notification-center">{toast.message}</div>
+      )}
     </section>
   );
 }
