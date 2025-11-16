@@ -6,7 +6,7 @@
   height: 100vh;
 }
 
-/* Ensure header and nav never shrink */
+/* Header */
 .header {
   flex-shrink: 0;
   position: fixed;
@@ -18,7 +18,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
   z-index: 1000;
 }
 
@@ -28,46 +28,31 @@
   color: white;
 }
 
-/* -----------------------------------------------------------
-   UNIVERSAL DARK-MODE SAFE TEXT + INPUT FIX  
------------------------------------------------------------- */
-body, .app-container {
-  color: #111 !important;
-}
+/* Universal Dark Mode Text Fix */
+body, .app-container { color: #111 !important; }
 
 .data-card,
 .shift-subcard,
 .pick-card,
-.bagged-card {
-  color: #111 !important;
-}
-
+.bagged-card,
 h1, h2, h3, h4, h5, h6,
 .data-title,
-.subcard-title {
-  color: #111 !important;
-}
-
+.subcard-title,
 .data-table td,
 .data-table th,
 .compact-table td,
-.compact-table th {
-  color: #111 !important;
-}
-
-input,
-input[type="number"],
-input[type="text"] {
-  color: #111 !important;
-  background: white !important;
-}
-
+.compact-table th,
 .bagged-row span,
 .bagged-result .result-line span {
   color: #111 !important;
 }
 
-/* --- Navigation Buttons --- */
+input {
+  color: #111 !important;
+  background: white !important;
+}
+
+/* Navigation Buttons */
 .carousel-links {
   display: flex;
   justify-content: center;
@@ -80,21 +65,21 @@ input[type="text"] {
 .carousel-links button {
   background: none;
   border: 2px solid #007bff;
-  color: #007bff;
+  color: #007bff !important;
   padding: 8px 16px;
   border-radius: 6px;
   cursor: pointer;
   font-weight: 600;
-  transition: all 0.2s;
+  transition: 0.2s;
 }
 
 .carousel-links button.active,
 .carousel-links button:hover {
   background: #007bff;
-  color: white;
+  color: white !important;
 }
 
-/* --- Carousel Container Uses Remaining Height --- */
+/* Carousel Container */
 .carousel-container {
   flex: 1;
   display: flex;
@@ -104,24 +89,27 @@ input[type="text"] {
   min-height: 0;
 }
 
-/* FIXED: Side-by-side cards + internal scrolling */
+/* --- FIXED: No scrolling, no arrows, side-by-side layout --- */
 .carousel-slide {
   display: flex;
-  flex-direction: row;      /* <--- KEEP CARDS SIDE BY SIDE */
+  flex-direction: row;     /* keep cards side-by-side */
   gap: 20px;
   justify-content: center;
   align-items: flex-start;
 
   width: 100%;
   height: 100%;
-  overflow-y: auto;         /* <--- INTERNAL SCROLL */
+
+  overflow-y: visible !important;  /* no forced scroll */
+  overflow-x: visible !important;
+
   padding: 16px;
 }
 
-/* Explicit two-card layout fix */
+/* Two-card layout stays horizontal */
 .two-card-layout {
   display: flex;
-  flex-direction: row;     /* <--- SIDE-BY-SIDE ALWAYS */
+  flex-direction: row;
   flex-wrap: nowrap;
   gap: 24px;
   justify-content: center;
@@ -131,80 +119,53 @@ input[type="text"] {
 }
 
 .two-card-layout > * {
-  flex-shrink: 0;          /* Prevent cards from collapsing */
+  flex-shrink: 0;
 }
 
-/* Arrows always visible */
-.carousel .control-arrow {
-  opacity: 1 !important;
-  visibility: visible !important;
-  background: #4a90e2 !important;
-  border-radius: 50%;
-  width: 40px;
-  height: 40px;
-  top: 50% !important;
-  transform: translateY(-50%);
-  z-index: 1000;
+/* REMOVE ARROWS AND DOTS */
+.carousel .control-arrow,
+.carousel .control-prev,
+.carousel .control-next,
+.carousel .control-dots {
+  display: none !important;
 }
 
-.carousel .control-arrow:before {
-  border: solid white;
-  border-width: 0 3px 3px 0;
-  padding: 8px;
-}
-
-.carousel .control-prev { left: 10px; }
-.carousel .control-next { right: 10px; }
-
-.carousel .control-dots { display: none; }
-
-/* --- Card Base --- */
+/* Card Base */
 .data-card {
   flex: 1;
   background: linear-gradient(145deg, #f0f4fc, #d9e6fc);
   border-radius: 16px;
-  box-shadow: 0 12px 24px rgba(0,0,0,0.15), 0 6px 12px rgba(0,0,0,0.10);
+  box-shadow: 0 12px 24px rgba(0,0,0,0.15);
   padding: 24px;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: 0.2s;
 }
 
 .data-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 20px 40px rgba(0,0,0,0.18), 0 10px 20px rgba(0,0,0,0.12);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.18);
 }
 
-.adaptive-card {
-  max-width: 1000px;
-}
+.adaptive-card { max-width: 1000px; }
+.bagged-card  { flex: 2; max-width: 1000px; }
 
-.bagged-card {
-  flex: 2;
-  max-width: 1000px;
-}
-
-/* --- Buttons --- */
+/* Buttons */
 .clear-btn {
   padding: 8px 14px;
   margin-left: 12px;
   border-radius: 6px;
-  border: none;
   background-color: #007bff;
   color: white;
+  border: none;
 }
 
-.clear-btn:hover {
-  background-color: #0056b3;
-}
-
+.clear-btn:hover { background-color: #0056b3; }
 .clear-btn:disabled {
-  background-color: #ccc;
+  background: #ccc;
   cursor: not-allowed;
 }
 
-/* --- Tables --- */
-.table-container {
-  overflow-x: auto;
-}
+/* Tables */
+.table-container { overflow-x: auto; }
 
 .data-table {
   width: 100%;
@@ -217,34 +178,23 @@ input[type="text"] {
 .data-table td {
   padding: 10px 12px;
   border-bottom: 1px solid #eee;
-  text-align: left;
 }
 
 .data-table thead th {
-  background-color: #f9f9f9;
+  background: #f9f9f9;
   position: sticky;
   top: 0;
 }
 
-.data-table tbody tr:nth-child(even) {
-  background-color: #fafafa;
-}
+.data-table tbody tr:nth-child(even) { background: #fafafa; }
+.data-table tbody tr:hover { background: #e6f0ff; }
 
-.data-table tbody tr:hover {
-  background-color: #e6f0ff;
-}
-
-/* --- Bagged Totes --- */
+/* Bagged Totes */
 .bagged-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-}
-
-.bagged-row span {
-  flex: 1;
-  font-weight: 500;
 }
 
 .bagged-row input {
@@ -255,42 +205,16 @@ input[type="text"] {
   text-align: right;
 }
 
-.bagged-result .result-line {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  font-weight: 600;
-}
-
-/* Bagged Card Layout */
-.bagged-card {
-  display: flex;
-  flex-direction: column;
-  max-height: 600px;
-  padding: 24px;
-  overflow: hidden;
-}
-
-.bagged-fields {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  flex-shrink: 0;
-}
-
 .bagged-result {
   margin-top: 16px;
   padding-top: 8px;
   border-top: 1px solid #ccc;
-  flex-shrink: 1;
-  overflow-y: auto;
   max-height: 150px;
+  overflow-y: auto;
 }
 
-/* --- Pick Calculator --- */
+/* Pick Calculator */
 .pick-card .data-table {
-  border-collapse: separate;
-  border-spacing: 0;
   border: 1px solid #d0d7e2;
   border-radius: 8px;
   background: white;
@@ -313,7 +237,7 @@ input[type="text"] {
 .uph-input { width: 60px; }
 .outstanding-input { width: 100px; }
 
-/* --- Toast Notification --- */
+/* Toast Notification */
 .toast-notification-center {
   position: absolute;
   top: 50%;
@@ -329,12 +253,11 @@ input[type="text"] {
 
 @keyframes slideFadeCenter {
   0% { opacity: 0; transform: translate(-50%, 30%); }
-  10% { opacity: 1; transform: translate(-50%, -50%); }
-  90% { opacity: 1; }
+  10%, 90% { opacity: 1; transform: translate(-50%, -50%); }
   100% { opacity: 0; transform: translate(-50%, -60%); }
 }
 
-/* --- Shift EOS Card --- */
+/* Shift EOS Card */
 .shift-eos-card {
   max-width: 1600px;
   width: 100%;
@@ -342,17 +265,15 @@ input[type="text"] {
   margin: 0 auto;
 }
 
-@media (max-width: 1100px) {
-  .shift-eos-flex {
-    flex-direction: column;
-  }
-}
-
 .shift-eos-flex {
   display: flex;
   gap: 16px;
   justify-content: space-between;
   flex-wrap: wrap;
+}
+
+@media (max-width: 1100px) {
+  .shift-eos-flex { flex-direction: column; }
 }
 
 .shift-table-container {
@@ -368,7 +289,6 @@ input[type="text"] {
 }
 
 .shift-subcard {
-  flex: 1;
   background: white;
   border-radius: 12px;
   padding: 16px;
