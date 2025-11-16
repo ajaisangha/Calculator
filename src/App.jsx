@@ -3,10 +3,12 @@ import Papa from "papaparse";
 import { doc, onSnapshot, setDoc, deleteDoc } from "firebase/firestore";
 import { db } from "./firebase";
 import "./App.css";
+
 import TotesUsedCard from "./TotesUsedCard";
 import BaggedTotesCard from "./BaggedTotesCard";
 import PickAndBaggedCombinedCard from "./PickAndBaggedCombinedCard";
 import ShiftEOSCard from "./ShiftEOSCard";
+
 import { Carousel } from "react-responsive-carousel";
 import "react-responsive-carousel/lib/styles/carousel.min.css";
 
@@ -20,6 +22,9 @@ function Header() {
   );
 }
 
+// -------------------------
+// Utility Functions
+// -------------------------
 function parseToteCell(cell) {
   if (!cell && cell !== 0) return 0;
   const str = String(cell).trim();
@@ -58,6 +63,9 @@ function getRouteName(row, shipmentKey, dispatchKey) {
   return "Spoke";
 }
 
+// -------------------------
+// APP COMPONENT
+// -------------------------
 export default function App() {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -72,14 +80,19 @@ export default function App() {
   const [currentAmbient, setCurrentAmbient] = useState("");
   const [currentChill, setCurrentChill] = useState("");
 
+  // -------------------------
+  // Firestore Snapshot
+  // -------------------------
   useEffect(() => {
     const unsubscribe = onSnapshot(DATA_DOC, (docSnap) => {
       if (docSnap.exists()) {
         const savedRows = docSnap.data().rows || [];
         setRows(savedRows);
         setConsignmentSet(new Set(savedRows.map(r => r.consignment)));
+
         const routeMap = {};
         let grand={ambient:0,chilled:0,freezer:0,total:0};
+
         savedRows.forEach(r => {
           if (!routeMap[r.route]) routeMap[r.route] = { totals:{ambient:0,chilled:0,freezer:0,total:0}, rows:[] };
           routeMap[r.route].totals.ambient += r.ambient;
@@ -87,10 +100,12 @@ export default function App() {
           routeMap[r.route].totals.freezer += r.freezer;
           routeMap[r.route].totals.total += r.ambient + r.chilled + r.freezer;
           routeMap[r.route].rows.push(r);
+
           grand.ambient += r.ambient;
           grand.chilled += r.chilled;
           grand.freezer += r.freezer;
         });
+
         grand.total = grand.ambient + grand.chilled + grand.freezer;
         setRoutesInfo(routeMap);
         setGrandTotals(grand);
@@ -102,9 +117,13 @@ export default function App() {
       }
       setLoading(false);
     });
+
     return () => unsubscribe();
   }, []);
 
+  // -------------------------
+  // File Handling
+  // -------------------------
   const handleFiles = (files) => {
     Array.from(files).forEach(file => {
       Papa.parse(file, {
@@ -116,9 +135,11 @@ export default function App() {
           if (!dataRows.length) return;
           const headers = Object.keys(dataRows[0]);
           const { consignmentKey, ambientKey, chilledKey, freezerKey, shipmentKey, dispatchKey } = getColumnKeys(headers);
+
           const newRows = [];
           const newConsignments = new Set(consignmentSet);
           let duplicatesDetected = 0;
+
           dataRows.forEach(r => {
             const consignment = (r[consignmentKey]||"").trim();
             if (!consignment || newConsignments.has(consignment)) {
@@ -126,7 +147,9 @@ export default function App() {
               return;
             }
             newConsignments.add(consignment);
+
             const route = getRouteName(r, shipmentKey, dispatchKey);
+
             newRows.push({
               consignment,
               route,
@@ -135,10 +158,12 @@ export default function App() {
               freezer: freezerKey ? parseToteCell(r[freezerKey]) : 0,
             });
           });
+
           if (duplicatesDetected > 0) {
-            setDuplicateMessage(`${duplicatesDetected} duplicate line${duplicatesDetected > 1 ? "s" : ""} ignored`);
+            setDuplicateMessage(`${duplicatesDetected} duplicate line${duplicatesDetected>1?"s":""} ignored`);
             setTimeout(() => setDuplicateMessage(""), 5000);
           }
+
           if (newRows.length) {
             try { await setDoc(DATA_DOC, { rows: [...rows, ...newRows] }); }
             catch(err) { console.error("Firestore upload error:", err); }
@@ -156,37 +181,42 @@ export default function App() {
   };
 
   const clearAll = async () => {
-    try { await deleteDoc(DATA_DOC); } catch (err) { console.error("Firestore clear error:", err); }
+    try { await deleteDoc(DATA_DOC); } catch (err) { console.error(err); }
   };
 
   const baggedAmbient = (parseInt(currentAmbient,10)||0) + (grandTotals.ambient||0) - (parseInt(receivedAmbient,10)||0);
-  const baggedChill = (parseInt(currentChill,10)||0) + (grandTotals.chilled||0) - (parseInt(receivedChill,10)||0);
-  const totalBagged = baggedAmbient + baggedChill;
+  const baggedChill   = (parseInt(currentChill,10)||0) + (grandTotals.chilled||0) - (parseInt(receivedChill,10)||0);
+  const totalBagged   = baggedAmbient + baggedChill;
 
   if (loading) return <p style={{ marginTop:120, textAlign:"center" }}>Loading...</p>;
 
+  // -------------------------
+  // RENDER
+  // -------------------------
   return (
     <div className="app-container">
       <Header />
 
-      {/* Navigation Links */}
+      {/* Navigation */}
       <nav className="carousel-links">
-        <button onClick={() => setSlideIndex(0)} className={slideIndex===0 ? "active" : ""}>Totes Used</button>
-        <button onClick={() => setSlideIndex(1)} className={slideIndex===1 ? "active" : ""}>Pick/Bag</button>
-        <button onClick={() => setSlideIndex(2)} className={slideIndex===2 ? "active" : ""}>Shift EOS</button>
+        <button onClick={() => setSlideIndex(0)} className={slideIndex===0?"active":""}>Totes Used</button>
+        <button onClick={() => setSlideIndex(1)} className={slideIndex===1?"active":""}>Pick/Bag</button>
+        <button onClick={() => setSlideIndex(2)} className={slideIndex===2?"active":""}>Shift EOS</button>
       </nav>
 
+      {/* Carousel */}
       <div className="carousel-container">
         <Carousel
           selectedItem={slideIndex}
-          onChange={(i) => setSlideIndex(i)}
+          onChange={setSlideIndex}
           showThumbs={false}
           showStatus={false}
           showIndicators={false}
-          showArrows={true}
           infiniteLoop={false}
           swipeable
+          emulateTouch
         >
+          {/* Slide 1: Totes Used */}
           <div className="carousel-slide">
             <TotesUsedCard
               rows={rows}
@@ -197,6 +227,8 @@ export default function App() {
               clearAll={clearAll}
             />
           </div>
+
+          {/* Slide 2: Bagged + Pick */}
           <div className="carousel-slide">
             <div className="two-card-layout">
               <BaggedTotesCard
@@ -215,6 +247,8 @@ export default function App() {
               <PickAndBaggedCombinedCard />
             </div>
           </div>
+
+          {/* Slide 3: Shift EOS */}
           <div className="carousel-slide">
             <ShiftEOSCard />
           </div>

@@ -1,26 +1,87 @@
 /* --- App Layout --- */
-html, body {
-  margin: 0;
-  padding: 0;
-  width: 100%;
-  height: 100%;
-  overflow: hidden !important; /* remove global scrolling */
-  font-family: sans-serif;
-  color: #111;
-}
-
 .app-container {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  height: 100vh !important;
-  overflow: hidden;
+}
+
+/* -----------------------------------------------------------
+   UNIVERSAL DARK-MODE SAFE TEXT + INPUT FIX  
+   Ensures all cards & tables remain readable in dark mode
+------------------------------------------------------------ */
+
+/* Force app text color */
+body, .app-container {
   color: #111 !important;
+}
+
+/* Ensure all card text stays dark */
+.data-card,
+.shift-subcard,
+.pick-card,
+.bagged-card {
+  color: #111 !important;
+}
+
+/* Headings */
+h1, h2, h3, h4, h5, h6,
+.data-title,
+.subcard-title {
+  color: #111 !important;
+}
+
+/* Table text */
+.data-table td,
+.data-table th,
+.compact-table td,
+.compact-table th {
+  color: #111 !important;
+}
+
+/* Inputs */
+input,
+input[type="number"],
+input[type="text"] {
+  color: #111 !important;
+  background: white !important;
+}
+
+/* Bagged totes labels */
+.bagged-row span {
+  color: #111 !important;
+}
+
+/* Result text */
+.bagged-result .result-line span {
+  color: #111 !important;
+}
+
+/* Buttons */
+/* Light Mode */
+body.light-mode button {
+  background: #f2f2f2;
+  color: #111;
+}
+
+/* Dark Mode */
+body.dark-mode button {
+  background: #333;
+  color: white;
+}
+
+
+/* Carousel buttons */
+.carousel-links button {
+  color: #007bff !important;
+}
+
+.carousel-links button.active,
+.carousel-links button:hover {
+  color: white !important;
 }
 
 /* --- Header --- */
 .header {
-  flex-shrink: 0;
   position: fixed;
   top: 0;
   left: 0;
@@ -40,156 +101,61 @@ html, body {
   color: white;
 }
 
-/* --- Dark Mode Text Fix --- */
-.data-card,
-.shift-subcard,
-.pick-card,
-.bagged-card,
-h1, h2, h3, h4, h5, h6,
-.data-title,
-.subcard-title,
-.data-table td,
-.data-table th,
-.compact-table td,
-.compact-table th,
-.bagged-row span,
-.bagged-result .result-line span {
-  color: #111 !important;
-}
-
-input {
-  color: #111 !important;
-  background: white !important;
-}
-
-/* --- Navigation Buttons --- */
-.carousel-links {
-  display: flex;
-  justify-content: center;
-  gap: 16px;
-  margin-top: 90px;
-  margin-bottom: 16px;
-  flex-shrink: 0;
-}
-
-.carousel-links button {
-  background: none;
-  border: 2px solid #007bff;
-  color: #007bff !important;
-  padding: 8px 16px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 600;
-  transition: 0.2s;
-}
-
-.carousel-links button.active,
-.carousel-links button:hover {
-  background: #007bff;
-  color: white !important;
-}
-
-/* --- Carousel Container --- */
-.carousel-container {
-  flex: 1;
-  width: 100%;
-  height: calc(100vh - 100px); /* header + nav */
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  overflow: hidden;
-}
-
-.carousel-slide {
-  display: flex;
-  flex-direction: row;
-  gap: 20px;
-  justify-content: center;
-  align-items: flex-start;
-  width: 100%;
-  height: 100%;
-  overflow: hidden !important;
-  padding: 0;
-  margin: 0;
-}
-
-/* --- Two-card layout fix for Bagged + Pick cards --- */
-.two-card-layout {
-  display: flex;
-  flex-direction: row;
-  gap: 24px;
-  justify-content: center;
-  align-items: stretch; /* match card heights */
-  width: 100%;
-  max-width: 1400px;
-  height: 100%;
-  overflow: hidden;
-  padding: 0 16px;
-}
-
-.two-card-layout > .bagged-card {
-  flex: 0 0 45%;      /* max width for bagged card */
-  max-width: 45%;
-  height: 100%;
-  overflow-y: auto;   /* scroll inside card if content too tall */
-}
-
-.two-card-layout > .pick-card {
-  flex: 1 1 auto;     /* take remaining space */
-  height: 100%;
-  overflow-y: auto;
-}
-
-.bagged-card,
-.pick-card {
-  max-height: 100%;
-  box-sizing: border-box;
-}
-
-/* --- Hide default carousel arrows/dots --- */
-.carousel .control-arrow,
-.carousel .control-prev,
-.carousel .control-next,
-.carousel .control-dots {
-  display: none !important;
-}
-
 /* --- Card Base --- */
 .data-card {
   flex: 1;
   background: linear-gradient(145deg, #f0f4fc, #d9e6fc);
   border-radius: 16px;
-  box-shadow: 0 12px 24px rgba(0,0,0,0.15);
+  box-shadow: 0 12px 24px rgba(0,0,0,0.15), 0 6px 12px rgba(0,0,0,0.10);
   padding: 24px;
-  transition: 0.2s;
+  transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .data-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 20px 40px rgba(0,0,0,0.18);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.18), 0 10px 20px rgba(0,0,0,0.12);
 }
 
-.adaptive-card { max-width: 1000px; }
-.bagged-card  { flex: 2; max-width: 1000px; }
+/* --- Card Sizes --- */
+.adaptive-card {
+  max-width: 1000px;
+  height: auto;
+}
 
-/* --- Buttons --- */
+.bagged-card {
+  flex: 2; /* wider than Totes Used card */
+  max-width: 1000px;
+}
+
+/* --- File Controls --- */
+.file-controls {
+  margin-bottom: 16px;
+}
+
 .clear-btn {
   padding: 8px 14px;
   margin-left: 12px;
   border-radius: 6px;
+  border: none;
   background-color: #007bff;
   color: white;
-  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s;
 }
 
-.clear-btn:hover { background-color: #0056b3; }
+.clear-btn:hover {
+  background-color: #0056b3;
+}
+
 .clear-btn:disabled {
-  background: #ccc;
+  background-color: #ccc;
   cursor: not-allowed;
 }
 
 /* --- Tables --- */
-.table-container { overflow-x: auto; }
+.table-container {
+  overflow-x: auto;
+}
 
 .data-table {
   width: 100%;
@@ -202,18 +168,26 @@ input {
 .data-table td {
   padding: 10px 12px;
   border-bottom: 1px solid #eee;
+  text-align: left;
 }
 
 .data-table thead th {
-  background: #f9f9f9;
+  background-color: #f9f9f9;
   position: sticky;
   top: 0;
+  z-index: 1;
 }
 
-.data-table tbody tr:nth-child(even) { background: #fafafa; }
-.data-table tbody tr:hover { background: #e6f0ff; }
+.data-table tbody tr:nth-child(even) {
+  background-color: #fafafa;
+}
+
+.data-table tbody tr:hover {
+  background-color: #e6f0ff;
+}
 
 /* --- Bagged Totes --- */
+
 .bagged-row {
   display: flex;
   justify-content: space-between;
@@ -221,34 +195,86 @@ input {
   gap: 12px;
 }
 
+.bagged-row span {
+  flex: 1;
+  font-weight: 500;
+}
+
 .bagged-row input {
   width: 120px;
   padding: 6px 10px;
   border-radius: 8px;
   border: 1px solid #ccc;
+  font-size: 15px;
   text-align: right;
 }
 
+
+.bagged-result .result-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-weight: 600;
+  margin-top: 8px;
+  font-size: 16px;
+}
+
+/* --- Bagged Totes Result --- */
+.bagged-card {
+  display: flex;
+  flex-direction: column;
+  max-height: 600px; /* total card max height */
+  padding: 24px;
+  overflow: hidden; /* prevents card overflow outside */
+}
+
+.bagged-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex-shrink: 0; /* prevent inputs from shrinking */
+}
+
+/* Make result section scroll internally if it grows too large */
 .bagged-result {
   margin-top: 16px;
   padding-top: 8px;
   border-top: 1px solid #ccc;
-  max-height: 150px;
-  overflow-y: auto;
+  flex-shrink: 1;
+  overflow-y: auto; /* scroll inside result if needed */
+  max-height: 150px; /* adjust as needed */
 }
+
 
 /* --- Pick Calculator --- */
 .pick-card .data-table {
+  border-collapse: separate;
+  border-spacing: 0;
   border: 1px solid #d0d7e2;
   border-radius: 8px;
+  overflow: hidden;
   background: white;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}
+
+.pick-card .data-table th,
+.pick-card .data-table td {
+  border-right: 1px solid #e0e5ef;
+  border-bottom: 1px solid #e0e5ef;
+}
+
+.pick-card .data-table th:last-child,
+.pick-card .data-table td:last-child {
+  border-right: none;
 }
 
 .pick-card input {
   border: 1px solid #c9d1e0;
   border-radius: 6px;
   background-color: #fafcff;
+  font-size: 13px;
   text-align: right;
+  padding: 4px 6px;
 }
 
 .pick-card input:focus {
@@ -257,66 +283,169 @@ input {
   box-shadow: 0 0 3px rgba(74,144,226,0.4);
 }
 
-.picker-input { width: 40px; }
-.uph-input { width: 60px; }
-.outstanding-input { width: 100px; }
+/* --- Pick Calculator Column Sizes --- */
+.picker-input { width: 40px; }      /* 2 digits */
+.uph-input { width: 60px; }         /* 3 digits */
+.outstanding-input { width: 100px; } /* 6 digits */
 
-/* --- Toast Notification --- */
-.toast-notification-center {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background-color: #4a90e2;
-  color: white;
+/* --- Carousel Navigation Links --- */
+.carousel-links {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 90px;
+  margin-bottom: 16px;
+}
+
+.carousel-links button {
+  background: none;
+  border: 2px solid #007bff;
+  color: #007bff;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
   font-weight: 600;
-  padding: 10px 20px;
-  border-radius: 10px;
-  animation: slideFadeCenter 2s forwards;
+  transition: all 0.2s;
 }
 
-@keyframes slideFadeCenter {
-  0% { opacity: 0; transform: translate(-50%, 30%); }
-  10%, 90% { opacity: 1; transform: translate(-50%, -50%); }
-  100% { opacity: 0; transform: translate(-50%, -60%); }
+.carousel-links button.active,
+.carousel-links button:hover {
+  background: #007bff;
+  color: white;
 }
 
-/* --- Shift EOS Card --- */
+/* --- Carousel Container --- */
+.carousel-container {
+  margin-top: 10px;
+  height: calc(100vh - 180px);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  overflow: hidden;
+}
+
+.carousel-slide {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 20px;
+  min-height: 500px; /* reduced from 600px */
+  padding: 16px;
+}
+
+.two-card-layout {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  justify-content: center;
+  align-items: flex-start;
+  width: 100%;
+  max-width: 1200px;
+}
+
+/* --- Carousel Arrows Always Visible --- */
+.carousel .control-arrow {
+  opacity: 1 !important;          /* always visible */
+  visibility: visible !important; /* override hidden on non-hover */
+  background: #4a90e2 !important; /* match header gradient color */
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  top: 50% !important;
+  transform: translateY(-50%);
+  z-index: 1000;
+  transition: none !important;    /* remove fade-in transition */
+}
+
+.carousel .control-arrow:before {
+  border: solid white;
+  border-width: 0 3px 3px 0;
+  padding: 8px;
+}
+
+.carousel .control-prev { left: 10px; }
+.carousel .control-next { right: 10px; }
+
+.carousel .control-dots {
+  display: none; /* hide default dots */
+}
+
+/* ShiftEOSCard adjustments to prevent scrolling */
 .shift-eos-card {
   max-width: 1600px;
   width: 100%;
-  padding: 16px;
   margin: 0 auto;
+  padding: 16px;
+}
+
+@media (max-width: 1100px) {
+  .shift-eos-flex {
+    flex-direction: column; /* Stacks automatically on smaller screens */
+  }
+}
+
+.shift-eos-table input {
+  width: 60px;       /* smaller input to fit in card */
+  padding: 4px 6px;
+  font-size: 13px;
+  text-align: right;
+  border-radius: 4px;
+  border: 1px solid #c9d1e0;
+}
+
+.shift-eos-table th, .shift-eos-table td {
+  padding: 6px 8px;
+  text-align: center;
+}
+
+.shift-eos-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.shift-eos-table th, .shift-eos-table td {
+  border: 1px solid #e0e5ef;
 }
 
 .shift-eos-flex {
   display: flex;
-  gap: 16px;
-  justify-content: space-between;
-  flex-wrap: wrap;
-}
-
-@media (max-width: 1100px) {
-  .shift-eos-flex { flex-direction: column; }
+  gap: 24px;
+  flex-wrap: wrap; /* keep responsive */
+  justify-content: center;
 }
 
 .shift-table-container {
   flex: 1;
   min-width: 400px;
   max-width: 550px;
+  overflow-x: auto;
 }
 
 .shift-calc-container {
   flex: 1;
   min-width: 350px;
   max-width: 450px;
+  overflow-x: auto;
+}
+
+.shift-eos-flex {
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
 }
 
 .shift-subcard {
+  flex: 1;
   background: white;
   border-radius: 12px;
   padding: 16px;
   box-shadow: 0 6px 14px rgba(0,0,0,0.1);
+}
+
+.subcard-title {
+  margin-bottom: 12px;
+  font-size: 18px;
+  font-weight: 600;
 }
 
 .compact-table td,
@@ -327,16 +456,31 @@ input {
 .tiny-input {
   width: 70px;
   padding: 4px 6px;
+  font-size: 14px;
   border-radius: 6px;
   border: 1px solid #ccc;
 }
 
-/* --- Internal Scroll for Cards --- */
-.data-card,
-.bagged-card,
-.pick-card,
-.shift-eos-card {
-  max-height: calc(100vh - 180px); /* header + nav + spacing */
-  overflow-y: auto;
-  overflow-x: hidden;
+/* --- Centered Toast Notification --- */
+.toast-notification-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: #4a90e2;
+  color: white;
+  font-weight: 600;
+  padding: 10px 20px;
+  border-radius: 10px;
+  box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+  opacity: 0;
+  z-index: 999;
+  animation: slideFadeCenter 2s forwards;
+}
+
+@keyframes slideFadeCenter {
+  0% { opacity: 0; transform: translate(-50%, 30%); }
+  10% { opacity: 1; transform: translate(-50%, -50%); }
+  90% { opacity: 1; transform: translate(-50%, -50%); }
+  100% { opacity: 0; transform: translate(-50%, -60%); }
 }
