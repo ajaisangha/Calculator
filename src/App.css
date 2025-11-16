@@ -57,8 +57,13 @@ input[type="text"] {
 }
 
 /* Buttons */
-button {
+.dark-mode button {
   color: white !important;
+}
+
+button {
+  background-color: #007bff; /* or any color */
+  color: white;
 }
 
 /* Carousel buttons */
