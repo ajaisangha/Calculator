@@ -1,12 +1,24 @@
 /* --- App Layout --- */
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden !important; /* remove global scrolling */
+  font-family: sans-serif;
+  color: #111;
+}
+
 .app-container {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  height: 100vh;
+  height: 100vh !important;
+  overflow: hidden;
+  color: #111 !important;
 }
 
-/* Header */
+/* --- Header --- */
 .header {
   flex-shrink: 0;
   position: fixed;
@@ -28,9 +40,7 @@
   color: white;
 }
 
-/* Universal Dark Mode Text Fix */
-body, .app-container { color: #111 !important; }
-
+/* --- Dark Mode Text Fix --- */
 .data-card,
 .shift-subcard,
 .pick-card,
@@ -52,7 +62,7 @@ input {
   background: white !important;
 }
 
-/* Navigation Buttons */
+/* --- Navigation Buttons --- */
 .carousel-links {
   display: flex;
   justify-content: center;
@@ -79,50 +89,64 @@ input {
   color: white !important;
 }
 
-/* Carousel Container */
+/* --- Carousel Container --- */
 .carousel-container {
   flex: 1;
+  width: 100%;
+  height: calc(100vh - 100px); /* header + nav */
   display: flex;
   justify-content: center;
-  align-items: flex-start;
+  align-items: center;
   overflow: hidden;
-  min-height: 0;
 }
 
-/* --- FIXED: No scrolling, no arrows, side-by-side layout --- */
 .carousel-slide {
   display: flex;
-  flex-direction: row;     /* keep cards side-by-side */
+  flex-direction: row;
   gap: 20px;
   justify-content: center;
   align-items: flex-start;
-
   width: 100%;
   height: 100%;
-
-  overflow-y: visible !important;  /* no forced scroll */
-  overflow-x: visible !important;
-
-  padding: 16px;
+  overflow: hidden !important;
+  padding: 0;
+  margin: 0;
 }
 
-/* Two-card layout stays horizontal */
+/* --- Two-card layout fix for Bagged + Pick cards --- */
 .two-card-layout {
   display: flex;
   flex-direction: row;
-  flex-wrap: nowrap;
   gap: 24px;
   justify-content: center;
-  align-items: flex-start;
+  align-items: stretch; /* match card heights */
   width: 100%;
   max-width: 1400px;
+  height: 100%;
+  overflow: hidden;
+  padding: 0 16px;
 }
 
-.two-card-layout > * {
-  flex-shrink: 0;
+.two-card-layout > .bagged-card {
+  flex: 0 0 45%;      /* max width for bagged card */
+  max-width: 45%;
+  height: 100%;
+  overflow-y: auto;   /* scroll inside card if content too tall */
 }
 
-/* REMOVE ARROWS AND DOTS */
+.two-card-layout > .pick-card {
+  flex: 1 1 auto;     /* take remaining space */
+  height: 100%;
+  overflow-y: auto;
+}
+
+.bagged-card,
+.pick-card {
+  max-height: 100%;
+  box-sizing: border-box;
+}
+
+/* --- Hide default carousel arrows/dots --- */
 .carousel .control-arrow,
 .carousel .control-prev,
 .carousel .control-next,
@@ -130,7 +154,7 @@ input {
   display: none !important;
 }
 
-/* Card Base */
+/* --- Card Base --- */
 .data-card {
   flex: 1;
   background: linear-gradient(145deg, #f0f4fc, #d9e6fc);
@@ -148,7 +172,7 @@ input {
 .adaptive-card { max-width: 1000px; }
 .bagged-card  { flex: 2; max-width: 1000px; }
 
-/* Buttons */
+/* --- Buttons --- */
 .clear-btn {
   padding: 8px 14px;
   margin-left: 12px;
@@ -164,7 +188,7 @@ input {
   cursor: not-allowed;
 }
 
-/* Tables */
+/* --- Tables --- */
 .table-container { overflow-x: auto; }
 
 .data-table {
@@ -189,7 +213,7 @@ input {
 .data-table tbody tr:nth-child(even) { background: #fafafa; }
 .data-table tbody tr:hover { background: #e6f0ff; }
 
-/* Bagged Totes */
+/* --- Bagged Totes --- */
 .bagged-row {
   display: flex;
   justify-content: space-between;
@@ -213,7 +237,7 @@ input {
   overflow-y: auto;
 }
 
-/* Pick Calculator */
+/* --- Pick Calculator --- */
 .pick-card .data-table {
   border: 1px solid #d0d7e2;
   border-radius: 8px;
@@ -237,7 +261,7 @@ input {
 .uph-input { width: 60px; }
 .outstanding-input { width: 100px; }
 
-/* Toast Notification */
+/* --- Toast Notification --- */
 .toast-notification-center {
   position: absolute;
   top: 50%;
@@ -257,7 +281,7 @@ input {
   100% { opacity: 0; transform: translate(-50%, -60%); }
 }
 
-/* Shift EOS Card */
+/* --- Shift EOS Card --- */
 .shift-eos-card {
   max-width: 1600px;
   width: 100%;
@@ -305,4 +329,14 @@ input {
   padding: 4px 6px;
   border-radius: 6px;
   border: 1px solid #ccc;
+}
+
+/* --- Internal Scroll for Cards --- */
+.data-card,
+.bagged-card,
+.pick-card,
+.shift-eos-card {
+  max-height: calc(100vh - 180px); /* header + nav + spacing */
+  overflow-y: auto;
+  overflow-x: hidden;
 }
