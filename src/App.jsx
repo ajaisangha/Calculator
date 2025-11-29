@@ -22,9 +22,6 @@ function Header() {
   );
 }
 
-// -------------------------
-// Utility Functions
-// -------------------------
 function parseToteCell(cell) {
   if (!cell && cell !== 0) return 0;
   const str = String(cell).trim();
@@ -63,9 +60,6 @@ function getRouteName(row, shipmentKey, dispatchKey) {
   return "Spoke";
 }
 
-// -------------------------
-// APP COMPONENT
-// -------------------------
 export default function App() {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -80,9 +74,6 @@ export default function App() {
   const [currentAmbient, setCurrentAmbient] = useState("");
   const [currentChill, setCurrentChill] = useState("");
 
-  // -------------------------
-  // Firestore Snapshot
-  // -------------------------
   useEffect(() => {
     const unsubscribe = onSnapshot(DATA_DOC, (docSnap) => {
       if (docSnap.exists()) {
@@ -117,13 +108,9 @@ export default function App() {
       }
       setLoading(false);
     });
-
     return () => unsubscribe();
   }, []);
 
-  // -------------------------
-  // File Handling
-  // -------------------------
   const handleFiles = (files) => {
     Array.from(files).forEach(file => {
       Papa.parse(file, {
@@ -174,9 +161,8 @@ export default function App() {
   };
 
   const onFileChange = (e) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-    handleFiles(files);
+    if (!e.target.files.length) return;
+    handleFiles(e.target.files);
     e.target.value = null;
   };
 
@@ -184,30 +170,19 @@ export default function App() {
     try { await deleteDoc(DATA_DOC); } catch (err) { console.error(err); }
   };
 
-  // -------------------------
-  // Bagged Totals Calculation
-  // -------------------------
-  const baggedAmbient = (grandTotals.ambient || 0) + (parseInt(currentAmbient,10)||0) - (parseInt(receivedAmbient,10)||0);
-  const baggedChill   = (grandTotals.chilled || 0) + (parseInt(currentChill,10)||0) - (parseInt(receivedChill,10)||0);
-  const totalBagged   = baggedAmbient + baggedChill;
-
   if (loading) return <p style={{ marginTop:120, textAlign:"center" }}>Loading...</p>;
 
-  // -------------------------
-  // RENDER
-  // -------------------------
   return (
     <div className="app-container">
       <Header />
 
-      {/* Navigation */}
       <nav className="carousel-links">
         <button onClick={() => setSlideIndex(0)} className={slideIndex===0?"active":""}>Totes Used</button>
-        <button onClick={() => setSlideIndex(1)} className={slideIndex===1?"active":""}>Pick/Bag</button>
-        <button onClick={() => setSlideIndex(2)} className={slideIndex===2?"active":""}>Shift EOS</button>
+        <button onClick={() => setSlideIndex(1)} className={slideIndex===1?"active":""}>Bagged Totes</button>
+        <button onClick={() => setSlideIndex(2)} className={slideIndex===2?"active":""}>Pick Calculator</button>
+        <button onClick={() => setSlideIndex(3)} className={slideIndex===3?"active":""}>Shift EOS</button>
       </nav>
 
-      {/* Carousel */}
       <div className="carousel-container">
         <Carousel
           selectedItem={slideIndex}
@@ -219,7 +194,6 @@ export default function App() {
           swipeable
           emulateTouch
         >
-          {/* Slide 1: Totes Used */}
           <div className="carousel-slide">
             <TotesUsedCard
               rows={rows}
@@ -231,28 +205,24 @@ export default function App() {
             />
           </div>
 
-          {/* Slide 2: Bagged + Pick */}
           <div className="carousel-slide">
-            <div className="two-card-layout">
-              <BaggedTotesCard
-                grandTotals={grandTotals}
-                receivedAmbient={receivedAmbient}
-                receivedChill={receivedChill}
-                currentAmbient={currentAmbient}
-                currentChill={currentChill}
-                setReceivedAmbient={setReceivedAmbient}
-                setReceivedChill={setReceivedChill}
-                setCurrentAmbient={setCurrentAmbient}
-                setCurrentChill={setCurrentChill}
-                baggedAmbient={baggedAmbient}
-                baggedChill={baggedChill}
-                totalBagged={totalBagged}
-              />
-              <PickAndBaggedCombinedCard />
-            </div>
+            <BaggedTotesCard
+              grandTotals={grandTotals}
+              receivedAmbient={receivedAmbient}
+              receivedChill={receivedChill}
+              currentAmbient={currentAmbient}
+              currentChill={currentChill}
+              setReceivedAmbient={setReceivedAmbient}
+              setReceivedChill={setReceivedChill}
+              setCurrentAmbient={setCurrentAmbient}
+              setCurrentChill={setCurrentChill}
+            />
           </div>
 
-          {/* Slide 3: Shift EOS */}
+          <div className="carousel-slide">
+            <PickAndBaggedCombinedCard />
+          </div>
+
           <div className="carousel-slide">
             <ShiftEOSCard />
           </div>

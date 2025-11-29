@@ -3,17 +3,9 @@ import { db } from "./firebase";
 import { doc, onSnapshot, setDoc } from "firebase/firestore";
 import "./App.css";
 
-const PICK_BAGGED_DOC = doc(db, "totes", "pickAndBagged");
+const PICK_DOC = doc(db, "totes", "pickCalculator");
 
 export default function PickAndBaggedCombinedCard() {
-  // --- Bagged Totes State ---
-  const [currentAmbient, setCurrentAmbient] = useState("");
-  const [currentChill, setCurrentChill] = useState("");
-  const [neededAmbient, setNeededAmbient] = useState("");
-  const [neededChill, setNeededChill] = useState("");
-  const [resultAmbient, setResultAmbient] = useState(null);
-  const [resultChill, setResultChill] = useState(null);
-
   // --- Pick Calculator State ---
   const [ambientPickers, setAmbientPickers] = useState("");
   const [chillPickers, setChillPickers] = useState("");
@@ -22,107 +14,108 @@ export default function PickAndBaggedCombinedCard() {
   const [ambientOutstanding, setAmbientOutstanding] = useState("");
   const [chillOutstanding, setChillOutstanding] = useState("");
 
-  // --- Toast Notifications ---
-  const [baggedToast, setBaggedToast] = useState({ show: false, message: "" });
-  const [pickCalcToast, setPickCalcToast] = useState({ show: false, message: "" });
+  // --- Toast Notification ---
+  const [toast, setToast] = useState({ show:false, message:"" });
 
-  // --- Load data from Firestore ---
+  const showToast = (msg) => {
+    setToast({ show:true, message:msg });
+    setTimeout(() => setToast({ show:false, message:"" }), 2000);
+  };
+
+  // --- Load Firestore Data ---
   useEffect(() => {
-    const unsubscribe = onSnapshot(PICK_BAGGED_DOC, (docSnap) => {
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        setCurrentAmbient(data.currentAmbient || "");
-        setCurrentChill(data.currentChill || "");
-        setNeededAmbient(data.neededAmbient || "");
-        setNeededChill(data.neededChill || "");
-        setResultAmbient(data.resultAmbient ?? null);
-        setResultChill(data.resultChill ?? null);
-
-        setAmbientPickers(data.ambientPickers || "");
-        setChillPickers(data.chillPickers || "");
-        setAmbientUPH(data.ambientUPH || "");
-        setChillUPH(data.chillUPH || "");
-        setAmbientOutstanding(data.ambientOutstanding || "");
-        setChillOutstanding(data.chillOutstanding || "");
+    const unsub = onSnapshot(PICK_DOC, (snap) => {
+      if (snap.exists()) {
+        const d = snap.data();
+        setAmbientPickers(d.ambientPickers || "");
+        setChillPickers(d.chillPickers || "");
+        setAmbientUPH(d.ambientUPH || "");
+        setChillUPH(d.chillUPH || "");
+        setAmbientOutstanding(d.ambientOutstanding || "");
+        setChillOutstanding(d.chillOutstanding || "");
       }
     });
-    return () => unsubscribe();
+    return () => unsub();
   }, []);
 
   // --- Helper Functions ---
-  const calculateProjected = (uph, pickers) => (parseFloat(uph) || 0) * (parseFloat(pickers) || 0);
+  const projected = (uph, pickers) => (parseFloat(uph) || 0) * (parseFloat(pickers) || 0);
 
-  const calculateFinishTime = (outstanding, projected) => {
-    if (!projected || projected === 0) return "-";
+  const finishingTime = (outstanding, proj) => {
+    if (!proj || proj <= 0) return "-";
+
     const now = new Date();
     const year = now.getFullYear();
     const month = now.getMonth();
     const day = now.getDate();
+
     const time225 = new Date(year, month, day, 2, 25, 0);
     const time310 = new Date(year, month, day, 3, 10, 0);
-    const hoursNeeded = outstanding / projected;
-    let finishTime;
-    if (now < time225) finishTime = new Date(now.getTime() + hoursNeeded * 3600000 + 45 * 60000);
-    else if (now > time310) finishTime = new Date(now.getTime() + hoursNeeded * 3600000);
-    else finishTime = new Date(time310.getTime() + hoursNeeded * 3600000);
-    const hours = finishTime.getHours();
-    const minutes = finishTime.getMinutes();
-    const ampm = hours >= 12 ? "PM" : "AM";
-    const displayHours = hours % 12 === 0 ? 12 : hours % 12;
-    const displayMinutes = minutes.toString().padStart(2, "0");
-    return `${displayHours}:${displayMinutes} ${ampm}`;
+
+    const hoursNeeded = outstanding / proj;
+
+    let finish;
+
+    if (now < time225) {
+      finish = new Date(now.getTime() + hoursNeeded * 3600000 + 45 * 60000);
+    } else if (now > time310) {
+      finish = new Date(now.getTime() + hoursNeeded * 3600000);
+    } else {
+      finish = new Date(time310.getTime() + hoursNeeded * 3600000);
+    }
+
+    let h = finish.getHours();
+    let m = finish.getMinutes().toString().padStart(2, "0");
+    const ampm = h >= 12 ? "PM" : "AM";
+    h = h % 12 || 12;
+
+    return `${h}:${m} ${ampm}`;
   };
 
-  // --- Toast Helpers ---
-  const showBaggedToast = (msg) => {
-    setBaggedToast({ show: true, message: msg });
-    setTimeout(() => setBaggedToast({ show: false, message: "" }), 2000);
+  // --- Save Pick Calculator ---
+  const savePickCalc = async () => {
+    await setDoc(PICK_DOC, {
+      ambientPickers,
+      chillPickers,
+      ambientUPH,
+      chillUPH,
+      ambientOutstanding,
+      chillOutstanding
+    }, { merge:true });
+
+    showToast("Pick Calculator Saved");
   };
 
-  const showPickCalcToast = (msg) => {
-    setPickCalcToast({ show: true, message: msg });
-    setTimeout(() => setPickCalcToast({ show: false, message: "" }), 2000);
-  };
+  // --- Clear Pick Calculator ---
+  const clearPickCalc = async () => {
+    setAmbientPickers("");
+    setChillPickers("");
+    setAmbientUPH("");
+    setChillUPH("");
+    setAmbientOutstanding("");
+    setChillOutstanding("");
 
-  // --- Bagged Totes Actions ---
-  const calculateBaggedTotes = async () => {
-    const ambient = (parseInt(currentAmbient, 10) || 0) - (parseInt(neededAmbient, 10) || 0);
-    const chill = (parseInt(currentChill, 10) || 0) - (parseInt(neededChill, 10) || 0);
-    setResultAmbient(ambient);
-    setResultChill(chill);
-    await setDoc(PICK_BAGGED_DOC, { currentAmbient, currentChill, neededAmbient, neededChill, resultAmbient: ambient, resultChill: chill }, { merge: true });
-    showBaggedToast("Bagged Totes Saved");
-  };
-
-  const clearBaggedTotes = async () => {
-    setCurrentAmbient(""); setCurrentChill(""); setNeededAmbient(""); setNeededChill("");
-    setResultAmbient(null); setResultChill(null);
-    await setDoc(PICK_BAGGED_DOC, { currentAmbient: "", currentChill: "", neededAmbient: "", neededChill: "", resultAmbient: null, resultChill: null }, { merge: true });
-  };
-
-  // --- Pick Calculator Actions ---
-  const calculatePickCalculator = async () => {
-    await setDoc(PICK_BAGGED_DOC, { ambientPickers, chillPickers, ambientUPH, chillUPH, ambientOutstanding, chillOutstanding }, { merge: true });
-    showPickCalcToast("Pick Calculator Saved");
-  };
-
-  const clearPickCalculator = async () => {
-    setAmbientPickers(""); setChillPickers("");
-    setAmbientUPH(""); setChillUPH("");
-    setAmbientOutstanding(""); setChillOutstanding("");
-    await setDoc(PICK_BAGGED_DOC, { ambientPickers: "", chillPickers: "", ambientUPH: "", chillUPH: "", ambientOutstanding: "", chillOutstanding: "" }, { merge: true });
+    await setDoc(PICK_DOC, {
+      ambientPickers: "",
+      chillPickers: "",
+      ambientUPH: "",
+      chillUPH: "",
+      ambientOutstanding: "",
+      chillOutstanding: ""
+    }, { merge:true });
   };
 
   // --- Calculated Values ---
-  const ambientProjected = calculateProjected(ambientUPH, ambientPickers);
-  const chillProjected = calculateProjected(chillUPH, chillPickers);
-  const ambientFinish = calculateFinishTime(parseFloat(ambientOutstanding) || 0, ambientProjected);
-  const chillFinish = calculateFinishTime(parseFloat(chillOutstanding) || 0, chillProjected);
+  const ambProjected = projected(ambientUPH, ambientPickers);
+  const chlProjected = projected(chillUPH, chillPickers);
+
+  const ambFinish = finishingTime(parseFloat(ambientOutstanding) || 0, ambProjected);
+  const chlFinish = finishingTime(parseFloat(chillOutstanding) || 0, chlProjected);
 
   return (
-    <section className="data-card pick-bagged-card" style={{ position: "relative" }}>
-      {/* --- Pick Calculator --- */}
+    <section className="data-card pick-card" style={{ position: "relative" }}>
       <h2 className="data-title">Pick Calculator</h2>
+
       <div className="table-container" style={{ marginTop: 24 }}>
         <table className="data-table pick-table">
           <thead>
@@ -135,59 +128,82 @@ export default function PickAndBaggedCombinedCard() {
               <th>Finishing At</th>
             </tr>
           </thead>
+
           <tbody>
-            {[
-              { zone: "Ambient", pickers: ambientPickers, uph: ambientUPH, outstanding: ambientOutstanding, setPickers: setAmbientPickers, setUPH: setAmbientUPH, setOutstanding: setAmbientOutstanding, projected: ambientProjected, finish: ambientFinish },
-              { zone: "Chill", pickers: chillPickers, uph: chillUPH, outstanding: chillOutstanding, setPickers: setChillPickers, setUPH: setChillUPH, setOutstanding: setChillOutstanding, projected: chillProjected, finish: chillFinish },
-            ].map((row, i) => (
-              <tr key={i}>
-                <td>{row.zone}</td>
-                <td><input type="number" value={row.pickers} onChange={e => row.setPickers(e.target.value)} className="picker-input" /></td>
-                <td><input type="number" value={row.uph} onChange={e => row.setUPH(e.target.value)} className="uph-input" /></td>
-                <td><input type="number" value={row.outstanding} onChange={e => row.setOutstanding(e.target.value)} className="outstanding-input" /></td>
-                <td>{row.projected}</td>
-                <td>{row.finish}</td>
-              </tr>
-            ))}
+            <tr>
+              <td>Ambient</td>
+              <td>
+                <input
+                  type="number"
+                  value={ambientPickers}
+                  onChange={(e) => setAmbientPickers(e.target.value)}
+                  className="picker-input"
+                />
+              </td>
+              <td>
+                <input
+                  type="number"
+                  value={ambientUPH}
+                  onChange={(e) => setAmbientUPH(e.target.value)}
+                  className="uph-input"
+                />
+              </td>
+              <td>
+                <input
+                  type="number"
+                  value={ambientOutstanding}
+                  onChange={(e) => setAmbientOutstanding(e.target.value)}
+                  className="outstanding-input"
+                />
+              </td>
+              <td>{ambProjected}</td>
+              <td>{ambFinish}</td>
+            </tr>
+
+            <tr>
+              <td>Chill</td>
+              <td>
+                <input
+                  type="number"
+                  value={chillPickers}
+                  onChange={(e) => setChillPickers(e.target.value)}
+                  className="picker-input"
+                />
+              </td>
+              <td>
+                <input
+                  type="number"
+                  value={chillUPH}
+                  onChange={(e) => setChillUPH(e.target.value)}
+                  className="uph-input"
+                />
+              </td>
+              <td>
+                <input
+                  type="number"
+                  value={chillOutstanding}
+                  onChange={(e) => setChillOutstanding(e.target.value)}
+                  className="outstanding-input"
+                />
+              </td>
+              <td>{chlProjected}</td>
+              <td>{chlFinish}</td>
+            </tr>
           </tbody>
         </table>
+
         <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
-          <button className="calculate-btn" onClick={calculatePickCalculator}>Save Pick Calculator</button>
-          <button className="clear-btn" onClick={clearPickCalculator}>Clear Pick Calculator</button>
+          <button className="calculate-btn" onClick={savePickCalc}>
+            Save Pick Calculator
+          </button>
+          <button className="clear-btn" onClick={clearPickCalc}>
+            Clear Pick Calculator
+          </button>
         </div>
       </div>
 
-      <h2 className="data-title">Current Bagged Totes</h2>
-      {/* --- Bagged Totes --- */}
-      <div className="bagged-fields">
-        {[{ label: "Current totes ambient:", value: currentAmbient, setter: setCurrentAmbient },
-          { label: "Current totes chill:", value: currentChill, setter: setCurrentChill },
-          { label: "Totes needed ambient:", value: neededAmbient, setter: setNeededAmbient },
-          { label: "Totes needed chill:", value: neededChill, setter: setNeededChill },
-        ].map((field, i) => (
-          <div key={i} className="bagged-row">
-            <span>{field.label}</span>
-            <input type="number" value={field.value} onChange={e => field.setter(e.target.value)} className="bagged-input" />
-          </div>
-        ))}
-        <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
-          <button className="calculate-btn" onClick={calculateBaggedTotes}>Calculate & Save Bagged Totes</button>
-          <button className="clear-btn" onClick={clearBaggedTotes}>Clear Bagged Totes</button>
-        </div>
-        {resultAmbient !== null && resultChill !== null && (
-          <div className="bagged-result">
-            <div className="result-line"><span>Ambient after pick:</span> <span>{resultAmbient}</span></div>
-            <div className="result-line"><span>Chill after pick:</span> <span>{resultChill}</span></div>
-          </div>
-        )}
-      </div>
-
-      {/* --- Toast Notifications --- */}
-      {baggedToast.show && (
-        <div className="toast-notification-center">{baggedToast.message}</div>
-      )}
-      {pickCalcToast.show && (
-        <div className="toast-notification-center">{pickCalcToast.message}</div>
+      {toast.show && (
+        <div className="toast-notification-center">{toast.message}</div>
       )}
     </section>
   );
