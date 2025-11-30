@@ -319,3 +319,11 @@ button:disabled {
   90% { opacity: 1; }
   100% { opacity: 0; transform: translate(-50%, -60%); }
 }
+
+.button-row-centered {
+  margin-top: 12px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px; /* spacing between buttons */
+}

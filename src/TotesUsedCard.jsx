@@ -3,7 +3,7 @@ import { db } from "./firebase";
 import { doc, onSnapshot, setDoc } from "firebase/firestore";
 import "./App.css";
 
-const TOTES_DOC = doc(db, "totes", "totesUsed"); // Firestore document
+const TOTES_DOC = doc(db, "totes", "totesUsed");
 
 export default function TotesUsedCard({
   rows,
@@ -19,42 +19,47 @@ export default function TotesUsedCard({
   const [dolliesEmpty, setDolliesEmpty] = useState(0);
   const [dolliesResult, setDolliesResult] = useState(null);
 
-  // --- Notification State ---
-  const [notification, setNotification] = useState(""); // Added / Updated
+  const [notification, setNotification] = useState("");
   const [showToast, setShowToast] = useState(false);
 
-  // --- Load Dollies data from Firestore ---
+  // ---- Load Dollies from Firestore ----
   useEffect(() => {
-    const unsubscribe = onSnapshot(TOTES_DOC, (docSnap) => {
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        setDolliesReceived(data.dolliesReceived || 0);
-        setDolliesUsed(data.dolliesUsed || 0);
-        setDolliesEmpty(data.dolliesEmpty || 0);
-        setDolliesResult(data.dolliesResult ?? null);
-      }
+    const unsub = onSnapshot(TOTES_DOC, (snap) => {
+      if (!snap.exists()) return;
+
+      const d = snap.data();
+      setDolliesReceived(d.dolliesReceived || 0);
+      setDolliesUsed(d.dolliesUsed || 0);
+      setDolliesEmpty(d.dolliesEmpty || 0);
+      setDolliesResult(d.dolliesResult ?? null);
     });
-    return () => unsubscribe();
+
+    return () => unsub();
   }, []);
 
-  // --- Dollies Actions ---
+  // ---- Dollies Calculate ----
   const calculateDollies = async () => {
-    const result = (parseInt(dolliesUsed, 10) || 0) + (parseInt(dolliesEmpty, 10) || 0) - (parseInt(dolliesReceived, 10) || 0);
+    const result =
+      (parseInt(dolliesUsed) || 0) +
+      (parseInt(dolliesEmpty) || 0) -
+      (parseInt(dolliesReceived) || 0);
 
-    // Determine notification
     setNotification(dolliesResult === null ? "Added" : "Updated");
     setShowToast(true);
 
     setDolliesResult(result);
 
-    await setDoc(TOTES_DOC, {
-      dolliesReceived,
-      dolliesUsed,
-      dolliesEmpty,
-      dolliesResult: result
-    }, { merge: true });
+    await setDoc(
+      TOTES_DOC,
+      {
+        dolliesReceived,
+        dolliesUsed,
+        dolliesEmpty,
+        dolliesResult: result
+      },
+      { merge: true }
+    );
 
-    // Remove toast after animation (2.5s)
     setTimeout(() => setShowToast(false), 2500);
   };
 
@@ -65,28 +70,54 @@ export default function TotesUsedCard({
     setDolliesResult(null);
     setNotification("");
     setShowToast(false);
-    await setDoc(TOTES_DOC, {
-      dolliesReceived: 0,
-      dolliesUsed: 0,
-      dolliesEmpty: 0,
-      dolliesResult: null
-    }, { merge: true });
+
+    await setDoc(
+      TOTES_DOC,
+      {
+        dolliesReceived: 0,
+        dolliesUsed: 0,
+        dolliesEmpty: 0,
+        dolliesResult: null
+      },
+      { merge: true }
+    );
   };
+
+  // ------------------------------------------------------------------
+  // 🔥 GRAND TOTALS CALCULATION (requested update)
+  // ------------------------------------------------------------------
+  const totalConsignments = Object.values(routesInfo).reduce(
+    (sum, r) => sum + r.rows.length,
+    0
+  );
+
+  const totalFrames = totalConsignments * 4 + 20; // +20 as requested
+
+  // ------------------------------------------------------------------
 
   return (
     <section className="data-card adaptive-card">
       <h2 className="data-title">Totes Used</h2>
 
-      {/* --- File Controls --- */}
+      {/* Upload Buttons */}
       <div className="file-controls">
         <input type="file" accept=".csv" multiple onChange={onFileChange} />
-        <button onClick={clearAll} disabled={rows.length === 0} className="clear-btn">
+        <button
+          onClick={clearAll}
+          disabled={rows.length === 0}
+          className="clear-btn"
+        >
           Clear uploaded data
         </button>
       </div>
-      {duplicateMessage && <p className="duplicate-warning">{duplicateMessage}</p>}
 
-      {/* --- Routes Table --- */}
+      {duplicateMessage && (
+        <p className="duplicate-warning">{duplicateMessage}</p>
+      )}
+
+      {/* ----------------------------------------------------
+          ROUTES TABLE + FRAMES COLUMN
+         ---------------------------------------------------- */}
       {Object.keys(routesInfo).length === 0 ? (
         <p className="no-data">No data available yet.</p>
       ) : (
@@ -96,40 +127,56 @@ export default function TotesUsedCard({
               <tr>
                 <th>Route</th>
                 <th>Consignments</th>
+                <th>Frames</th>
                 <th>Ambient</th>
                 <th>Chilled</th>
                 <th>Freezer</th>
                 <th>Total</th>
               </tr>
             </thead>
+
             <tbody>
-              {Object.entries(routesInfo).map(([route, data], i) => (
-                <tr key={i}>
-                  <td>{route}</td>
-                  <td>{data.rows.length}</td>
-                  <td>{data.totals.ambient}</td>
-                  <td>{data.totals.chilled}</td>
-                  <td>{data.totals.freezer}</td>
-                  <td className="bold">{data.totals.total}</td>
-                </tr>
-              ))}
+              {Object.entries(routesInfo).map(([route, data], i) => {
+                const consignments = data.rows.length;
+                const frames = consignments * 4;
+
+                return (
+                  <tr key={i}>
+                    <td>{route}</td>
+                    <td>{consignments}</td>
+                    <td>{frames}</td>
+                    <td>{data.totals.ambient}</td>
+                    <td>{data.totals.chilled}</td>
+                    <td>{data.totals.freezer}</td>
+                    <td className="bold">{data.totals.total}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
 
-          {/* --- Grand Totals --- */}
-          <div className="grand-totals">
+          {/* ----------------------------------------------------
+              GRAND TOTALS SECTION (UPDATED)
+             ---------------------------------------------------- */}
+          <div className="grand-totals" style={{ marginTop: "20px" }}>
             <h3>Grand Totals</h3>
+
             <table className="data-table">
               <thead>
                 <tr>
+                  <th>Total Consignments</th>
+                  <th>Total Frames</th>
                   <th>Ambient</th>
                   <th>Chilled</th>
                   <th>Freezer</th>
-                  <th>Total</th>
+                  <th>Total Totes</th>
                 </tr>
               </thead>
+
               <tbody>
                 <tr>
+                  <td className="bold">{totalConsignments}</td>
+                  <td className="bold">{totalFrames}</td>
                   <td>{grandTotals.ambient}</td>
                   <td>{grandTotals.chilled}</td>
                   <td>{grandTotals.freezer}</td>
@@ -141,44 +188,51 @@ export default function TotesUsedCard({
         </div>
       )}
 
-      {/* --- Dollies Section --- */}
+      {/* ----------------------------------------------------
+          DOLLIES SECTION
+         ---------------------------------------------------- */}
       <div className="dollies-section" style={{ marginTop: "20px" }}>
         <h3>Dollies</h3>
-        <div className="dollies-flex" style={{ display: "flex", alignItems: "center", gap: "20px" }}>
 
-          {/* Left: Inputs */}
-          <div className="bagged-fields" style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+        <div
+          className="dollies-flex"
+          style={{ display: "flex", alignItems: "center", gap: "20px" }}
+        >
+          {/* Inputs */}
+          <div
+            className="bagged-fields"
+            style={{ display: "flex", flexDirection: "column", gap: "12px" }}
+          >
             <div className="bagged-row">
               <span>Dollies Received:</span>
               <input
                 type="number"
                 value={dolliesReceived}
                 onChange={(e) => setDolliesReceived(e.target.value)}
-                className="bagged-input"
               />
             </div>
+
             <div className="bagged-row">
               <span>Dollies Used:</span>
               <input
                 type="number"
                 value={dolliesUsed}
                 onChange={(e) => setDolliesUsed(e.target.value)}
-                className="bagged-input"
               />
             </div>
+
             <div className="bagged-row">
               <span>Dollies Empty:</span>
               <input
                 type="number"
                 value={dolliesEmpty}
                 onChange={(e) => setDolliesEmpty(e.target.value)}
-                className="bagged-input"
               />
             </div>
           </div>
 
-          {/* Middle: Buttons */}
-          <div className="dollies-buttons" style={{ display: "flex", gap: "12px" }}>
+          {/* Buttons */}
+          <div style={{ display: "flex", gap: "12px" }}>
             <button className="calculate-btn" onClick={calculateDollies}>
               Calculate
             </button>
@@ -187,23 +241,21 @@ export default function TotesUsedCard({
             </button>
           </div>
 
-          {/* Right: Result */}
+          {/* Result */}
           <div className="bagged-result" style={{ marginLeft: "20px" }}>
             {dolliesResult !== null && (
               <div className="result-line">
                 <span>Dollies Dekitted:</span>
-                <span style={{ fontWeight: "bold", marginLeft: "8px" }}>{dolliesResult}</span>
+                <span style={{ fontWeight: "bold", marginLeft: "8px" }}>
+                  {dolliesResult}
+                </span>
               </div>
             )}
 
-            {/* Animated Toast */}
             {showToast && (
-              <div className="toast-notification-center">
-                {notification}
-              </div>
+              <div className="toast-notification-center">{notification}</div>
             )}
           </div>
-
         </div>
       </div>
     </section>

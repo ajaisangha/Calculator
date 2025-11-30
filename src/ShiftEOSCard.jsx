@@ -17,7 +17,7 @@ export default function ShiftEOSCard() {
 
   const [shiftData, setShiftData] = useState(initialShiftData);
 
-  // Productivity
+  // Productivity states
   const [ambInbound, setAmbInbound] = useState("0");
   const [chillInbound, setChillInbound] = useState("0");
   const [freezerInbound, setFreezerInbound] = useState("0");
@@ -40,10 +40,10 @@ export default function ShiftEOSCard() {
     const unsub = onSnapshot(SHIFT_EOS_DOC, (docSnap) => {
       if (!docSnap.exists()) return;
 
-      const data = docSnap.data();
+      const d = docSnap.data();
 
-      if (data.shiftData) {
-        const loaded = data.shiftData.map((row) => ({
+      if (d.shiftData) {
+        const loaded = d.shiftData.map((row) => ({
           department: row.department,
           present: row.present.toString(),
           absent: row.absent.toString(),
@@ -53,46 +53,31 @@ export default function ShiftEOSCard() {
         setShiftData(loaded);
       }
 
-      setAmbInbound(data.ambInbound?.toString() || "0");
-      setChillInbound(data.chillInbound?.toString() || "0");
-      setFreezerInbound(data.freezerInbound?.toString() || "0");
-      setOutstandingPick(data.outstandingPick?.toString() || "0");
-      setAmbientPick(data.ambientPick?.toString() || "0");
-      setChillPick(data.chillPick?.toString() || "0");
-      setFreezerPick(data.freezerPick?.toString() || "0");
-      setTargetProd(data.targetProd?.toString() || "260");
+      setAmbInbound(d.ambInbound?.toString() || "0");
+      setChillInbound(d.chillInbound?.toString() || "0");
+      setFreezerInbound(d.freezerInbound?.toString() || "0");
+      setOutstandingPick(d.outstandingPick?.toString() || "0");
+      setAmbientPick(d.ambientPick?.toString() || "0");
+      setChillPick(d.chillPick?.toString() || "0");
+      setFreezerPick(d.freezerPick?.toString() || "0");
+      setTargetProd(d.targetProd?.toString() || "260");
     });
     return () => unsub();
   }, []);
 
-  // Handle table input (allow empty string)
+  // Allow empty input
   const handleShiftChange = (idx, field, value) => {
     const updated = [...shiftData];
     updated[idx][field] = value;
     setShiftData(updated);
   };
 
-  // ------------------ CALCULATIONS ------------------
+  // ---------------- CALCULATIONS ----------------
 
-  const totalPresent = shiftData.reduce(
-    (sum, r) => sum + (parseInt(r.present) || 0),
-    0
-  );
-
-  const totalAbsent = shiftData.reduce(
-    (sum, r) => sum + (parseInt(r.absent) || 0),
-    0
-  );
-
-  const totalVTO = shiftData.reduce(
-    (sum, r) => sum + (parseFloat(r.vto) || 0),
-    0
-  );
-
-  const totalOT = shiftData.reduce(
-    (sum, r) => sum + (parseFloat(r.ot) || 0),
-    0
-  );
+  const totalPresent = shiftData.reduce((s, r) => s + (parseInt(r.present) || 0), 0);
+  const totalAbsent = shiftData.reduce((s, r) => s + (parseInt(r.absent) || 0), 0);
+  const totalVTO = shiftData.reduce((s, r) => s + (parseFloat(r.vto) || 0), 0);
+  const totalOT = shiftData.reduce((s, r) => s + (parseFloat(r.ot) || 0), 0);
 
   const totalHours = totalPresent * 10 + totalOT - totalVTO;
 
@@ -122,7 +107,7 @@ export default function ShiftEOSCard() {
   const vtoNeeded =
     target > 0 ? totalHours - (totalIO * 1.13) / target : 0;
 
-  // ------------------ SAVE ------------------
+  // ---------------- SAVE ----------------
 
   const saveShiftStaffing = async () => {
     const numericRows = shiftData.map((row) => ({
@@ -134,7 +119,7 @@ export default function ShiftEOSCard() {
     }));
 
     await setDoc(SHIFT_EOS_DOC, { shiftData: numericRows }, { merge: true });
-    showToast("Shift Staffing Saved");
+    showToast("Hours Saved");
   };
 
   const saveInboundOutbound = async () => {
@@ -152,10 +137,10 @@ export default function ShiftEOSCard() {
       },
       { merge: true }
     );
-    showToast("Inbound/Outbound Saved");
+    showToast("Shift EOS Saved");
   };
 
-  // ------------------ CLEAR ------------------
+  // ---------------- CLEAR ----------------
 
   const clearShiftStaffing = async () => {
     setShiftData(initialShiftData);
@@ -188,7 +173,7 @@ export default function ShiftEOSCard() {
     );
   };
 
-  // ------------------ RENDER ------------------
+  // ---------------- RENDER ----------------
 
   return (
     <section className="data-card shift-eos-card" style={{ position: "relative" }}>
@@ -282,14 +267,15 @@ export default function ShiftEOSCard() {
               </tbody>
             </table>
 
-            <div style={{ marginTop: 8 }}>
-              <button className="calculate-btn" onClick={saveShiftStaffing}>Save Shift Staffing</button>
-              <button className="clear-btn" onClick={clearShiftStaffing}>Clear Shift Staffing</button>
+            <div className="button-row-centered">
+              <button className="calculate-btn" onClick={saveShiftStaffing}>Save Hours</button>
+              <button className="clear-btn" onClick={clearShiftStaffing}>Clear Hours</button>
             </div>
+
           </div>
         </div>
 
-        {/* PRODUCTIVITY CALCULATOR */}
+        {/* SHIFT EOS TABLE */}
         <div className="shift-subcard">
           <h3 className="subcard-title">Shift EOS</h3>
 
@@ -337,15 +323,9 @@ export default function ShiftEOSCard() {
                   <td></td><td></td>
                 </tr>
 
-                <tr>
+                <tr className="bold">
                   <td>Total Hours</td>
                   <td>{totalHours.toFixed(2)}</td>
-                  <td></td><td></td>
-                </tr>
-
-                <tr>
-                  <td>Actual Productivity</td>
-                  <td>{actualProductivity.toFixed(2)}</td>
                   <td></td><td></td>
                 </tr>
 
@@ -362,36 +342,35 @@ export default function ShiftEOSCard() {
                   <td></td><td></td>
                 </tr>
 
+                <tr className="bold">
+                  <td>Actual Productivity</td>
+                  <td style={{ fontWeight: "bold" }}>{actualProductivity.toFixed(2)}</td>
+                  <td>Inbound Needed</td>
+                  <td style={{ fontWeight: "bold" }}>{inboundNeeded.toFixed(2)}</td>
+                </tr>
+
                 <tr>
                   <td>Difference</td>
                   <td>{difference.toFixed(2)}</td>
-                  <td></td><td></td>
-                </tr>
-
-                <tr>
-                  <td>Inbound Needed</td>
-                  <td>{inboundNeeded.toFixed(2)}</td>
-                  <td></td><td></td>
-                </tr>
-
-                <tr>
                   <td>VTO Needed</td>
-                  <td>{vtoNeeded.toFixed(2)}</td>
-                  <td></td><td></td>
+                  <td style={{ fontWeight: "bold" }}>{vtoNeeded.toFixed(2)}</td>
                 </tr>
 
               </tbody>
             </table>
 
-            <div style={{ marginTop: 8 }}>
-              <button className="calculate-btn" onClick={saveInboundOutbound}>Save Inbound/Outbound</button>
-              <button className="clear-btn" onClick={clearInboundOutbound}>Clear Inbound/Outbound</button>
+            <div className="button-row-centered">
+              <button className="calculate-btn" onClick={saveInboundOutbound}>Save Shift EOS</button>
+              <button className="clear-btn" onClick={clearInboundOutbound}>Clear Shift EOS</button>
             </div>
+
           </div>
         </div>
       </div>
 
-      {toast.show && <div className="toast-notification-center">{toast.message}</div>}
+      {toast.show && (
+        <div className="toast-notification-center">{toast.message}</div>
+      )}
     </section>
   );
 }
