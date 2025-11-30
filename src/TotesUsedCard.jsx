@@ -244,11 +244,18 @@ export default function TotesUsedCard({
           {/* Result */}
           <div className="bagged-result" style={{ marginLeft: "20px" }}>
             {dolliesResult !== null && (
-              <div className="result-line">
-                <span>Dollies Dekitted:</span>
-                <span style={{ fontWeight: "bold", marginLeft: "8px" }}>
-                  {dolliesResult}
-                </span>
+              <div className="bagged-result" style={{ marginLeft: "20px" }}>
+                {/* Dollies Dekitted */}
+                <div className="result-line" style={{ fontWeight: "bold", fontSize: "18px" }}>
+                  <span>Dollies Dekitted:</span>
+                  <span style={{ marginLeft: "8px" }}>{dolliesResult}</span>
+                </div>
+
+                {/* Totes Dekitted */}
+                <div className="result-line" style={{ fontWeight: "bold", fontSize: "18px", marginTop: "6px" }}>
+                  <span>Totes Dekitted (Dollies × 15):</span>
+                  <span style={{ marginLeft: "8px" }}>{dolliesResult * 15}</span>
+                </div>
               </div>
             )}
 
