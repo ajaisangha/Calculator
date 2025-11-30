@@ -1,23 +1,23 @@
 /* =======================================================================
-   GLOBAL LAYOUT + DARK-MODE FIXES
-   ======================================================================= */
+   GLOBAL RESET + DARK MODE SAFETY
+======================================================================= */
 
 * {
   box-sizing: border-box;
 }
 
 body, .app-container {
-  color: #111 !important;
   margin: 0;
   padding: 0;
-  overflow-x: hidden !important;      /* Prevent sideways scroll */
+  color: #111 !important;
+  overflow-x: hidden !important;
 }
 
 input, button {
   font-family: inherit;
 }
 
-/* Ensure all card text stays readable */
+h1, h2, h3, h4, h5, h6,
 .data-card,
 .bagged-card,
 .pick-card,
@@ -25,14 +25,10 @@ input, button {
   color: #111 !important;
 }
 
-h1, h2, h3, h4, h5, h6 {
-  color: #111 !important;
-}
-
 
 /* =======================================================================
    HEADER
-   ======================================================================= */
+======================================================================= */
 
 .header {
   position: fixed;
@@ -57,7 +53,7 @@ h1, h2, h3, h4, h5, h6 {
 
 /* =======================================================================
    TOP NAVIGATION BUTTONS
-   ======================================================================= */
+======================================================================= */
 
 .carousel-links {
   display: flex;
@@ -68,41 +64,36 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .carousel-links button {
-  background: none;
-  border: 2px solid #007bff;
-  color: #007bff;
+  background: none !important;
+  border: 2px solid #007bff !important;
+  color: #007bff !important;
   padding: 8px 16px;
   border-radius: 6px;
   cursor: pointer;
   font-weight: 600;
-  transition: all 0.2s;
+  transition: 0.2s;
 }
 
 .carousel-links button.active,
 .carousel-links button:hover {
-  background: #007bff;
+  background: #007bff !important;
   color: white !important;
 }
 
 
 /* =======================================================================
-   CAROUSEL CONTAINER — FIXED TO PREVENT OVERFLOW
-   ======================================================================= */
+   CAROUSEL — CENTERED, NO ARROWS, NO SCROLLING
+======================================================================= */
 
-/* Carousel wrapper */
 .carousel-container {
   width: 100%;
   display: flex;
   justify-content: center;
-  align-items: flex-start;
   margin-top: 10px;
-
-  /* REMOVE all restrictive height/overflow */
   height: auto !important;
   overflow: visible !important;
 }
 
-/* Each slide centers and sizes naturally */
 .carousel-slide {
   width: 100%;
   max-width: 1300px;
@@ -115,42 +106,29 @@ h1, h2, h3, h4, h5, h6 {
 
   height: auto !important;
   overflow: visible !important;
-  position: relative;
 }
 
-/* =======================================================================
-   CAROUSEL ARROWS (Always Visible)
-   ======================================================================= */
-
-/* Hide all arrows */
+/* hide arrows & dots */
 .carousel .control-arrow,
 .carousel .control-prev,
-.carousel .control-next {
-  display: none !important;
-  visibility: hidden !important;
-  opacity: 0 !important;
-}
-
-.carousel .control-arrow:before {
-  border: solid white;
-  border-width: 0 3px 3px 0;
-  padding: 8px;
-}
-
+.carousel .control-next,
 .carousel .control-dots {
   display: none !important;
 }
 
 
 /* =======================================================================
-   CARD BASE STYLING
-   ======================================================================= */
+   CARD BASE STYLE
+======================================================================= */
 
 .data-card {
+  width: 100%;
+  max-width: 1100px;
   background: linear-gradient(145deg, #f0f4fc, #d9e6fc);
   border-radius: 16px;
-  box-shadow: 0 12px 24px rgba(0,0,0,0.15);
   padding: 24px;
+  margin: auto;
+  box-shadow: 0 12px 24px rgba(0,0,0,0.15);
   transition: 0.2s;
 }
 
@@ -159,20 +137,10 @@ h1, h2, h3, h4, h5, h6 {
   box-shadow: 0 20px 40px rgba(0,0,0,0.18);
 }
 
-/* Center all large cards */
-.data-card, 
-.bagged-card, 
-.pick-card, 
-.shift-eos-card {
-  width: 100%;
-  max-width: 1100px;
-  margin: auto;
-}
-
 
 /* =======================================================================
-   TOTES USED — TABLES
-   ======================================================================= */
+   TABLES
+======================================================================= */
 
 .table-container {
   overflow-x: auto;
@@ -201,13 +169,54 @@ h1, h2, h3, h4, h5, h6 {
 
 
 /* =======================================================================
-   BAGGED TOTES
-   ======================================================================= */
+   BUTTONS — BLUE (SAVE/CALCULATE) & RED (CLEAR)
+======================================================================= */
 
-.bagged-card {
-  max-width: 1100px;
-  overflow: hidden;
+button {
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  transition: 0.2s;
+  font-size: 14px;
 }
+
+/* ACTION BUTTONS - BLUE */
+.calculate-btn,
+.save-btn,
+.primary-btn {
+  background-color: #007bff !important;
+  color: white !important;
+}
+
+.calculate-btn:hover,
+.save-btn:hover,
+.primary-btn:hover {
+  background-color: #0056b3 !important;
+}
+
+/* CLEAR BUTTONS - RED */
+.clear-btn {
+  background-color: #d9534f !important;
+  color: white !important;
+}
+
+.clear-btn:hover {
+  background-color: #b52b27 !important;
+}
+
+/* Disabled buttons */
+button:disabled {
+  background-color: #c9c9c9 !important;
+  color: #666 !important;
+  cursor: not-allowed !important;
+}
+
+
+/* =======================================================================
+   BAGGED TOTES
+======================================================================= */
 
 .bagged-row {
   display: flex;
@@ -218,22 +227,21 @@ h1, h2, h3, h4, h5, h6 {
 
 .bagged-row input {
   width: 120px;
-  padding: 6px 10px;
+  padding: 6px;
   border-radius: 8px;
   border: 1px solid #ccc;
   text-align: right;
 }
 
 
-
 /* =======================================================================
    PICK CALCULATOR
-   ======================================================================= */
+======================================================================= */
 
 .pick-card {
   width: 100%;
   max-width: 950px;
-  margin: 0 auto;
+  margin: auto;
 }
 
 .pick-card .table-container {
@@ -244,35 +252,31 @@ h1, h2, h3, h4, h5, h6 {
   table-layout: fixed;
 }
 
+.picker-input { width: 40px; }
+.uph-input { width: 60px; }
+.outstanding-input { width: 100px; }
 
 
 /* =======================================================================
-   SHIFT EOS — FIX FOR VERTICAL AND HORIZONTAL OVERFLOW
-   ======================================================================= */
+   SHIFT EOS SECTION
+======================================================================= */
 
 .shift-eos-card {
   width: 100%;
   max-width: 1300px;
-  margin: 0 auto;
+  margin: auto;
   padding: 20px;
-
-  height: auto !important;
   overflow: visible !important;
 }
 
-/* Two subcards layout */
 .shift-eos-flex {
   display: flex;
   justify-content: center;
-  align-items: flex-start;
   gap: 24px;
   flex-wrap: wrap;
-
-  height: auto !important;
-  overflow: visible !important;
+  overflow: visible;
 }
 
-/* Individual subcards */
 .shift-subcard {
   flex: 1;
   min-width: 420px;
@@ -281,14 +285,7 @@ h1, h2, h3, h4, h5, h6 {
   border-radius: 12px;
   padding: 20px;
   box-shadow: 0 6px 14px rgba(0,0,0,0.1);
-
-  height: auto !important;
-  overflow: visible !important;
 }
-
-/* =======================================================================
-   INPUTS + SMALL FORM ELEMENTS
-   ======================================================================= */
 
 .tiny-input {
   width: 70px;
@@ -299,15 +296,15 @@ h1, h2, h3, h4, h5, h6 {
 
 
 /* =======================================================================
-   TOAST NOTIFICATION — CENTER EVERYWHERE
-   ======================================================================= */
+   TOAST
+======================================================================= */
 
 .toast-notification-center {
   position: fixed;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background-color: #4a90e2;
+  background: #4a90e2;
   color: white;
   padding: 10px 20px;
   border-radius: 10px;
@@ -322,4 +319,3 @@ h1, h2, h3, h4, h5, h6 {
   90% { opacity: 1; }
   100% { opacity: 0; transform: translate(-50%, -60%); }
 }
-
