@@ -327,3 +327,33 @@ button:disabled {
   align-items: center;
   gap: 16px; /* spacing between buttons */
 }
+
+/* Space inputs nicely */
+.pick-input,
+.break-input,
+.time-input {
+  width: 110px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  margin: 4px 0;
+}
+
+/* Keep time field same width */
+.time-input {
+  width: 130px !important;
+}
+
+/* Give tables breathing room */
+.spaced-table td,
+.spaced-table th {
+  padding: 12px 14px !important;
+}
+
+/* Centered buttons under tables */
+.center-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 14px;
+}
