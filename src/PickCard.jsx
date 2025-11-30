@@ -14,32 +14,35 @@ export default function PickAndBaggedCombinedCard() {
   const [ambientOutstanding, setAmbientOutstanding] = useState("");
   const [chillOutstanding, setChillOutstanding] = useState("");
 
-  // --- Required Pickers Section ---
+  // --- Required Pickers Calculator ---
   const [reqAmbientUPH, setReqAmbientUPH] = useState("");
   const [reqChillUPH, setReqChillUPH] = useState("");
+
   const [reqAmbientOutstanding, setReqAmbientOutstanding] = useState("");
   const [reqChillOutstanding, setReqChillOutstanding] = useState("");
+
   const [reqAmbientFinish, setReqAmbientFinish] = useState("");
   const [reqChillFinish, setReqChillFinish] = useState("");
+
+  const [reqAmbientBreak, setReqAmbientBreak] = useState(""); // MINUTES
+  const [reqChillBreak, setReqChillBreak] = useState("");     // MINUTES
 
   const [reqAmbientResult, setReqAmbientResult] = useState(null);
   const [reqChillResult, setReqChillResult] = useState(null);
 
   // --- Toast ---
   const [toast, setToast] = useState({ show: false, message: "" });
-
-  const showToast = (msg) => {
-    setToast({ show: true, message: msg });
+  const showToast = (m) => {
+    setToast({ show: true, message: m });
     setTimeout(() => setToast({ show: false, message: "" }), 1800);
   };
 
-  // --- Load Data from Firestore ---
+  // --- Load Firestore Data ---
   useEffect(() => {
     const unsub = onSnapshot(PICK_DOC, (snap) => {
       if (!snap.exists()) return;
       const d = snap.data();
 
-      // Main pick calculator
       setAmbientPickers(d.ambientPickers || "");
       setChillPickers(d.chillPickers || "");
       setAmbientUPH(d.ambientUPH || "");
@@ -47,13 +50,14 @@ export default function PickAndBaggedCombinedCard() {
       setAmbientOutstanding(d.ambientOutstanding || "");
       setChillOutstanding(d.chillOutstanding || "");
 
-      // Required pickers calculator
       setReqAmbientUPH(d.reqAmbientUPH || "");
       setReqChillUPH(d.reqChillUPH || "");
       setReqAmbientOutstanding(d.reqAmbientOutstanding || "");
       setReqChillOutstanding(d.reqChillOutstanding || "");
       setReqAmbientFinish(d.reqAmbientFinish || "");
       setReqChillFinish(d.reqChillFinish || "");
+      setReqAmbientBreak(d.reqAmbientBreak || "");
+      setReqChillBreak(d.reqChillBreak || "");
       setReqAmbientResult(d.reqAmbientResult ?? null);
       setReqChillResult(d.reqChillResult ?? null);
     });
@@ -61,7 +65,7 @@ export default function PickAndBaggedCombinedCard() {
     return () => unsub();
   }, []);
 
-  // --- Helper Functions ---
+  // --- Helpers ---
   const projected = (uph, pickers) =>
     (parseFloat(uph) || 0) * (parseFloat(pickers) || 0);
 
@@ -80,15 +84,14 @@ export default function PickAndBaggedCombinedCard() {
     return `${h}:${m} ${ampm}`;
   };
 
-  // --- Convert HH:MM (24h) to hours remaining ---
-  const getHoursRemaining = (timeStr) => {
-    if (!timeStr) return 0;
+  // --- Hours remaining (corrected with break logic) ---
+  const getHoursRemaining = (finishTime, breakMinutes) => {
+    if (!finishTime) return 0;
 
     const now = new Date();
-    const [hh, mm] = timeStr.split(":").map(Number);
-    if (isNaN(hh) || isNaN(mm)) return 0;
+    const [hh, mm] = finishTime.split(":").map(Number);
 
-    const finish = new Date(
+    let finish = new Date(
       now.getFullYear(),
       now.getMonth(),
       now.getDate(),
@@ -96,13 +99,23 @@ export default function PickAndBaggedCombinedCard() {
       mm
     );
 
-    const diff = finish - now;
-    if (diff <= 0) return 0;
+    // If finish time already passed → next day
+    if (finish <= now) finish.setDate(finish.getDate() + 1);
 
-    return diff / 3600000; // convert ms to hours
+    const msDiff = finish - now;
+    let hours = msDiff / 3600000;
+
+    const breakHours = (parseFloat(breakMinutes) || 0) / 60;
+
+    // 👇 Correct logic: subtract available time because break reduces work hours
+    hours -= breakHours; 
+
+    if (hours < 0) hours = 0;
+
+    return hours;
   };
 
-  // --- Save Main Pick Calculator ---
+  // --- SAVE MAIN PICK ---
   const savePickCalc = async () => {
     await setDoc(
       PICK_DOC,
@@ -141,26 +154,24 @@ export default function PickAndBaggedCombinedCard() {
     );
   };
 
-  // --- Calculate Required Pickers ---
+  // --- REQUIRED PICKERS CALC ---
   const calculateRequiredPickers = async () => {
-    const ambHours = getHoursRemaining(reqAmbientFinish);
-    const chlHours = getHoursRemaining(reqChillFinish);
+    const ambHours = getHoursRemaining(reqAmbientFinish, reqAmbientBreak);
+    const chlHours = getHoursRemaining(reqChillFinish, reqChillBreak);
 
     const ambReq =
       ambHours > 0
-        ? Math.round(
+        ? Math.ceil(
             (parseFloat(reqAmbientOutstanding) || 0) /
-              ambHours /
-              (parseFloat(reqAmbientUPH) || 1)
+              (ambHours * (parseFloat(reqAmbientUPH) || 1))
           )
         : 0;
 
     const chlReq =
       chlHours > 0
-        ? Math.round(
+        ? Math.ceil(
             (parseFloat(reqChillOutstanding) || 0) /
-              chlHours /
-              (parseFloat(reqChillUPH) || 1)
+              (chlHours * (parseFloat(reqChillUPH) || 1))
           )
         : 0;
 
@@ -176,6 +187,8 @@ export default function PickAndBaggedCombinedCard() {
         reqChillOutstanding,
         reqAmbientFinish,
         reqChillFinish,
+        reqAmbientBreak,
+        reqChillBreak,
         reqAmbientResult: ambReq,
         reqChillResult: chlReq,
       },
@@ -192,6 +205,8 @@ export default function PickAndBaggedCombinedCard() {
     setReqChillOutstanding("");
     setReqAmbientFinish("");
     setReqChillFinish("");
+    setReqAmbientBreak("");
+    setReqChillBreak("");
     setReqAmbientResult(null);
     setReqChillResult(null);
 
@@ -204,6 +219,8 @@ export default function PickAndBaggedCombinedCard() {
         reqChillOutstanding: "",
         reqAmbientFinish: "",
         reqChillFinish: "",
+        reqAmbientBreak: "",
+        reqChillBreak: "",
         reqAmbientResult: null,
         reqChillResult: null,
       },
@@ -211,24 +228,18 @@ export default function PickAndBaggedCombinedCard() {
     );
   };
 
-  // --- Projections ---
+  // --- Computed Values ---
   const ambProjected = projected(ambientUPH, ambientPickers);
   const chlProjected = projected(chillUPH, chillPickers);
 
-  const ambFinish = finishingTime(
-    parseFloat(ambientOutstanding) || 0,
-    ambProjected
-  );
-  const chlFinish = finishingTime(
-    parseFloat(chillOutstanding) || 0,
-    chlProjected
-  );
+  const ambFinish = finishingTime(parseFloat(ambientOutstanding) || 0, ambProjected);
+  const chlFinish = finishingTime(parseFloat(chillOutstanding) || 0, chlProjected);
 
   return (
     <section className="data-card pick-card" style={{ position: "relative" }}>
       <h2 className="data-title">Pick Calculator</h2>
 
-      {/* MAIN PICK CALCULATOR */}
+      {/* MAIN PICK CALCULATOR TABLE */}
       <div className="table-container" style={{ marginTop: 24 }}>
         <table className="data-table pick-table">
           <thead>
@@ -263,13 +274,13 @@ export default function PickAndBaggedCombinedCard() {
           </tbody>
         </table>
 
-        <div style={{ marginTop: 8, display:"flex", gap:8 }}>
+        <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
           <button className="calculate-btn" onClick={savePickCalc}>Save</button>
           <button className="clear-btn" onClick={clearPickCalc}>Clear</button>
         </div>
       </div>
 
-      {/* REQUIRED PICKERS CALCULATOR */}
+      {/* REQUIRED PICKERS TABLE */}
       <h3 style={{ marginTop: 40 }}>Required Pickers Calculator</h3>
 
       <div className="table-container" style={{ marginTop: 10 }}>
@@ -280,6 +291,7 @@ export default function PickAndBaggedCombinedCard() {
               <th>UPH</th>
               <th>Outstanding</th>
               <th>Finish By</th>
+              <th>Break (min)</th>
               <th>Pickers Required</th>
             </tr>
           </thead>
@@ -290,7 +302,8 @@ export default function PickAndBaggedCombinedCard() {
               <td><input type="number" value={reqAmbientUPH} onChange={(e)=>setReqAmbientUPH(e.target.value)} className="uph-input"/></td>
               <td><input type="number" value={reqAmbientOutstanding} onChange={(e)=>setReqAmbientOutstanding(e.target.value)} className="outstanding-input"/></td>
               <td><input type="time" value={reqAmbientFinish} onChange={(e)=>setReqAmbientFinish(e.target.value)} className="uph-input"/></td>
-              <td>{reqAmbientResult !== null ? reqAmbientResult : "-"}</td>
+              <td><input type="number" value={reqAmbientBreak} onChange={(e)=>setReqAmbientBreak(e.target.value)} className="uph-input"/></td>
+              <td>{reqAmbientResult ?? "-"}</td>
             </tr>
 
             <tr>
@@ -298,19 +311,21 @@ export default function PickAndBaggedCombinedCard() {
               <td><input type="number" value={reqChillUPH} onChange={(e)=>setReqChillUPH(e.target.value)} className="uph-input"/></td>
               <td><input type="number" value={reqChillOutstanding} onChange={(e)=>setReqChillOutstanding(e.target.value)} className="outstanding-input"/></td>
               <td><input type="time" value={reqChillFinish} onChange={(e)=>setReqChillFinish(e.target.value)} className="uph-input"/></td>
-              <td>{reqChillResult !== null ? reqChillResult : "-"}</td>
+              <td><input type="number" value={reqChillBreak} onChange={(e)=>setReqChillBreak(e.target.value)} className="uph-input"/></td>
+              <td>{reqChillResult ?? "-"}</td>
             </tr>
           </tbody>
         </table>
 
-        <div style={{ marginTop: 8, display:"flex", gap:8 }}>
+        <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
           <button className="calculate-btn" onClick={calculateRequiredPickers}>Calculate</button>
           <button className="clear-btn" onClick={clearRequiredPickers}>Clear</button>
         </div>
       </div>
 
-      {/* Toast */}
-      {toast.show && <div className="toast-notification-center">{toast.message}</div>}
+      {toast.show && (
+        <div className="toast-notification-center">{toast.message}</div>
+      )}
     </section>
   );
 }

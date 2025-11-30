@@ -6,7 +6,7 @@ import "./App.css";
 
 import TotesUsedCard from "./TotesUsedCard";
 import BaggedTotesCard from "./BaggedTotesCard";
-import PickAndBaggedCombinedCard from "./PickAndBaggedCombinedCard";
+import PickAndBaggedCombinedCard from "./PickCard";
 import ShiftEOSCard from "./ShiftEOSCard";
 
 import { Carousel } from "react-responsive-carousel";
