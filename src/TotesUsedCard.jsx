@@ -263,8 +263,10 @@ export default function TotesUsedCard({
               <div className="toast-notification-center">{notification}</div>
             )}
           </div>
+          
         </div>
       </div>
+      <div>*Total Frames include recovery vans</div>
     </section>
   );
 }
