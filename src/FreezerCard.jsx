@@ -32,7 +32,7 @@ export default function FreezerCard() {
   };
 
   // -----------------------------
-  // LOAD FIRESTORE DATA
+  // LOAD FIRESTORE
   // -----------------------------
   useEffect(() => {
     const unsub = onSnapshot(FREEZER_DOC, (snap) => {
@@ -56,8 +56,7 @@ export default function FreezerCard() {
   }, []);
 
   // ----------------------------------------------------
-  // TIME CONVERSION FUNCTION
-  // hoursToTimeString(hours, breakMinutes)
+  // Convert hours → formatted time
   // ----------------------------------------------------
   const calculateFinishTime = (hours, breakMinutes) => {
     if (!hours || hours <= 0) return "-";
@@ -66,7 +65,6 @@ export default function FreezerCard() {
     const breakHrs = (parseFloat(breakMinutes) || 0) / 60;
 
     const finalHours = hours + breakHrs;
-
     const finish = new Date(now.getTime() + finalHours * 3600000);
 
     let hh = finish.getHours();
@@ -77,17 +75,32 @@ export default function FreezerCard() {
     return `${hh}:${mm} ${ampm}`;
   };
 
-  // -----------------------------
-  // CALCULATE TABLE 1 (UPH)
-  // -----------------------------
-  const handleCalculateUPH = async () => {
+  // ----------------------------------------------------
+  // AUTO-CALCULATE (UPH TABLE)
+  // ----------------------------------------------------
+  useEffect(() => {
     const hours =
       (parseFloat(outstandingUPH) || 0) /
       ((parseFloat(pickersUPH) || 0) * (parseFloat(uph) || 0));
 
-    const time = calculateFinishTime(hours, breakUPH);
-    setResultUPH(time);
+    setResultUPH(calculateFinishTime(hours, breakUPH));
+  }, [pickersUPH, uph, outstandingUPH, breakUPH]);
 
+  // ----------------------------------------------------
+  // AUTO-CALCULATE (TROLLY TABLE)
+  // ----------------------------------------------------
+  useEffect(() => {
+    const hours =
+      (parseFloat(outstandingTrolly) || 0) /
+      ((parseFloat(pickersTrolly) || 0) * (parseFloat(trollyRate) || 0));
+
+    setResultTrolly(calculateFinishTime(hours, breakTrolly));
+  }, [pickersTrolly, trollyRate, outstandingTrolly, breakTrolly]);
+
+  // ----------------------------------------------------
+  // SAVE TABLE 1 ONLY
+  // ----------------------------------------------------
+  const saveUPH = async () => {
     await setDoc(
       FREEZER_DOC,
       {
@@ -95,14 +108,17 @@ export default function FreezerCard() {
         uph,
         outstandingUPH,
         breakUPH,
-        resultUPH: time,
+        resultUPH,
       },
       { merge: true }
     );
 
-    showToast("UPH Calculation Saved");
+    showToast("UPH Table Saved");
   };
 
+  // ----------------------------------------------------
+  // CLEAR TABLE 1 ONLY
+  // ----------------------------------------------------
   const clearUPH = async () => {
     setPickersUPH("");
     setUPH("");
@@ -121,19 +137,14 @@ export default function FreezerCard() {
       },
       { merge: true }
     );
+
+    showToast("UPH Table Cleared");
   };
 
-  // -----------------------------
-  // CALCULATE TABLE 2 (Trolley)
-  // -----------------------------
-  const handleCalculateTrolly = async () => {
-    const hours =
-      (parseFloat(outstandingTrolly) || 0) /
-      ((parseFloat(pickersTrolly) || 0) * (parseFloat(trollyRate) || 0));
-
-    const time = calculateFinishTime(hours, breakTrolly);
-    setResultTrolly(time);
-
+  // ----------------------------------------------------
+  // SAVE TABLE 2 ONLY
+  // ----------------------------------------------------
+  const saveTrolly = async () => {
     await setDoc(
       FREEZER_DOC,
       {
@@ -141,14 +152,17 @@ export default function FreezerCard() {
         trollyRate,
         outstandingTrolly,
         breakTrolly,
-        resultTrolly: time,
+        resultTrolly,
       },
       { merge: true }
     );
 
-    showToast("Trolley Calculation Saved");
+    showToast("Trolly Table Saved");
   };
 
+  // ----------------------------------------------------
+  // CLEAR TABLE 2 ONLY
+  // ----------------------------------------------------
   const clearTrolly = async () => {
     setPickersTrolly("");
     setTrollyRate("");
@@ -167,13 +181,15 @@ export default function FreezerCard() {
       },
       { merge: true }
     );
+
+    showToast("Trolly Table Cleared");
   };
 
   return (
     <section className="data-card" style={{ paddingBottom: 30 }}>
       <h2 className="data-title">Freezer Calculator</h2>
 
-      {/* ======================= TABLE 1 - UPH METHOD ======================= */}
+      {/* ======================= TABLE 1 ======================= */}
       <h3 style={{ marginTop: 20 }}>Finish Time Using UPH</h3>
 
       <table className="data-table" style={{ marginTop: 12 }}>
@@ -181,9 +197,9 @@ export default function FreezerCard() {
           <tr>
             <th>Pickers</th>
             <th>UPH</th>
-            <th>Outstanding Picks</th>
+            <th>Outstanding</th>
             <th>Break (min)</th>
-            <th>Finishing Time</th>
+            <th>Finish Time</th>
           </tr>
         </thead>
 
@@ -198,13 +214,13 @@ export default function FreezerCard() {
         </tbody>
       </table>
 
-      {/* Buttons Centered */}
-      <div style={{ display:"flex", justifyContent:"center", gap:10, marginTop:12 }}>
-        <button className="calculate-btn" onClick={handleCalculateUPH}>Save</button>
+      {/* Buttons for Table 1 */}
+      <div style={{ display:"flex", justifyContent:"center", gap:12, marginTop:12 }}>
+        <button className="calculate-btn" onClick={saveUPH}>Save</button>
         <button className="clear-btn" onClick={clearUPH}>Clear</button>
       </div>
 
-      {/* ======================= TABLE 2 - TROLLEY METHOD ======================= */}
+      {/* ======================= TABLE 2 ======================= */}
       <h3 style={{ marginTop: 40 }}>Finish Time Using Trollies</h3>
 
       <table className="data-table" style={{ marginTop: 12 }}>
@@ -214,7 +230,7 @@ export default function FreezerCard() {
             <th>Trolly/hr</th>
             <th>Outstanding Trollies</th>
             <th>Break (min)</th>
-            <th>Finishing Time</th>
+            <th>Finish Time</th>
           </tr>
         </thead>
 
@@ -229,9 +245,9 @@ export default function FreezerCard() {
         </tbody>
       </table>
 
-      {/* Buttons Centered */}
-      <div style={{ display:"flex", justifyContent:"center", gap:10, marginTop:12 }}>
-        <button className="calculate-btn" onClick={handleCalculateTrolly}>Save</button>
+      {/* Buttons for Table 2 */}
+      <div style={{ display:"flex", justifyContent:"center", gap:12, marginTop:12 }}>
+        <button className="calculate-btn" onClick={saveTrolly}>Save</button>
         <button className="clear-btn" onClick={clearTrolly}>Clear</button>
       </div>
 
