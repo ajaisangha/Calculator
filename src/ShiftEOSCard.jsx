@@ -25,7 +25,7 @@ export default function ShiftEOSCard() {
   const [ambientPick, setAmbientPick] = useState("0");
   const [chillPick, setChillPick] = useState("0");
   const [freezerPick, setFreezerPick] = useState("0");
-  const [targetProd, setTargetProd] = useState("260");
+  const [targetProd, setTargetProd] = useState("285");
 
   // Toast
   const [toast, setToast] = useState({ show: false, message: "" });
@@ -60,7 +60,7 @@ export default function ShiftEOSCard() {
       setAmbientPick(d.ambientPick?.toString() || "0");
       setChillPick(d.chillPick?.toString() || "0");
       setFreezerPick(d.freezerPick?.toString() || "0");
-      setTargetProd(d.targetProd?.toString() || "260");
+      setTargetProd(d.targetProd?.toString() || "285");
     });
     return () => unsub();
   }, []);
@@ -155,7 +155,7 @@ export default function ShiftEOSCard() {
     setAmbientPick("0");
     setChillPick("0");
     setFreezerPick("0");
-    setTargetProd("260");
+    setTargetProd("285");
 
     await setDoc(
       SHIFT_EOS_DOC,
@@ -167,7 +167,7 @@ export default function ShiftEOSCard() {
         ambientPick: 0,
         chillPick: 0,
         freezerPick: 0,
-        targetProd: 260,
+        targetProd: 285,
       },
       { merge: true }
     );
