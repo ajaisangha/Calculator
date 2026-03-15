@@ -1,23 +1,25 @@
-/* =======================================================================
-   GLOBAL RESET + DARK MODE SAFETY
-======================================================================= */
-
 * {
   box-sizing: border-box;
 }
 
-body, .app-container {
+body,
+.app-container {
   margin: 0;
   padding: 0;
   color: #111 !important;
-  overflow-x: hidden !important;
 }
 
-input, button {
+input,
+button {
   font-family: inherit;
 }
 
-h1, h2, h3, h4, h5, h6,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
 .data-card,
 .bagged-card,
 .pick-card,
@@ -25,6 +27,48 @@ h1, h2, h3, h4, h5, h6,
   color: #111 !important;
 }
 
+.app-container {
+  width: 100%;
+  min-height: 100vh;
+}
+
+.app-main {
+  width: 100%;
+  padding-top: calc(var(--header-height, 80px) + 14px);
+  padding-bottom: 28px;
+}
+
+.app-shell {
+  width: min(100%, 1500px);
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+.app-layout {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.sidebar-nav {
+  position: sticky;
+  top: calc(var(--header-height, 80px) + 16px);
+  align-self: start;
+}
+
+.carousel-panel {
+  min-width: 0;
+  display: flex;
+  justify-content: center;
+}
+
+.app-loading {
+  margin-top: 120px;
+  text-align: center;
+  color: #111;
+  font-weight: 600;
+}
 
 /* =======================================================================
    HEADER
@@ -35,43 +79,56 @@ h1, h2, h3, h4, h5, h6,
   top: 0;
   left: 0;
   width: 100%;
-  height: 80px;
+  height: var(--header-height, 80px);
   background: linear-gradient(135deg, #4a90e2, #6fb1fc);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
   z-index: 1000;
 }
 
 .header-title {
   color: #fff;
-  font-size: 32px;
+  font-size: clamp(24px, 2.4vw, 32px);
   margin: 0;
 }
 
-
 /* =======================================================================
-   TOP NAVIGATION BUTTONS
+   LEFT NAV
 ======================================================================= */
 
 .carousel-links {
   display: flex;
-  justify-content: center;
-  gap: 16px;
-  margin-top: 90px;
-  margin-bottom: 16px;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
 }
 
 .carousel-links button {
-  background: none !important;
-  border: 2px solid #007bff !important;
+  width: 100%;
+  text-align: left;
+  background: #fff !important;
+  border: 1px solid #c8dcff !important;
   color: #007bff !important;
-  padding: 8px 16px;
-  border-radius: 6px;
+  padding: 12px 14px;
+  border-radius: 12px;
   cursor: pointer;
   font-weight: 600;
-  transition: 0.2s;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.15s ease,
+    box-shadow 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.08);
+  white-space: nowrap;
+}
+
+.carousel-links button:hover {
+  transform: translateY(-1px);
+  border-color: #007bff !important;
+  box-shadow: 0 8px 18px rgba(0, 123, 255, 0.14);
 }
 
 .carousel-links button.active,
@@ -80,42 +137,47 @@ h1, h2, h3, h4, h5, h6,
   color: white !important;
 }
 
-
 /* =======================================================================
-   CAROUSEL — CENTERED, NO ARROWS, NO SCROLLING
+   CAROUSEL
 ======================================================================= */
 
 .carousel-container {
   width: 100%;
-  display: flex;
-  justify-content: center;
-  margin-top: 10px;
-  height: auto !important;
-  overflow: visible !important;
+  max-width: 1300px;
+  min-width: 0;
+}
+
+.carousel-root,
+.carousel,
+.carousel .slider-wrapper,
+.carousel .slider {
+  width: 100%;
+}
+
+.carousel .slider-wrapper {
+  overflow: hidden !important;
 }
 
 .carousel-slide {
   width: 100%;
-  max-width: 1300px;
-  margin: 0 auto;
-  padding: 20px;
-
+  min-width: 0;
+  padding: 0;
   display: flex;
   justify-content: center;
   align-items: flex-start;
-
-  height: auto !important;
-  overflow: visible !important;
 }
 
-/* hide arrows & dots */
+.carousel-slide > * {
+  width: 100%;
+  min-width: 0;
+}
+
 .carousel .control-arrow,
 .carousel .control-prev,
 .carousel .control-next,
 .carousel .control-dots {
   display: none !important;
 }
-
 
 /* =======================================================================
    CARD BASE STYLE
@@ -124,70 +186,95 @@ h1, h2, h3, h4, h5, h6,
 .data-card {
   width: 100%;
   max-width: 1100px;
-  background: linear-gradient(145deg, #f0f4fc, #d9e6fc);
-  border-radius: 16px;
+  min-width: 0;
+  background: linear-gradient(145deg, #f8fbff, #e3eefc);
+  border: 1px solid rgba(190, 210, 235, 0.9);
+  border-radius: 18px;
   padding: 24px;
-  margin: auto;
-  box-shadow: 0 12px 24px rgba(0,0,0,0.15);
-  transition: 0.2s;
+  margin: 0 auto;
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.12);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .data-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 20px 40px rgba(0,0,0,0.18);
+  transform: translateY(-3px);
+  box-shadow: 0 22px 42px rgba(0, 0, 0, 0.14);
 }
-
 
 /* =======================================================================
    TABLES
 ======================================================================= */
 
 .table-container {
+  width: 100%;
   overflow-x: auto;
+  overflow-y: visible;
+  -webkit-overflow-scrolling: touch;
 }
 
 .data-table {
   width: 100%;
-  border-collapse: collapse;
+  min-width: 640px;
+  border-collapse: separate;
+  border-spacing: 0;
   margin-top: 16px;
 }
 
 .data-table th,
 .data-table td {
-  padding: 10px 12px;
-  border-bottom: 1px solid #eee;
+  padding: 12px 14px;
+  border-bottom: 1px solid #e8eef7;
   background: white;
+  vertical-align: middle;
 }
 
-.data-table tbody tr:nth-child(even) {
-  background-color: #fafafa;
+.data-table thead th {
+  background: #edf5ff;
+  color: #123c73;
+  font-weight: 700;
 }
 
-.data-table tbody tr:hover {
-  background-color: #e6f0ff;
+.data-table tbody tr:nth-child(even) td {
+  background-color: #fbfdff;
 }
 
+.data-table tbody tr:hover td {
+  background-color: #eef6ff;
+}
+
+.bold {
+  font-weight: 700;
+}
 
 /* =======================================================================
-   BUTTONS — BLUE (SAVE/CALCULATE) & RED (CLEAR)
+   BUTTONS
 ======================================================================= */
 
 button {
-  padding: 8px 16px;
-  border-radius: 6px;
+  padding: 10px 16px;
+  border-radius: 10px;
   border: none;
   cursor: pointer;
   font-weight: 600;
-  transition: 0.2s;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
   font-size: 14px;
 }
 
-/* ACTION BUTTONS - BLUE */
+button:hover {
+  transform: translateY(-1px);
+}
+
 .calculate-btn,
 .save-btn,
 .primary-btn {
   background-color: #007bff !important;
   color: white !important;
+  box-shadow: 0 10px 18px rgba(0, 123, 255, 0.22);
 }
 
 .calculate-btn:hover,
@@ -196,47 +283,143 @@ button {
   background-color: #0056b3 !important;
 }
 
-/* CLEAR BUTTONS - RED */
 .clear-btn {
   background-color: #d9534f !important;
   color: white !important;
+  box-shadow: 0 10px 18px rgba(217, 83, 79, 0.18);
 }
 
 .clear-btn:hover {
   background-color: #b52b27 !important;
 }
 
-/* Disabled buttons */
 button:disabled {
   background-color: #c9c9c9 !important;
   color: #666 !important;
   cursor: not-allowed !important;
+  transform: none !important;
+  box-shadow: none !important;
 }
 
+/* =======================================================================
+   INPUTS
+======================================================================= */
+
+input[type="number"],
+input[type="time"],
+input[type="text"],
+input[type="file"] {
+  max-width: 100%;
+}
+
+input[type="number"],
+input[type="time"],
+.pick-input,
+.break-input,
+.time-input,
+.tiny-input,
+.bagged-row input {
+  border: 1px solid #cdd7e6;
+  background: #fff;
+  border-radius: 8px;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+input:focus {
+  outline: none;
+  border-color: #5ea2ff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.12);
+}
+
+.tiny-input {
+  width: 70px;
+  padding: 5px 7px;
+}
+
+.pick-input,
+.break-input,
+.time-input {
+  width: 110px;
+  padding: 6px 8px;
+  margin: 4px 0;
+}
+
+.time-input {
+  width: 130px !important;
+}
 
 /* =======================================================================
-   BAGGED TOTES
+   COMMON LAYOUT HELPERS
 ======================================================================= */
+
+.file-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.duplicate-warning {
+  margin: 14px 0 0;
+  color: #b42318;
+  font-weight: 600;
+}
+
+.no-data {
+  margin: 18px 0 0;
+  color: #526071;
+}
+
+.grand-totals {
+  margin-top: 20px;
+}
+
+.dollies-flex {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.bagged-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.result-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.bagged-result {
+  min-width: 220px;
+}
 
 .bagged-row {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   gap: 12px;
   margin-bottom: 10px;
 }
 
-.bagged-row input {
-  width: 120px;
-  padding: 6px;
-  border-radius: 8px;
-  border: 1px solid #ccc;
-  text-align: right;
+.bagged-row span {
+  flex: 1;
+  min-width: 0;
 }
 
-
-/* =======================================================================
-   PICK CALCULATOR
-======================================================================= */
+.bagged-row input {
+  width: 120px;
+  min-width: 100px;
+  padding: 8px 10px;
+  text-align: right;
+}
 
 .pick-card {
   width: 100%;
@@ -252,48 +435,93 @@ button:disabled {
   table-layout: fixed;
 }
 
-.picker-input { width: 40px; }
-.uph-input { width: 60px; }
-.outstanding-input { width: 100px; }
+.picker-input {
+  width: 40px;
+}
 
+.uph-input {
+  width: 60px;
+}
+
+.outstanding-input {
+  width: 100px;
+}
+
+.spaced-table td,
+.spaced-table th {
+  padding: 12px 14px !important;
+}
+
+.button-row-centered,
+.center-buttons {
+  margin-top: 14px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
 
 /* =======================================================================
-   SHIFT EOS SECTION
+   SHIFT EOS FIX
 ======================================================================= */
 
 .shift-eos-card {
   width: 100%;
-  max-width: 1300px;
-  margin: auto;
-  padding: 20px;
+  max-width: 1200px;
+  min-width: 0;
+  margin: 0 auto;
   overflow: visible !important;
 }
 
 .shift-eos-flex {
-  display: flex;
-  justify-content: center;
-  gap: 24px;
-  flex-wrap: wrap;
-  overflow: visible;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  align-items: start;
 }
 
 .shift-subcard {
-  flex: 1;
-  min-width: 420px;
-  max-width: 600px;
+  min-width: 0;
+  max-width: none;
+  width: 100%;
   background: white;
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 6px 14px rgba(0,0,0,0.1);
+  border-radius: 14px;
+  padding: 18px;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.1);
+  overflow: visible;
 }
 
-.tiny-input {
-  width: 70px;
-  padding: 4px 6px;
-  border-radius: 6px;
-  border: 1px solid #ccc;
+.shift-eos-card .table-container {
+  overflow: visible;
 }
 
+.shift-eos-card .data-table {
+  min-width: 0;
+  width: 100%;
+  table-layout: fixed;
+}
+
+.shift-eos-card .data-table th,
+.shift-eos-card .data-table td {
+  padding: 10px 8px;
+  word-break: break-word;
+}
+
+.shift-eos-card .data-table td:first-child,
+.shift-eos-card .data-table th:first-child {
+  width: 32%;
+}
+
+.shift-eos-card .tiny-input {
+  width: 100%;
+  min-width: 0;
+  max-width: 64px;
+}
+
+.shift-eos-card .button-row-centered {
+  flex-wrap: wrap;
+}
 
 /* =======================================================================
    TOAST
@@ -306,54 +534,147 @@ button:disabled {
   transform: translate(-50%, -50%);
   background: #4a90e2;
   color: white;
-  padding: 10px 20px;
-  border-radius: 10px;
+  padding: 12px 22px;
+  border-radius: 12px;
   font-weight: 600;
   z-index: 2000;
+  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.18);
   animation: slideFadeCenter 2s forwards;
 }
 
 @keyframes slideFadeCenter {
-  0% { opacity: 0; transform: translate(-50%, -40%); }
-  10% { opacity: 1; }
-  90% { opacity: 1; }
-  100% { opacity: 0; transform: translate(-50%, -60%); }
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -40%);
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -60%);
+  }
 }
 
-.button-row-centered {
-  margin-top: 12px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 16px; /* spacing between buttons */
+/* =======================================================================
+   RESPONSIVE
+======================================================================= */
+
+@media (max-width: 1200px) {
+  .app-layout {
+    grid-template-columns: 200px minmax(0, 1fr);
+    gap: 18px;
+  }
+
+  .data-card {
+    padding: 20px;
+  }
 }
 
-/* Space inputs nicely */
-.pick-input,
-.break-input,
-.time-input {
-  width: 110px;
-  padding: 6px 8px;
-  border-radius: 6px;
-  border: 1px solid #ccc;
-  margin: 4px 0;
+@media (max-width: 980px) {
+  .app-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar-nav {
+    position: static;
+  }
+
+  .carousel-links {
+    flex-direction: row;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 4px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .carousel-links button {
+    width: auto;
+    min-width: max-content;
+    text-align: center;
+  }
+
+  .carousel-panel {
+    width: 100%;
+  }
+
+  .shift-eos-flex {
+    grid-template-columns: 1fr;
+  }
 }
 
-/* Keep time field same width */
-.time-input {
-  width: 130px !important;
+@media (max-width: 700px) {
+  .app-shell {
+    padding: 0 10px;
+  }
+
+  .data-card,
+  .shift-subcard {
+    padding: 14px;
+  }
+
+  .data-table {
+    min-width: 560px;
+  }
+
+  .shift-eos-card .data-table {
+    min-width: 0;
+  }
+
+  .shift-eos-card .data-table td:first-child,
+  .shift-eos-card .data-table th:first-child {
+    width: 34%;
+  }
+
+  .bagged-row {
+    flex-wrap: wrap;
+  }
+
+  .bagged-row input {
+    width: 100%;
+  }
+
+  .button-row-centered,
+  .center-buttons {
+    flex-direction: column;
+  }
+
+  .button-row-centered button,
+  .center-buttons button {
+    width: 100%;
+  }
+
+  .dollies-flex,
+  .file-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
 }
 
-/* Give tables breathing room */
-.spaced-table td,
-.spaced-table th {
-  padding: 12px 14px !important;
-}
+@media (max-width: 520px) {
+  .header {
+    height: 72px;
+  }
 
-/* Centered buttons under tables */
-.center-buttons {
-  display: flex;
-  justify-content: center;
-  gap: 16px;
-  margin-top: 14px;
+  .app-main {
+    padding-top: 86px;
+  }
+
+  .carousel-links button {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+
+  .shift-eos-card .data-table th,
+  .shift-eos-card .data-table td {
+    padding: 8px 6px;
+    font-size: 13px;
+  }
+
+  .shift-eos-card .tiny-input {
+    max-width: 56px;
+  }
 }

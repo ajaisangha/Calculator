@@ -38,6 +38,7 @@ function parseToteCell(cell) {
 function getColumnKeys(headers) {
   const pickCol = (pattern) =>
     headers.find((h) => new RegExp(pattern, "i").test(h));
+
   return {
     consignmentKey: pickCol("Consignment") || pickCol("consignment"),
     ambientKey:
@@ -57,9 +58,12 @@ function getColumnKeys(headers) {
 function getRouteName(row, shipmentKey, dispatchKey) {
   const shipment = row[shipmentKey] || "";
   const dispatch = row[dispatchKey] || "";
+
   if (/route-/i.test(shipment)) return "Vans";
+
   const timeMatch = dispatch.match(/(\d{1,2}:\d{2})/);
   const dispatchTime = timeMatch ? timeMatch[1] : null;
+
   if (!dispatchTime) return "Spoke";
   if (["11:15", "11:16", "11:17"].includes(dispatchTime)) return "Ottawa";
   if (dispatchTime === "2:30") return "Etobicoke 1";
@@ -106,11 +110,11 @@ export default function App() {
               rows: [],
             };
           }
+
           routeMap[r.route].totals.ambient += r.ambient;
           routeMap[r.route].totals.chilled += r.chilled;
           routeMap[r.route].totals.freezer += r.freezer;
-          routeMap[r.route].totals.total +=
-            r.ambient + r.chilled + r.freezer;
+          routeMap[r.route].totals.total += r.ambient + r.chilled + r.freezer;
           routeMap[r.route].rows.push(r);
 
           grand.ambient += r.ambient;
@@ -132,8 +136,10 @@ export default function App() {
           total: 0,
         });
       }
+
       setLoading(false);
     });
+
     return () => unsubscribe();
   }, []);
 
@@ -146,6 +152,7 @@ export default function App() {
         complete: async (results) => {
           const dataRows = results.data;
           if (!dataRows.length) return;
+
           const headers = Object.keys(dataRows[0]);
           const {
             consignmentKey,
@@ -162,12 +169,13 @@ export default function App() {
 
           dataRows.forEach((r) => {
             const consignment = (r[consignmentKey] || "").trim();
+
             if (!consignment || newConsignments.has(consignment)) {
               if (consignment) duplicatesDetected++;
               return;
             }
-            newConsignments.add(consignment);
 
+            newConsignments.add(consignment);
             const route = getRouteName(r, shipmentKey, dispatchKey);
 
             newRows.push({
@@ -214,104 +222,106 @@ export default function App() {
     }
   };
 
-  if (loading)
-    return (
-      <p style={{ marginTop: 120, textAlign: "center" }}>Loading...</p>
-    );
+  if (loading) {
+    return <p className="app-loading">Loading...</p>;
+  }
 
   return (
     <div className="app-container">
       <Header />
 
-      <nav className="carousel-links" style={{
-          transform: "translateX(-350px)", // 👈 small nudge to the left
-        }}>
-        <button
-          onClick={() => setSlideIndex(0)}
-          className={slideIndex === 0 ? "active" : ""}
-        >
-          Totes Used
-        </button>
-        <button
-          onClick={() => setSlideIndex(1)}
-          className={slideIndex === 1 ? "active" : ""}
-        >
-          Bagged Totes
-        </button>
-        <button
-          onClick={() => setSlideIndex(2)}
-          className={slideIndex === 2 ? "active" : ""}
-        >
-          Pick Calculator
-        </button>
-        <button
-          onClick={() => setSlideIndex(3)}
-          className={slideIndex === 3 ? "active" : ""}
-        >
-          Shift EOS
-        </button>
-        <button
-          onClick={() => setSlideIndex(4)}
-          className={slideIndex === 4 ? "active" : ""}
-        >
-          Freezer Calculator
-        </button>
-      </nav>
+      <main className="app-main">
+        <div className="app-shell">
+          <div className="app-layout">
+            <aside className="sidebar-nav" aria-label="Calculator sections">
+              <nav className="carousel-links">
+                <button
+                  onClick={() => setSlideIndex(0)}
+                  className={slideIndex === 0 ? "active" : ""}
+                >
+                  Totes Used
+                </button>
+                <button
+                  onClick={() => setSlideIndex(1)}
+                  className={slideIndex === 1 ? "active" : ""}
+                >
+                  Bagged Totes
+                </button>
+                <button
+                  onClick={() => setSlideIndex(2)}
+                  className={slideIndex === 2 ? "active" : ""}
+                >
+                  Pick Calculator
+                </button>
+                <button
+                  onClick={() => setSlideIndex(3)}
+                  className={slideIndex === 3 ? "active" : ""}
+                >
+                  Shift EOS
+                </button>
+                <button
+                  onClick={() => setSlideIndex(4)}
+                  className={slideIndex === 4 ? "active" : ""}
+                >
+                  Freezer Calculator
+                </button>
+              </nav>
+            </aside>
 
-      <div
-        className="carousel-container"
-        style={{
-          transform: "translateX(-350px)", // 👈 small nudge to the left
-        }}
-      >
-        <Carousel
-          selectedItem={slideIndex}
-          onChange={setSlideIndex}
-          showThumbs={false}
-          showStatus={false}
-          showIndicators={false}
-          infiniteLoop={false}
-          swipeable
-          emulateTouch
-        >
-          <div className="carousel-slide">
-            <TotesUsedCard
-              rows={rows}
-              routesInfo={routesInfo}
-              grandTotals={grandTotals}
-              duplicateMessage={duplicateMessage}
-              onFileChange={onFileChange}
-              clearAll={clearAll}
-            />
-          </div>
+            <section className="carousel-panel">
+              <div className="carousel-container">
+                <Carousel
+                  selectedItem={slideIndex}
+                  onChange={setSlideIndex}
+                  showThumbs={false}
+                  showStatus={false}
+                  showIndicators={false}
+                  infiniteLoop={false}
+                  swipeable
+                  emulateTouch
+                >
+                  <div className="carousel-slide">
+                    <TotesUsedCard
+                      rows={rows}
+                      routesInfo={routesInfo}
+                      grandTotals={grandTotals}
+                      duplicateMessage={duplicateMessage}
+                      onFileChange={onFileChange}
+                      clearAll={clearAll}
+                    />
+                  </div>
 
-          <div className="carousel-slide">
-            <BaggedTotesCard
-              grandTotals={grandTotals}
-              receivedAmbient={receivedAmbient}
-              receivedChill={receivedChill}
-              currentAmbient={currentAmbient}
-              currentChill={currentChill}
-              setReceivedAmbient={setReceivedAmbient}
-              setReceivedChill={setReceivedChill}
-              setCurrentAmbient={setCurrentAmbient}
-              setCurrentChill={setCurrentChill}
-            />
-          </div>
+                  <div className="carousel-slide">
+                    <BaggedTotesCard
+                      grandTotals={grandTotals}
+                      receivedAmbient={receivedAmbient}
+                      receivedChill={receivedChill}
+                      currentAmbient={currentAmbient}
+                      currentChill={currentChill}
+                      setReceivedAmbient={setReceivedAmbient}
+                      setReceivedChill={setReceivedChill}
+                      setCurrentAmbient={setCurrentAmbient}
+                      setCurrentChill={setCurrentChill}
+                    />
+                  </div>
 
-          <div className="carousel-slide">
-            <PickAndBaggedCombinedCard />
-          </div>
+                  <div className="carousel-slide">
+                    <PickAndBaggedCombinedCard />
+                  </div>
 
-          <div className="carousel-slide">
-            <ShiftEOSCard />
-          </div>
+                  <div className="carousel-slide">
+                    <ShiftEOSCard />
+                  </div>
 
-          <div className="carousel-slide">
-            <FreezerCard />
+                  <div className="carousel-slide">
+                    <FreezerCard />
+                  </div>
+                </Carousel>
+              </div>
+            </section>
           </div>
-        </Carousel>
-      </div>
+        </div>
+      </main>
     </div>
   );
 }
