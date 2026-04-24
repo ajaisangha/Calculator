@@ -686,3 +686,120 @@ input:focus {
     max-width: 56px;
   }
 }
+
+/* ---------- BAGGED TOTES RESPONSIVE LAYOUT ---------- */
+.bagged-two-column {
+  display: flex;
+  gap: 32px;
+  width: 100%;
+  align-items: flex-start;
+}
+
+.bagged-panel {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ---------- PHONE SCROLL / OVERFLOW FIX ---------- */
+html,
+body,
+#root {
+  width: 100%;
+  min-width: 320px;
+  min-height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.app-container,
+.app-main,
+.app-shell,
+.app-layout,
+.carousel-panel,
+.carousel-container,
+.carousel-root,
+.carousel,
+.carousel .slider-wrapper,
+.carousel .slider,
+.carousel-slide {
+  min-width: 0;
+}
+
+.app-main {
+  overflow-x: hidden;
+  overflow-y: visible;
+}
+
+.carousel-slide {
+  overflow: visible;
+}
+
+/* ---------- MOBILE ---------- */
+@media (max-width: 700px) {
+  .bagged-two-column {
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .bagged-panel {
+    width: 100%;
+  }
+
+  .bagged-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .bagged-row input {
+    width: 100%;
+    min-width: 0;
+    text-align: left;
+  }
+
+  .bagged-result {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .result-line {
+    justify-content: space-between;
+  }
+}
+
+@media (max-width: 520px) {
+  html,
+  body {
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .app-container {
+    overflow-x: hidden;
+  }
+
+  .app-main {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .app-shell {
+    padding: 0 8px;
+  }
+
+  .data-card,
+  .shift-subcard,
+  .bagged-card,
+  .pick-card {
+    width: 100%;
+    max-width: 100%;
+    margin: 0 auto;
+  }
+
+  .table-container {
+    overflow-x: auto;
+    overflow-y: visible;
+    -webkit-overflow-scrolling: touch;
+  }
+}

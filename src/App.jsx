@@ -18,7 +18,7 @@ const DATA_DOC = doc(db, "totes", "data");
 function Header() {
   return (
     <header className="header">
-      <h1 className="header-title">Calculator</h1>
+      <h1 className="header-title">Shift Planner</h1>
     </header>
   );
 }

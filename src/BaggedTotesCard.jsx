@@ -7,40 +7,39 @@ const BAGGED_TOTES_DOC = doc(db, "totes", "baggedTotes");
 
 export default function BaggedTotesCard({
   grandTotals,
-  receivedAmbient, receivedChill,
-  currentAmbient, currentChill,
-  setReceivedAmbient, setReceivedChill,
-  setCurrentAmbient, setCurrentChill
+  receivedAmbient,
+  receivedChill,
+  currentAmbient,
+  currentChill,
+  setReceivedAmbient,
+  setReceivedChill,
+  setCurrentAmbient,
+  setCurrentChill,
 }) {
-
-  // LEFT: Bagged Totes
   const [baggedAmbient, setBaggedAmbient] = useState(null);
   const [baggedChill, setBaggedChill] = useState(null);
 
-  // RIGHT: Current bagged
   const [currentAmbient2, setCurrentAmbient2] = useState("");
   const [currentChill2, setCurrentChill2] = useState("");
   const [neededAmbient, setNeededAmbient] = useState("");
   const [neededChill, setNeededChill] = useState("");
+  const [leavingAmbient, setLeavingAmbient] = useState("");
+  const [leavingChill, setLeavingChill] = useState("");
   const [resultAmbient, setResultAmbient] = useState(null);
   const [resultChill, setResultChill] = useState(null);
 
-  // Toast
-  const [toast, setToast] = useState({ show:false, message:"" });
+  const [toast, setToast] = useState({ show: false, message: "" });
+
   const showToast = (msg) => {
-    setToast({ show:true, message:msg });
-    setTimeout(() => setToast({ show:false, message:"" }), 2000);
+    setToast({ show: true, message: msg });
+    setTimeout(() => setToast({ show: false, message: "" }), 2000);
   };
 
-  // ================================
-  // 🔥 LOAD FROM FIRESTORE
-  // ================================
   useEffect(() => {
     const unsub = onSnapshot(BAGGED_TOTES_DOC, (snap) => {
       if (!snap.exists()) return;
       const d = snap.data();
 
-      // load left side
       setReceivedAmbient(d.receivedAmbient || "");
       setReceivedChill(d.receivedChill || "");
       setCurrentAmbient(d.currentAmbient || "");
@@ -48,36 +47,33 @@ export default function BaggedTotesCard({
       setBaggedAmbient(d.baggedAmbient ?? null);
       setBaggedChill(d.baggedChill ?? null);
 
-      // load right side
       setCurrentAmbient2(d.currentAmbient2 || "");
       setCurrentChill2(d.currentChill2 || "");
       setNeededAmbient(d.neededAmbient || "");
       setNeededChill(d.neededChill || "");
+      setLeavingAmbient(d.leavingAmbient || "");
+      setLeavingChill(d.leavingChill || "");
       setResultAmbient(d.resultAmbient ?? null);
       setResultChill(d.resultChill ?? null);
     });
 
     return () => unsub();
-  }, []);
+  }, [setReceivedAmbient, setReceivedChill, setCurrentAmbient, setCurrentChill]);
 
-  // ================================
-  // 🔥 SAVE LEFT SIDE
-  // ================================
   const calculateBaggedTotes = async () => {
     const ambient =
       (grandTotals.ambient || 0) +
-      (parseInt(currentAmbient,10)||0) -
-      (parseInt(receivedAmbient,10)||0);
+      (parseInt(currentAmbient, 10) || 0) -
+      (parseInt(receivedAmbient, 10) || 0);
 
     const chill =
       (grandTotals.chilled || 0) +
-      (parseInt(currentChill,10)||0) -
-      (parseInt(receivedChill,10)||0);
+      (parseInt(currentChill, 10) || 0) -
+      (parseInt(receivedChill, 10) || 0);
 
     setBaggedAmbient(ambient);
     setBaggedChill(chill);
 
-    // SAVE VALUES THAT COME FROM PROPS + RESULT
     await setDoc(
       BAGGED_TOTES_DOC,
       {
@@ -86,7 +82,7 @@ export default function BaggedTotesCard({
         currentAmbient,
         currentChill,
         baggedAmbient: ambient,
-        baggedChill: chill
+        baggedChill: chill,
       },
       { merge: true }
     );
@@ -99,7 +95,6 @@ export default function BaggedTotesCard({
     setReceivedChill("");
     setCurrentAmbient("");
     setCurrentChill("");
-
     setBaggedAmbient(null);
     setBaggedChill(null);
 
@@ -111,7 +106,7 @@ export default function BaggedTotesCard({
         currentAmbient: "",
         currentChill: "",
         baggedAmbient: null,
-        baggedChill: null
+        baggedChill: null,
       },
       { merge: true }
     );
@@ -119,12 +114,14 @@ export default function BaggedTotesCard({
     showToast("Bagged Totes Cleared");
   };
 
-  // ================================
-  // 🔥 SAVE RIGHT SIDE
-  // ================================
   const calculateCurrentBagged = async () => {
-    const amb = (parseInt(currentAmbient2,10)||0) - (parseInt(neededAmbient,10)||0);
-    const chl = (parseInt(currentChill2,10)||0) - (parseInt(neededChill,10)||0);
+    const amb =
+      (parseInt(currentAmbient2, 10) || 0) -
+      ((parseInt(neededAmbient, 10) || 0) + (parseInt(leavingAmbient, 10) || 0));
+
+    const chl =
+      (parseInt(currentChill2, 10) || 0) -
+      ((parseInt(neededChill, 10) || 0) + (parseInt(leavingChill, 10) || 0));
 
     setResultAmbient(amb);
     setResultChill(chl);
@@ -136,8 +133,10 @@ export default function BaggedTotesCard({
         currentChill2,
         neededAmbient,
         neededChill,
+        leavingAmbient,
+        leavingChill,
         resultAmbient: amb,
-        resultChill: chl
+        resultChill: chl,
       },
       { merge: true }
     );
@@ -150,7 +149,8 @@ export default function BaggedTotesCard({
     setCurrentChill2("");
     setNeededAmbient("");
     setNeededChill("");
-
+    setLeavingAmbient("");
+    setLeavingChill("");
     setResultAmbient(null);
     setResultChill(null);
 
@@ -161,8 +161,10 @@ export default function BaggedTotesCard({
         currentChill2: "",
         neededAmbient: "",
         neededChill: "",
+        leavingAmbient: "",
+        leavingChill: "",
         resultAmbient: null,
-        resultChill: null
+        resultChill: null,
       },
       { merge: true }
     );
@@ -170,37 +172,39 @@ export default function BaggedTotesCard({
     showToast("Current Bagged Totes Cleared");
   };
 
-  // ================================
-  // RENDER UI
-  // ================================
-
   return (
     <section className="data-card bagged-card">
       <h2 className="data-title">Bagged Totes</h2>
 
-      <div style={{ display:"flex", gap:"32px", width:"100%" }}>
-        
-        {/* LEFT SIDE */}
-        <div style={{ flex:1 }}>
+      <div className="bagged-two-column">
+        <div className="bagged-panel">
           <h3>Bagged Totes</h3>
 
-          <div style={{ display:"flex", flexDirection:"column", gap:"18px" }}>
+          <div className="bagged-fields">
             {[
-              { label:"Ambient totes received:", value:receivedAmbient, setter:setReceivedAmbient },
-              { label:"Chill totes received:", value:receivedChill, setter:setReceivedChill },
-              { label:"Current totes ambient:", value:currentAmbient, setter:setCurrentAmbient },
-              { label:"Current totes chill:", value:currentChill, setter:setCurrentChill },
+              { label: "Ambient totes received:", value: receivedAmbient, setter: setReceivedAmbient },
+              { label: "Chill totes received:", value: receivedChill, setter: setReceivedChill },
+              { label: "Current totes ambient:", value: currentAmbient, setter: setCurrentAmbient },
+              { label: "Current totes chill:", value: currentChill, setter: setCurrentChill },
             ].map((f, i) => (
               <div key={i} className="bagged-row">
                 <span>{f.label}</span>
-                <input type="number" value={f.value} onChange={e => f.setter(e.target.value)} />
+                <input
+                  type="number"
+                  value={f.value}
+                  onChange={(e) => f.setter(e.target.value)}
+                />
               </div>
             ))}
           </div>
 
           <div className="center-buttons">
-            <button className="calculate-btn" onClick={calculateBaggedTotes}>Calculate & Save</button>
-            <button className="clear-btn" onClick={clearBaggedTotes}>Clear</button>
+            <button className="calculate-btn" onClick={calculateBaggedTotes}>
+              Calculate & Save
+            </button>
+            <button className="clear-btn" onClick={clearBaggedTotes}>
+              Clear
+            </button>
           </div>
 
           {baggedAmbient !== null && (
@@ -215,47 +219,53 @@ export default function BaggedTotesCard({
               </div>
             </div>
           )}
-
         </div>
 
-        {/* RIGHT SIDE */}
-        <div style={{ flex:1 }}>
+        <div className="bagged-panel">
           <h3>Current Bagged Totes</h3>
 
-          <div style={{ display:"flex", flexDirection:"column", gap:"18px" }}>
+          <div className="bagged-fields">
             {[
-              { label:"Current totes ambient:", value:currentAmbient2, setter:setCurrentAmbient2 },
-              { label:"Current totes chill:", value:currentChill2, setter:setCurrentChill2 },
-              { label:"Totes needed ambient:", value:neededAmbient, setter:setNeededAmbient },
-              { label:"Totes needed chill:", value:neededChill, setter:setNeededChill },
+              { label: "Current totes ambient:", value: currentAmbient2, setter: setCurrentAmbient2 },
+              { label: "Current totes chill:", value: currentChill2, setter: setCurrentChill2 },
+              { label: "Totes needed ambient:", value: neededAmbient, setter: setNeededAmbient },
+              { label: "Totes needed chill:", value: neededChill, setter: setNeededChill },
+              { label: "Totes leaving for other shift ambient:", value: leavingAmbient, setter: setLeavingAmbient },
+              { label: "Totes leaving for other shift chill:", value: leavingChill, setter: setLeavingChill },
             ].map((f, i) => (
               <div key={i} className="bagged-row">
                 <span>{f.label}</span>
-                <input type="number" value={f.value} onChange={e => f.setter(e.target.value)} />
+                <input
+                  type="number"
+                  value={f.value}
+                  onChange={(e) => f.setter(e.target.value)}
+                />
               </div>
             ))}
           </div>
 
           <div className="center-buttons">
-            <button className="calculate-btn" onClick={calculateCurrentBagged}>Calculate & Save</button>
-            <button className="clear-btn" onClick={clearCurrentBagged}>Clear</button>
+            <button className="calculate-btn" onClick={calculateCurrentBagged}>
+              Calculate & Save
+            </button>
+            <button className="clear-btn" onClick={clearCurrentBagged}>
+              Clear
+            </button>
           </div>
 
           {resultAmbient !== null && (
             <div className="bagged-result" style={{ marginTop: "20px" }}>
               <div className="result-line" style={{ fontWeight: "bold", fontSize: "18px" }}>
-                <span>Ambient After Pick:</span>
+                <span>Ambient Behind / Ahead:</span>
                 <span style={{ marginLeft: "8px" }}>{resultAmbient}</span>
               </div>
               <div className="result-line" style={{ fontWeight: "bold", fontSize: "18px" }}>
-                <span>Chill After Pick:</span>
+                <span>Chill Behind / Ahead:</span>
                 <span style={{ marginLeft: "8px" }}>{resultChill}</span>
               </div>
             </div>
           )}
-
         </div>
-
       </div>
 
       {toast.show && <div className="toast-notification-center">{toast.message}</div>}
