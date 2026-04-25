@@ -17,7 +17,6 @@ export default function ShiftEOSCard() {
 
   const [shiftData, setShiftData] = useState(initialShiftData);
 
-  // Productivity states
   const [ambInbound, setAmbInbound] = useState("0");
   const [chillInbound, setChillInbound] = useState("0");
   const [freezerInbound, setFreezerInbound] = useState("0");
@@ -27,7 +26,6 @@ export default function ShiftEOSCard() {
   const [freezerPick, setFreezerPick] = useState("0");
   const [targetProd, setTargetProd] = useState("285");
 
-  // Toast
   const [toast, setToast] = useState({ show: false, message: "" });
 
   const showToast = (msg) => {
@@ -35,7 +33,6 @@ export default function ShiftEOSCard() {
     setTimeout(() => setToast({ show: false, message: "" }), 2000);
   };
 
-  // Load Firestore
   useEffect(() => {
     const unsub = onSnapshot(SHIFT_EOS_DOC, (docSnap) => {
       if (!docSnap.exists()) return;
@@ -65,14 +62,11 @@ export default function ShiftEOSCard() {
     return () => unsub();
   }, []);
 
-  // Allow empty input
   const handleShiftChange = (idx, field, value) => {
     const updated = [...shiftData];
     updated[idx][field] = value;
     setShiftData(updated);
   };
-
-  // ---------------- CALCULATIONS ----------------
 
   const totalPresent = shiftData.reduce((s, r) => s + (parseInt(r.present) || 0), 0);
   const totalAbsent = shiftData.reduce((s, r) => s + (parseInt(r.absent) || 0), 0);
@@ -107,8 +101,6 @@ export default function ShiftEOSCard() {
   const vtoNeeded =
     target > 0 ? totalHours - (totalIO * 1.13) / target : 0;
 
-  // ---------------- SAVE ----------------
-
   const saveShiftStaffing = async () => {
     const numericRows = shiftData.map((row) => ({
       department: row.department,
@@ -139,8 +131,6 @@ export default function ShiftEOSCard() {
     );
     showToast("Shift EOS Saved");
   };
-
-  // ---------------- CLEAR ----------------
 
   const clearShiftStaffing = async () => {
     setShiftData(initialShiftData);
@@ -173,14 +163,11 @@ export default function ShiftEOSCard() {
     );
   };
 
-  // ---------------- RENDER ----------------
-
   return (
     <section className="data-card shift-eos-card" style={{ position: "relative" }}>
       <h2 className="data-title">Shift EOS Calculator</h2>
 
       <div className="shift-eos-flex">
-
         {/* HOURS TABLE */}
         <div className="shift-subcard">
           <h3 className="subcard-title">Hours</h3>
@@ -250,7 +237,6 @@ export default function ShiftEOSCard() {
                   </tr>
                 ))}
 
-                {/* TOTALS */}
                 <tr className="bold">
                   <td>Total</td>
                   <td>{totalPresent}</td>
@@ -268,10 +254,13 @@ export default function ShiftEOSCard() {
             </table>
 
             <div className="button-row-centered">
-              <button className="calculate-btn" onClick={saveShiftStaffing}>Save Hours</button>
-              <button className="clear-btn" onClick={clearShiftStaffing}>Clear Hours</button>
+              <button className="calculate-btn" onClick={saveShiftStaffing}>
+                Save Hours
+              </button>
+              <button className="clear-btn" onClick={clearShiftStaffing}>
+                Clear Hours
+              </button>
             </div>
-
           </div>
         </div>
 
@@ -282,26 +271,67 @@ export default function ShiftEOSCard() {
           <div className="table-container">
             <table className="data-table compact-table">
               <tbody>
-
                 <tr>
                   <td>Ambient Pick</td>
-                  <td><input type="number" value={ambientPick} onChange={(e)=>setAmbientPick(e.target.value)} className="tiny-input" /></td>
+                  <td>
+                    <input
+                      type="number"
+                      value={ambientPick}
+                      onChange={(e) => setAmbientPick(e.target.value)}
+                      className="tiny-input"
+                    />
+                  </td>
                   <td>Ambient Inbound</td>
-                  <td><input type="number" value={ambInbound} onChange={(e)=>setAmbInbound(e.target.value)} className="tiny-input" /></td>
+                  <td>
+                    <input
+                      type="number"
+                      value={ambInbound}
+                      onChange={(e) => setAmbInbound(e.target.value)}
+                      className="tiny-input"
+                    />
+                  </td>
                 </tr>
 
                 <tr>
                   <td>Chill Pick</td>
-                  <td><input type="number" value={chillPick} onChange={(e)=>setChillPick(e.target.value)} className="tiny-input" /></td>
+                  <td>
+                    <input
+                      type="number"
+                      value={chillPick}
+                      onChange={(e) => setChillPick(e.target.value)}
+                      className="tiny-input"
+                    />
+                  </td>
                   <td>Chill Inbound</td>
-                  <td><input type="number" value={chillInbound} onChange={(e)=>setChillInbound(e.target.value)} className="tiny-input" /></td>
+                  <td>
+                    <input
+                      type="number"
+                      value={chillInbound}
+                      onChange={(e) => setChillInbound(e.target.value)}
+                      className="tiny-input"
+                    />
+                  </td>
                 </tr>
 
                 <tr>
                   <td>Freezer Pick</td>
-                  <td><input type="number" value={freezerPick} onChange={(e)=>setFreezerPick(e.target.value)} className="tiny-input" /></td>
+                  <td>
+                    <input
+                      type="number"
+                      value={freezerPick}
+                      onChange={(e) => setFreezerPick(e.target.value)}
+                      className="tiny-input"
+                    />
+                  </td>
                   <td>Freezer Inbound</td>
-                  <td><input type="number" value={freezerInbound} onChange={(e)=>setFreezerInbound(e.target.value)} className="tiny-input" /></td>
+                  <td>
+                    <input
+                      type="number"
+                      value={freezerInbound}
+                      onChange={(e) => setFreezerInbound(e.target.value)}
+                      className="tiny-input"
+                    />
+                  </td>
                 </tr>
 
                 <tr className="bold">
@@ -311,22 +341,18 @@ export default function ShiftEOSCard() {
                   <td>{inbound.toFixed(2)}</td>
                 </tr>
 
-                <tr>
-                  <td>Outstanding Picks @ 6AM</td>
-                  <td><input type="number" value={outstandingPick} onChange={(e)=>setOutstandingPick(e.target.value)} className="tiny-input" /></td>
-                  <td></td><td></td>
-                </tr>
-
                 <tr className="bold">
                   <td>Inbound + Outbound</td>
                   <td>{totalIO.toFixed(2)}</td>
-                  <td></td><td></td>
+                  <td>Inbound Needed</td>
+                  <td>{inboundNeeded.toFixed(2)}</td>
                 </tr>
 
                 <tr className="bold">
                   <td>Total Hours</td>
                   <td>{totalHours.toFixed(2)}</td>
-                  <td></td><td></td>
+                  <td>VTO Needed</td>
+                  <td>{vtoNeeded.toFixed(2)}</td>
                 </tr>
 
                 <tr>
@@ -339,31 +365,38 @@ export default function ShiftEOSCard() {
                       className="tiny-input"
                     />
                   </td>
-                  <td></td><td></td>
-                </tr>
-
-                <tr className="bold">
                   <td>Actual Productivity</td>
-                  <td style={{ fontWeight: "bold" }}>{actualProductivity.toFixed(2)}</td>
-                  <td>Inbound Needed</td>
-                  <td style={{ fontWeight: "bold" }}>{inboundNeeded.toFixed(2)}</td>
+                  <td style={{ fontWeight: "bold" }}>
+                    {actualProductivity.toFixed(2)}
+                  </td>
                 </tr>
 
                 <tr>
+                  <td>Outstanding Picks @ 6AM</td>
+                  <td>
+                    <input
+                      type="number"
+                      value={outstandingPick}
+                      onChange={(e) => setOutstandingPick(e.target.value)}
+                      className="tiny-input"
+                    />
+                  </td>
                   <td>Difference</td>
-                  <td>{difference.toFixed(2)}</td>
-                  <td>VTO Needed</td>
-                  <td style={{ fontWeight: "bold" }}>{vtoNeeded.toFixed(2)}</td>
+                  <td style={{ fontWeight: "bold" }}>
+                    {difference.toFixed(2)}
+                  </td>
                 </tr>
-
               </tbody>
             </table>
 
             <div className="button-row-centered">
-              <button className="calculate-btn" onClick={saveInboundOutbound}>Save Shift EOS</button>
-              <button className="clear-btn" onClick={clearInboundOutbound}>Clear Shift EOS</button>
+              <button className="calculate-btn" onClick={saveInboundOutbound}>
+                Save Shift EOS
+              </button>
+              <button className="clear-btn" onClick={clearInboundOutbound}>
+                Clear Shift EOS
+              </button>
             </div>
-
           </div>
         </div>
       </div>
