@@ -3,22 +3,42 @@ import Papa from "papaparse";
 import { doc, onSnapshot, setDoc, deleteDoc } from "firebase/firestore";
 import { db } from "./firebase";
 import "./App.css";
-
 import TotesUsedCard from "./TotesUsedCard";
 import BaggedTotesCard from "./BaggedTotesCard";
 import PickAndBaggedCombinedCard from "./PickCard";
 import ShiftEOSCard from "./ShiftEOSCard";
 import FreezerCard from "./FreezerCard";
-
 import { Carousel } from "react-responsive-carousel";
 import "react-responsive-carousel/lib/styles/carousel.min.css";
 
-const DATA_DOC = doc(db, "totes", "data");
+const DATADOC = doc(db, "totes", "data");
 
-function Header() {
+function Header({ theme, setTheme }) {
+  const themeOptions = [
+    { name: "blue", color: "#4a90e2" },
+    { name: "red", color: "#d9534f" },
+    { name: "yellow", color: "#d4a017" },
+    { name: "pink", color: "#d96cb3" },
+    { name: "orange", color: "#f28c28" },
+  ];
+
   return (
     <header className="header">
-      <h1 className="header-title">Shift Planner</h1>
+      <h1 className="header-title">Calculator</h1>
+
+      <div className="theme-picker">
+        {themeOptions.map((item) => (
+          <button
+            key={item.name}
+            type="button"
+            className={`theme-dot ${theme === item.name ? "active" : ""}`}
+            style={{ backgroundColor: item.color }}
+            onClick={() => setTheme(item.name)}
+            aria-label={`Switch to ${item.name} theme`}
+            title={item.name}
+          />
+        ))}
+      </div>
     </header>
   );
 }
@@ -26,32 +46,28 @@ function Header() {
 function parseToteCell(cell) {
   if (!cell && cell !== 0) return 0;
   const str = String(cell).trim();
-  if (str === "") return 0;
+  if (!str) return 0;
+
   const matches = str.match(/-?\d+/g);
   if (!matches) return 0;
+
   const nums = matches
     .map((n) => parseInt(n, 10))
     .filter((n) => !Number.isNaN(n));
-  return nums.length ? Math.max(...nums.map(Math.abs)) : 0;
+
+  return nums.length ? Math.max(...nums.map(Math.abs), 0) : 0;
 }
 
 function getColumnKeys(headers) {
-  const pickCol = (pattern) =>
-    headers.find((h) => new RegExp(pattern, "i").test(h));
+  const pickCol = (pattern) => headers.find((h) => new RegExp(pattern, "i").test(h));
 
   return {
-    consignmentKey: pickCol("Consignment") || pickCol("consignment"),
-    ambientKey:
-      pickCol("Completed\\s*Totes.*Ambient") || pickCol("ambient"),
-    chilledKey:
-      pickCol("Completed\\s*Totes.*Chill") || pickCol("chill|chilled"),
-    freezerKey:
-      pickCol("Completed\\s*Totes.*Freezer") || pickCol("freezer"),
-    shipmentKey: pickCol("Shipment") || pickCol("shipment"),
-    dispatchKey:
-      pickCol("Dispatch time") ||
-      pickCol("dispatch time") ||
-      pickCol("Dispatch Time"),
+    consignmentKey: pickCol("^Consignment$") || pickCol("consignment"),
+    ambientKey: pickCol("Completed.*Totes.*Ambient") || pickCol("ambient"),
+    chilledKey: pickCol("Completed.*Totes.*Chill") || pickCol("chill|chilled"),
+    freezerKey: pickCol("Completed.*Totes.*Freezer") || pickCol("freezer"),
+    shipmentKey: pickCol("^Shipment$") || pickCol("shipment"),
+    dispatchKey: pickCol("Dispatch time") || pickCol("dispatch time") || pickCol("Dispatch Time"),
   };
 }
 
@@ -59,18 +75,19 @@ function getRouteName(row, shipmentKey, dispatchKey) {
   const shipment = row[shipmentKey] || "";
   const dispatch = row[dispatchKey] || "";
 
-  if (/route-/i.test(shipment)) return "Vans";
+  if (/route-i/i.test(shipment)) return "Vans";
 
-  const timeMatch = dispatch.match(/(\d{1,2}:\d{2})/);
+  const timeMatch = dispatch.match(/(\d{1,2}:\d{2}|\d{3,4})/);
   const dispatchTime = timeMatch ? timeMatch[1] : null;
 
   if (!dispatchTime) return "Spoke";
-  if (["11:15", "11:16", "11:17"].includes(dispatchTime)) return "Ottawa";
-  if (dispatchTime === "2:30") return "Etobicoke 1";
-  if (dispatchTime === "3:00") return "Etobicoke 2";
-  if (dispatchTime === "5:30") return "Etobicoke 3";
-  if (dispatchTime === "8:45") return "Etobicoke 4";
-  if (dispatchTime === "9:15") return "Etobicoke 5";
+  if (["11:15", "11:16", "11:17", "1115", "1116", "1117"].includes(dispatchTime)) return "Ottawa";
+  if (dispatchTime === "2:30" || dispatchTime === "230") return "Etobicoke 1";
+  if (dispatchTime === "3:00" || dispatchTime === "300") return "Etobicoke 2";
+  if (dispatchTime === "5:30" || dispatchTime === "530") return "Etobicoke 3";
+  if (dispatchTime === "8:45" || dispatchTime === "845") return "Etobicoke 4";
+  if (dispatchTime === "9:15" || dispatchTime === "915") return "Etobicoke 5";
+
   return "Spoke";
 }
 
@@ -87,6 +104,7 @@ export default function App() {
   });
   const [duplicateMessage, setDuplicateMessage] = useState("");
   const [slideIndex, setSlideIndex] = useState(0);
+  const [theme, setTheme] = useState("blue");
 
   const [receivedAmbient, setReceivedAmbient] = useState("");
   const [receivedChill, setReceivedChill] = useState("");
@@ -94,14 +112,18 @@ export default function App() {
   const [currentChill, setCurrentChill] = useState("");
 
   useEffect(() => {
-    const unsubscribe = onSnapshot(DATA_DOC, (docSnap) => {
+    document.documentElement.setAttribute("data-theme", theme);
+  }, [theme]);
+
+  useEffect(() => {
+    const unsubscribe = onSnapshot(DATADOC, (docSnap) => {
       if (docSnap.exists()) {
         const savedRows = docSnap.data().rows || [];
         setRows(savedRows);
         setConsignmentSet(new Set(savedRows.map((r) => r.consignment)));
 
         const routeMap = {};
-        let grand = { ambient: 0, chilled: 0, freezer: 0, total: 0 };
+        const grand = { ambient: 0, chilled: 0, freezer: 0, total: 0 };
 
         savedRows.forEach((r) => {
           if (!routeMap[r.route]) {
@@ -120,27 +142,22 @@ export default function App() {
           grand.ambient += r.ambient;
           grand.chilled += r.chilled;
           grand.freezer += r.freezer;
+          grand.total = grand.ambient + grand.chilled + grand.freezer;
         });
 
-        grand.total = grand.ambient + grand.chilled + grand.freezer;
         setRoutesInfo(routeMap);
         setGrandTotals(grand);
       } else {
         setRows([]);
         setConsignmentSet(new Set());
         setRoutesInfo({});
-        setGrandTotals({
-          ambient: 0,
-          chilled: 0,
-          freezer: 0,
-          total: 0,
-        });
+        setGrandTotals({ ambient: 0, chilled: 0, freezer: 0, total: 0 });
       }
 
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    return unsubscribe;
   }, []);
 
   const handleFiles = (files) => {
@@ -169,7 +186,6 @@ export default function App() {
 
           dataRows.forEach((r) => {
             const consignment = (r[consignmentKey] || "").trim();
-
             if (!consignment || newConsignments.has(consignment)) {
               if (consignment) duplicatesDetected++;
               return;
@@ -189,16 +205,14 @@ export default function App() {
 
           if (duplicatesDetected > 0) {
             setDuplicateMessage(
-              `${duplicatesDetected} duplicate line${
-                duplicatesDetected > 1 ? "s" : ""
-              } ignored`
+              `${duplicatesDetected} duplicate line${duplicatesDetected > 1 ? "s" : ""} ignored`
             );
             setTimeout(() => setDuplicateMessage(""), 5000);
           }
 
           if (newRows.length) {
             try {
-              await setDoc(DATA_DOC, { rows: [...rows, ...newRows] });
+              await setDoc(DATADOC, { rows: [...rows, ...newRows] });
             } catch (err) {
               console.error("Firestore upload error:", err);
             }
@@ -216,53 +230,36 @@ export default function App() {
 
   const clearAll = async () => {
     try {
-      await deleteDoc(DATA_DOC);
+      await deleteDoc(DATADOC);
     } catch (err) {
       console.error(err);
     }
   };
 
-  if (loading) {
-    return <p className="app-loading">Loading...</p>;
-  }
+  if (loading) return <p className="app-loading">Loading...</p>;
 
   return (
     <div className="app-container">
-      <Header />
+      <Header theme={theme} setTheme={setTheme} />
 
       <main className="app-main">
         <div className="app-shell">
           <div className="app-layout">
             <aside className="sidebar-nav" aria-label="Calculator sections">
               <nav className="carousel-links">
-                <button
-                  onClick={() => setSlideIndex(0)}
-                  className={slideIndex === 0 ? "active" : ""}
-                >
+                <button onClick={() => setSlideIndex(0)} className={slideIndex === 0 ? "active" : ""}>
                   Totes Used
                 </button>
-                <button
-                  onClick={() => setSlideIndex(1)}
-                  className={slideIndex === 1 ? "active" : ""}
-                >
+                <button onClick={() => setSlideIndex(1)} className={slideIndex === 1 ? "active" : ""}>
                   Bagged Totes
                 </button>
-                <button
-                  onClick={() => setSlideIndex(2)}
-                  className={slideIndex === 2 ? "active" : ""}
-                >
+                <button onClick={() => setSlideIndex(2)} className={slideIndex === 2 ? "active" : ""}>
                   Pick Calculator
                 </button>
-                <button
-                  onClick={() => setSlideIndex(3)}
-                  className={slideIndex === 3 ? "active" : ""}
-                >
+                <button onClick={() => setSlideIndex(3)} className={slideIndex === 3 ? "active" : ""}>
                   Shift EOS
                 </button>
-                <button
-                  onClick={() => setSlideIndex(4)}
-                  className={slideIndex === 4 ? "active" : ""}
-                >
+                <button onClick={() => setSlideIndex(4)} className={slideIndex === 4 ? "active" : ""}>
                   Freezer Calculator
                 </button>
               </nav>
