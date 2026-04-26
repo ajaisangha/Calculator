@@ -929,6 +929,32 @@ input:focus {
   font-weight: 700;
 }
 
+.totes-used-grid {
+  display: grid;
+  grid-template-columns: 1.4fr 0.9fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.totes-used-card .subcard {
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 18px;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.1);
+  min-width: 0;
+}
+
+.totes-used-card .subcard h3 {
+  margin-top: 0;
+  margin-bottom: 16px;
+}
+
+@media (max-width: 900px) {
+  .totes-used-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 @keyframes slideFadeCenter {
   0% {
     opacity: 0;

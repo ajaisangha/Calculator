@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import Papa from "papaparse";
-import { doc, onSnapshot, setDoc, deleteDoc } from "firebase/firestore";
+import { doc, onSnapshot, setDoc } from "firebase/firestore";
 import { db } from "./firebase";
 import "./App.css";
 import TotesUsedCard from "./TotesUsedCard";
@@ -24,7 +24,7 @@ function Header({ theme, setTheme }) {
 
   return (
     <header className="header">
-      <h1 className="header-title">Calculator</h1>
+      <h1 className="header-title">Shift Planner</h1>
 
       <div className="theme-picker">
         {themeOptions.map((item) => (
@@ -47,14 +47,9 @@ function parseToteCell(cell) {
   if (!cell && cell !== 0) return 0;
   const str = String(cell).trim();
   if (!str) return 0;
-
   const matches = str.match(/-?\d+/g);
   if (!matches) return 0;
-
-  const nums = matches
-    .map((n) => parseInt(n, 10))
-    .filter((n) => !Number.isNaN(n));
-
+  const nums = matches.map((n) => parseInt(n, 10)).filter((n) => !Number.isNaN(n));
   return nums.length ? Math.max(...nums.map(Math.abs), 0) : 0;
 }
 
@@ -82,7 +77,7 @@ function getRouteName(row, shipmentKey, dispatchKey) {
 
   if (!dispatchTime) return "Spoke";
 
-  if (["11:15", "11:16", "11:17"].includes(dispatchTime)) return "Ottawa Spoke";
+  if (["23:15", "23:16", "23:17"].includes(dispatchTime)) return "Ottawa Spoke";
   if (dispatchTime === "02:30" || dispatchTime === "2:30") return "2:30 Etobicoke Spoke";
   if (dispatchTime === "03:00" || dispatchTime === "3:00") return "3:00 Etobicoke Spoke";
   if (dispatchTime === "05:30" || dispatchTime === "5:30") return "5:30 Etobicoke Spoke";
@@ -172,21 +167,17 @@ export default function App() {
           if (!dataRows.length) return;
 
           const headers = Object.keys(dataRows[0]);
-          const {
-            consignmentKey,
-            ambientKey,
-            chilledKey,
-            freezerKey,
-            shipmentKey,
-            dispatchKey,
-          } = getColumnKeys(headers);
+          const { consignmentKey, ambientKey, chilledKey, freezerKey, shipmentKey, dispatchKey } =
+            getColumnKeys(headers);
 
+          const latestRows = rows;
           const newRows = [];
-          const newConsignments = new Set(consignmentSet);
+          const newConsignments = new Set(latestRows.map((r) => r.consignment));
           let duplicatesDetected = 0;
 
           dataRows.forEach((r) => {
-            const consignment = (r[consignmentKey] || "").trim();
+            const consignment = String(r[consignmentKey] || "").trim();
+
             if (!consignment || newConsignments.has(consignment)) {
               if (consignment) duplicatesDetected++;
               return;
@@ -213,7 +204,7 @@ export default function App() {
 
           if (newRows.length) {
             try {
-              await setDoc(DATADOC, { rows: [...rows, ...newRows] });
+              await setDoc(DATADOC, { rows: [...latestRows, ...newRows] }, { merge: true });
             } catch (err) {
               console.error("Firestore upload error:", err);
             }
@@ -231,9 +222,10 @@ export default function App() {
 
   const clearAll = async () => {
     try {
-      await deleteDoc(DATADOC);
+      await setDoc(DATADOC, { rows: [] }, { merge: true });
+      setDuplicateMessage("");
     } catch (err) {
-      console.error(err);
+      console.error("Clear uploaded data error:", err);
     }
   };
 
