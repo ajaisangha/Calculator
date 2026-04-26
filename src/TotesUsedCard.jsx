@@ -86,6 +86,14 @@ export default function TotesUsedCard({
 
   const totalFrames = totalConsignments * 4 + 20;
 
+  const totalSpoke = Object.entries(routesInfo).reduce((sum, [route, data]) => {
+    return /spoke/i.test(route) ? sum + data.rows.length : sum;
+  }, 0);
+
+  const totalVans = Object.entries(routesInfo).reduce((sum, [route, data]) => {
+    return /vans?/i.test(route) ? sum + data.rows.length : sum;
+  }, 0);
+
   return (
     <section className="data-card adaptive-card">
       <h2 className="data-title">Totes Used</h2>
@@ -118,7 +126,6 @@ export default function TotesUsedCard({
             flexWrap: "wrap"
           }}
         >
-          {/* LEFT SIDE - BOTH TABLES */}
           <div
             className="totes-used-left"
             style={{
@@ -171,6 +178,8 @@ export default function TotesUsedCard({
                 <table className="data-table">
                   <thead>
                     <tr>
+                      <th>Total Spoke</th>
+                      <th>Total Vans</th>
                       <th>Total Consignments</th>
                       <th>Total Frames</th>
                       <th>Ambient</th>
@@ -182,6 +191,8 @@ export default function TotesUsedCard({
 
                   <tbody>
                     <tr>
+                      <td className="bold">{totalSpoke}</td>
+                      <td className="bold">{totalVans}</td>
                       <td className="bold">{totalConsignments}</td>
                       <td className="bold">{totalFrames}</td>
                       <td>{grandTotals.ambient}</td>
@@ -195,7 +206,6 @@ export default function TotesUsedCard({
             </div>
           </div>
 
-          {/* RIGHT SIDE - DOLLIES */}
           <div
             className="dollies-section"
             style={{
