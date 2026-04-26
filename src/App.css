@@ -914,6 +914,21 @@ input:focus {
   animation: slideFadeCenter 2s forwards;
 }
 
+.prod-red {
+  color: #d9534f !important;
+  font-weight: 700;
+}
+
+.prod-orange {
+  color: #f28c28 !important;
+  font-weight: 700;
+}
+
+.prod-green {
+  color: #2e8b57 !important;
+  font-weight: 700;
+}
+
 @keyframes slideFadeCenter {
   0% {
     opacity: 0;

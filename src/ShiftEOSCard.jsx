@@ -16,7 +16,6 @@ export default function ShiftEOSCard() {
   ];
 
   const [shiftData, setShiftData] = useState(initialShiftData);
-
   const [ambInbound, setAmbInbound] = useState("0");
   const [chillInbound, setChillInbound] = useState("0");
   const [freezerInbound, setFreezerInbound] = useState("0");
@@ -25,7 +24,6 @@ export default function ShiftEOSCard() {
   const [chillPick, setChillPick] = useState("0");
   const [freezerPick, setFreezerPick] = useState("0");
   const [targetProd, setTargetProd] = useState("285");
-
   const [toast, setToast] = useState({ show: false, message: "" });
 
   const showToast = (msg) => {
@@ -59,6 +57,7 @@ export default function ShiftEOSCard() {
       setFreezerPick(d.freezerPick?.toString() || "0");
       setTargetProd(d.targetProd?.toString() || "285");
     });
+
     return () => unsub();
   }, []);
 
@@ -87,19 +86,17 @@ export default function ShiftEOSCard() {
     (parseFloat(freezerPick) || 0);
 
   const totalIO = inbound + outbound;
-
-  const actualProductivity =
-    totalHours > 0 ? (totalIO / totalHours) * 1.13 : 0;
-
+  const actualProductivity = totalHours > 0 ? (totalIO / totalHours) * 1.13 : 0;
   const target = parseFloat(targetProd) || 0;
-
   const difference = actualProductivity - target;
+  const inboundNeeded = target > 0 ? (target / 1.13) * totalHours - totalIO : 0;
+  const vtoNeeded = target > 0 ? totalHours - (totalIO * 1.13) / target : 0;
 
-  const inboundNeeded =
-    target > 0 ? (target / 1.13) * totalHours - totalIO : 0;
+  const productivityClass =
+    actualProductivity < 270 ? "prod-red" : actualProductivity < 285 ? "prod-orange" : "prod-green";
 
-  const vtoNeeded =
-    target > 0 ? totalHours - (totalIO * 1.13) / target : 0;
+  const targetClass = "prod-green";
+  const aboutClass = "prod-green";
 
   const saveShiftStaffing = async () => {
     const numericRows = shiftData.map((row) => ({
@@ -168,7 +165,6 @@ export default function ShiftEOSCard() {
       <h2 className="data-title">Shift EOS Calculator</h2>
 
       <div className="shift-eos-flex">
-        {/* HOURS TABLE */}
         <div className="shift-subcard">
           <h3 className="subcard-title">Hours</h3>
 
@@ -188,49 +184,37 @@ export default function ShiftEOSCard() {
                 {shiftData.map((row, idx) => (
                   <tr key={idx}>
                     <td>{row.department}</td>
-
                     <td>
                       <input
                         type="number"
                         value={row.present}
-                        onChange={(e) =>
-                          handleShiftChange(idx, "present", e.target.value)
-                        }
+                        onChange={(e) => handleShiftChange(idx, "present", e.target.value)}
                         className="tiny-input"
                       />
                     </td>
-
                     <td>
                       <input
                         type="number"
                         value={row.absent}
-                        onChange={(e) =>
-                          handleShiftChange(idx, "absent", e.target.value)
-                        }
+                        onChange={(e) => handleShiftChange(idx, "absent", e.target.value)}
                         className="tiny-input"
                       />
                     </td>
-
                     <td>
                       <input
                         type="number"
                         step="0.01"
                         value={row.vto}
-                        onChange={(e) =>
-                          handleShiftChange(idx, "vto", e.target.value)
-                        }
+                        onChange={(e) => handleShiftChange(idx, "vto", e.target.value)}
                         className="tiny-input"
                       />
                     </td>
-
                     <td>
                       <input
                         type="number"
                         step="0.01"
                         value={row.ot}
-                        onChange={(e) =>
-                          handleShiftChange(idx, "ot", e.target.value)
-                        }
+                        onChange={(e) => handleShiftChange(idx, "ot", e.target.value)}
                         className="tiny-input"
                       />
                     </td>
@@ -264,7 +248,6 @@ export default function ShiftEOSCard() {
           </div>
         </div>
 
-        {/* SHIFT EOS TABLE */}
         <div className="shift-subcard">
           <h3 className="subcard-title">Shift EOS</h3>
 
@@ -356,8 +339,8 @@ export default function ShiftEOSCard() {
                 </tr>
 
                 <tr>
-                  <td>Target Productivity</td>
-                  <td>
+                  <td className={targetClass}>Target Productivity</td>
+                  <td className={targetClass}>
                     <input
                       type="number"
                       value={targetProd}
@@ -365,8 +348,8 @@ export default function ShiftEOSCard() {
                       className="tiny-input"
                     />
                   </td>
-                  <td>Actual Productivity</td>
-                  <td style={{ fontWeight: "bold" }}>
+                  <td className={productivityClass}>Actual Productivity</td>
+                  <td className={productivityClass} style={{ fontWeight: "bold" }}>
                     {actualProductivity.toFixed(2)}
                   </td>
                 </tr>
@@ -381,8 +364,8 @@ export default function ShiftEOSCard() {
                       className="tiny-input"
                     />
                   </td>
-                  <td>Difference</td>
-                  <td style={{ fontWeight: "bold" }}>
+                  <td className={aboutClass}>About</td>
+                  <td className={aboutClass} style={{ fontWeight: "bold" }}>
                     {difference.toFixed(2)}
                   </td>
                 </tr>
@@ -401,9 +384,7 @@ export default function ShiftEOSCard() {
         </div>
       </div>
 
-      {toast.show && (
-        <div className="toast-notification-center">{toast.message}</div>
-      )}
+      {toast.show && <div className="toast-notification-center">{toast.message}</div>}
     </section>
   );
 }
