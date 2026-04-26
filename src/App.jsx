@@ -72,21 +72,22 @@ function getColumnKeys(headers) {
 }
 
 function getRouteName(row, shipmentKey, dispatchKey) {
-  const shipment = row[shipmentKey] || "";
-  const dispatch = row[dispatchKey] || "";
+  const shipment = String(row[shipmentKey] || "").trim();
+  const dispatch = String(row[dispatchKey] || "").trim();
 
-  if (/route-i/i.test(shipment)) return "Vans";
+  if (/route[-\s]?/i.test(shipment) || /\bvans?\b/i.test(shipment)) return "Vans";
 
-  const timeMatch = dispatch.match(/(\d{1,2}:\d{2}|\d{3,4})/);
+  const timeMatch = dispatch.match(/(?:,\s*)?(\d{1,2}:\d{2})\s*$/);
   const dispatchTime = timeMatch ? timeMatch[1] : null;
 
   if (!dispatchTime) return "Spoke";
-  if (["11:15", "11:16", "11:17", "1115", "1116", "1117"].includes(dispatchTime)) return "Ottawa";
-  if (dispatchTime === "2:30" || dispatchTime === "230") return "Etobicoke 1";
-  if (dispatchTime === "3:00" || dispatchTime === "300") return "Etobicoke 2";
-  if (dispatchTime === "5:30" || dispatchTime === "530") return "Etobicoke 3";
-  if (dispatchTime === "8:45" || dispatchTime === "845") return "Etobicoke 4";
-  if (dispatchTime === "9:15" || dispatchTime === "915") return "Etobicoke 5";
+
+  if (["11:15", "11:16", "11:17"].includes(dispatchTime)) return "Ottawa Spoke";
+  if (dispatchTime === "02:30" || dispatchTime === "2:30") return "2:30 Etobicoke Spoke";
+  if (dispatchTime === "03:00" || dispatchTime === "3:00") return "3:00 Etobicoke Spoke";
+  if (dispatchTime === "05:30" || dispatchTime === "5:30") return "5:30 Etobicoke Spoke";
+  if (dispatchTime === "08:45" || dispatchTime === "8:45") return "8:45 Etobicoke Spoke";
+  if (dispatchTime === "09:15" || dispatchTime === "9:15") return "9:15 Etobicoke Spoke";
 
   return "Spoke";
 }
