@@ -29,6 +29,8 @@
 
 .bagged-row input {
   width: 100%;
+  min-height: 40px;
+  padding: 8px 10px;
 }
 
 .bagged-two-column {
