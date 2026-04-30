@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { doc, onSnapshot, setDoc } from "firebase/firestore";
 import { db } from "./firebase";
 import "./App.css";
+import "./totesused.css"
 
 const TOTESDOC = doc(db, "totes", "totesUsed");
 

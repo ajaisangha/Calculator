@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { db } from "./firebase";
 import { doc, setDoc, onSnapshot } from "firebase/firestore";
 import "./App.css";
+import "./pick.css";
 
 const PICK_DOC = doc(db, "totes", "pickCalculator");
 

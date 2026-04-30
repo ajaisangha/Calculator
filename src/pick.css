@@ -1,0 +1,53 @@
+.pick-card {
+  width: 100%;
+  max-width: 950px;
+  margin: auto;
+}
+
+.pick-card .table-container {
+  overflow-x: auto;
+}
+
+.pick-card .data-table {
+  table-layout: fixed;
+}
+
+.pick-input,
+.picker-input {
+  width: 90px;
+  min-width: 90px;
+}
+
+.uph-input {
+  width: 90px;
+  min-width: 90px;
+}
+
+.outstanding-input {
+  width: 110px;
+  min-width: 110px;
+}
+
+.break-input {
+  width: 90px;
+  min-width: 90px;
+}
+
+.time-input {
+  width: 110px;
+  min-width: 110px;
+}
+
+.pick-input {
+  color: var(--text-main);
+  border: 1px solid var(--input-border);
+  background: var(--input-bg);
+  border-radius: 8px;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
+  padding: 6px 8px;
+  margin: 4px 0;
+  text-align: center;
+}
