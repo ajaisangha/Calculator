@@ -1,7 +1,8 @@
 .pick-card {
   width: 100%;
-  max-width: 950px;
+  max-width: 900px;
   margin: auto;
+  padding: 14px;
 }
 
 .pick-card .table-container {
@@ -12,33 +13,45 @@
   table-layout: fixed;
 }
 
+.pick-card .data-table th,
+.pick-card .data-table td {
+  padding: 8px 8px;
+  font-size: 13px;
+  line-height: 1.2;
+}
+
 .pick-input,
 .picker-input {
-  width: 90px;
-  min-width: 90px;
+  width: 72px;
+  min-width: 72px;
 }
 
 .uph-input {
-  width: 90px;
-  min-width: 90px;
+  width: 72px;
+  min-width: 72px;
 }
 
 .outstanding-input {
-  width: 110px;
-  min-width: 110px;
-}
-
-.break-input {
   width: 90px;
   min-width: 90px;
 }
 
-.time-input {
-  width: 110px;
-  min-width: 110px;
+.break-input {
+  width: 72px;
+  min-width: 72px;
 }
 
-.pick-input {
+.time-input {
+  width: 90px;
+  min-width: 90px;
+}
+
+.pick-input,
+.picker-input,
+.uph-input,
+.outstanding-input,
+.break-input,
+.time-input {
   color: var(--text-main);
   border: 1px solid var(--input-border);
   background: var(--input-bg);
@@ -47,7 +60,55 @@
     border-color 0.2s ease,
     box-shadow 0.2s ease,
     background-color 0.2s ease;
-  padding: 6px 8px;
-  margin: 4px 0;
+  padding: 4px 6px;
+  margin: 2px 0;
   text-align: center;
+  font-size: 13px;
+}
+
+.pick-subcards {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.pick-card h2,
+.pick-card h3 {
+  margin-top: 0;
+  margin-bottom: 10px;
+}
+
+.pick-card .center-buttons,
+.pick-card .button-row-centered {
+  margin-top: 10px;
+  gap: 10px;
+}
+
+.pick-card button {
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+@media (max-width: 700px) {
+  .pick-card {
+    max-width: 100%;
+    padding: 10px;
+  }
+
+  .pick-card .data-table th,
+  .pick-card .data-table td {
+    padding: 6px 6px;
+    font-size: 12px;
+  }
+
+  .pick-input,
+  .picker-input,
+  .uph-input,
+  .outstanding-input,
+  .break-input,
+  .time-input {
+    font-size: 12px;
+    padding: 4px 5px;
+  }
 }
