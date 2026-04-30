@@ -18,6 +18,8 @@ export default function BaggedTotesCard({
 }) {
   const [baggedAmbient, setBaggedAmbient] = useState(null);
   const [baggedChill, setBaggedChill] = useState(null);
+  const [usedAmbient, setUsedAmbient] = useState(null);
+  const [usedChill, setUsedChill] = useState(null);
 
   const [currentAmbient2, setCurrentAmbient2] = useState("");
   const [currentChill2, setCurrentChill2] = useState("");
@@ -46,6 +48,8 @@ export default function BaggedTotesCard({
       setCurrentChill(d.currentChill || "");
       setBaggedAmbient(d.baggedAmbient ?? null);
       setBaggedChill(d.baggedChill ?? null);
+      setUsedAmbient(d.usedAmbient ?? null);
+      setUsedChill(d.usedChill ?? null);
 
       setCurrentAmbient2(d.currentAmbient2 || "");
       setCurrentChill2(d.currentChill2 || "");
@@ -61,18 +65,28 @@ export default function BaggedTotesCard({
   }, [setReceivedAmbient, setReceivedChill, setCurrentAmbient, setCurrentChill]);
 
   const calculateBaggedTotes = async () => {
+    const ambientReceivedNum = parseInt(receivedAmbient, 10) || 0;
+    const chillReceivedNum = parseInt(receivedChill, 10) || 0;
+    const currentAmbientNum = parseInt(currentAmbient, 10) || 0;
+    const currentChillNum = parseInt(currentChill, 10) || 0;
+
     const ambient =
       (grandTotals.ambient || 0) +
-      (parseInt(currentAmbient, 10) || 0) -
-      (parseInt(receivedAmbient, 10) || 0);
+      currentAmbientNum -
+      ambientReceivedNum;
 
     const chill =
       (grandTotals.chilled || 0) +
-      (parseInt(currentChill, 10) || 0) -
-      (parseInt(receivedChill, 10) || 0);
+      currentChillNum -
+      chillReceivedNum;
+
+    const ambientUsed = (grandTotals.ambient || 0) - ambientReceivedNum;
+    const chillUsed = (grandTotals.chilled || 0) - chillReceivedNum;
 
     setBaggedAmbient(ambient);
     setBaggedChill(chill);
+    setUsedAmbient(ambientUsed);
+    setUsedChill(chillUsed);
 
     await setDoc(
       BAGGED_TOTES_DOC,
@@ -83,6 +97,8 @@ export default function BaggedTotesCard({
         currentChill,
         baggedAmbient: ambient,
         baggedChill: chill,
+        usedAmbient: ambientUsed,
+        usedChill: chillUsed,
       },
       { merge: true }
     );
@@ -97,6 +113,8 @@ export default function BaggedTotesCard({
     setCurrentChill("");
     setBaggedAmbient(null);
     setBaggedChill(null);
+    setUsedAmbient(null);
+    setUsedChill(null);
 
     await setDoc(
       BAGGED_TOTES_DOC,
@@ -107,6 +125,8 @@ export default function BaggedTotesCard({
         currentChill: "",
         baggedAmbient: null,
         baggedChill: null,
+        usedAmbient: null,
+        usedChill: null,
       },
       { merge: true }
     );
@@ -177,7 +197,7 @@ export default function BaggedTotesCard({
       <h2 className="data-title">Bagged Totes</h2>
 
       <div className="bagged-two-column">
-        <div className="bagged-panel">
+        <div className="bagged-panel subcard">
           <h3>Bagged Totes</h3>
 
           <div className="bagged-fields">
@@ -210,6 +230,14 @@ export default function BaggedTotesCard({
           {baggedAmbient !== null && (
             <div className="bagged-result" style={{ marginTop: "20px" }}>
               <div className="result-line" style={{ fontWeight: "bold", fontSize: "18px" }}>
+                <span>Ambient Totes Used:</span>
+                <span style={{ marginLeft: "8px" }}>{usedAmbient}</span>
+              </div>
+              <div className="result-line" style={{ fontWeight: "bold", fontSize: "18px" }}>
+                <span>Chill Totes Used:</span>
+                <span style={{ marginLeft: "8px" }}>{usedChill}</span>
+              </div>
+              <div className="result-line" style={{ fontWeight: "bold", fontSize: "18px" }}>
                 <span>Bagged Ambient:</span>
                 <span style={{ marginLeft: "8px" }}>{baggedAmbient}</span>
               </div>
@@ -221,7 +249,7 @@ export default function BaggedTotesCard({
           )}
         </div>
 
-        <div className="bagged-panel">
+        <div className="bagged-panel subcard">
           <h3>Current Bagged Totes</h3>
 
           <div className="bagged-fields">

@@ -1368,3 +1368,11 @@ input:focus {
     flex: 1;
   }
 }
+
+.bagged-panel.subcard {
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 18px;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.1);
+  min-width: 0;
+}
