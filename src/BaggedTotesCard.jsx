@@ -18,8 +18,8 @@ export default function BaggedTotesCard({
 }) {
   const [baggedAmbient, setBaggedAmbient] = useState(null);
   const [baggedChill, setBaggedChill] = useState(null);
-  const [usedAmbient, setUsedAmbient] = useState(null);
-  const [usedChill, setUsedChill] = useState(null);
+  const [usedAmbient, setUsedAmbient] = useState(0);
+  const [usedChill, setUsedChill] = useState(0);
 
   const [currentAmbient2, setCurrentAmbient2] = useState("");
   const [currentChill2, setCurrentChill2] = useState("");
@@ -48,8 +48,8 @@ export default function BaggedTotesCard({
       setCurrentChill(d.currentChill || "");
       setBaggedAmbient(d.baggedAmbient ?? null);
       setBaggedChill(d.baggedChill ?? null);
-      setUsedAmbient(d.usedAmbient ?? null);
-      setUsedChill(d.usedChill ?? null);
+      setUsedAmbient(d.usedAmbient ?? 0);
+      setUsedChill(d.usedChill ?? 0);
 
       setCurrentAmbient2(d.currentAmbient2 || "");
       setCurrentChill2(d.currentChill2 || "");
@@ -70,15 +70,8 @@ export default function BaggedTotesCard({
     const currentAmbientNum = parseInt(currentAmbient, 10) || 0;
     const currentChillNum = parseInt(currentChill, 10) || 0;
 
-    const ambient =
-      (grandTotals.ambient || 0) +
-      currentAmbientNum -
-      ambientReceivedNum;
-
-    const chill =
-      (grandTotals.chilled || 0) +
-      currentChillNum -
-      chillReceivedNum;
+    const ambient = (grandTotals.ambient || 0) + currentAmbientNum - ambientReceivedNum;
+    const chill = (grandTotals.chilled || 0) + currentChillNum - chillReceivedNum;
 
     const ambientUsed = (grandTotals.ambient || 0) - ambientReceivedNum;
     const chillUsed = (grandTotals.chilled || 0) - chillReceivedNum;
@@ -113,8 +106,8 @@ export default function BaggedTotesCard({
     setCurrentChill("");
     setBaggedAmbient(null);
     setBaggedChill(null);
-    setUsedAmbient(null);
-    setUsedChill(null);
+    setUsedAmbient(0);
+    setUsedChill(0);
 
     await setDoc(
       BAGGED_TOTES_DOC,
@@ -125,8 +118,8 @@ export default function BaggedTotesCard({
         currentChill: "",
         baggedAmbient: null,
         baggedChill: null,
-        usedAmbient: null,
-        usedChill: null,
+        usedAmbient: 0,
+        usedChill: 0,
       },
       { merge: true }
     );
@@ -192,6 +185,13 @@ export default function BaggedTotesCard({
     showToast("Current Bagged Totes Cleared");
   };
 
+  const rowStyle = {
+    display: "grid",
+    gridTemplateColumns: "1fr auto",
+    gap: "12px",
+    alignItems: "center",
+  };
+
   return (
     <section className="data-card bagged-card">
       <h2 className="data-title">Bagged Totes</h2>
@@ -201,21 +201,51 @@ export default function BaggedTotesCard({
           <h3>Bagged Totes</h3>
 
           <div className="bagged-fields">
-            {[
-              { label: "Ambient totes received:", value: receivedAmbient, setter: setReceivedAmbient },
-              { label: "Chill totes received:", value: receivedChill, setter: setReceivedChill },
-              { label: "Current totes ambient:", value: currentAmbient, setter: setCurrentAmbient },
-              { label: "Current totes chill:", value: currentChill, setter: setCurrentChill },
-            ].map((f, i) => (
-              <div key={i} className="bagged-row">
-                <span>{f.label}</span>
-                <input
-                  type="number"
-                  value={f.value}
-                  onChange={(e) => f.setter(e.target.value)}
-                />
-              </div>
-            ))}
+            <div className="bagged-row" style={rowStyle}>
+              <span>Ambient Totes Used:</span>
+              <span style={{ fontSize: 25, fontWeight: "bold" }}>{usedAmbient ?? 0}</span>
+            </div>
+
+            <div className="bagged-row" style={rowStyle}>
+              <span>Chill Totes Used:</span>
+              <span style={{ fontSize: 25, fontWeight: "bold" }}>{usedChill ?? 0}</span>
+            </div>
+
+            <div className="bagged-row" style={rowStyle}>
+              <span>Ambient Totes Recieved:</span>
+              <input
+                type="number"
+                value={receivedAmbient}
+                onChange={(e) => setReceivedAmbient(e.target.value)}
+              />
+            </div>
+
+            <div className="bagged-row" style={rowStyle}>
+              <span>Chill Totes Recieved:</span>
+              <input
+                type="number"
+                value={receivedChill}
+                onChange={(e) => setReceivedChill(e.target.value)}
+              />
+            </div>
+
+            <div className="bagged-row" style={rowStyle}>
+              <span>Current totes ambient:</span>
+              <input
+                type="number"
+                value={currentAmbient}
+                onChange={(e) => setCurrentAmbient(e.target.value)}
+              />
+            </div>
+
+            <div className="bagged-row" style={rowStyle}>
+              <span>Current totes chill:</span>
+              <input
+                type="number"
+                value={currentChill}
+                onChange={(e) => setCurrentChill(e.target.value)}
+              />
+            </div>
           </div>
 
           <div className="center-buttons">
@@ -229,14 +259,6 @@ export default function BaggedTotesCard({
 
           {baggedAmbient !== null && (
             <div className="bagged-result" style={{ marginTop: "20px" }}>
-              <div className="result-line" style={{ fontWeight: "bold", fontSize: "18px" }}>
-                <span>Ambient Totes Used:</span>
-                <span style={{ marginLeft: "8px" }}>{usedAmbient}</span>
-              </div>
-              <div className="result-line" style={{ fontWeight: "bold", fontSize: "18px" }}>
-                <span>Chill Totes Used:</span>
-                <span style={{ marginLeft: "8px" }}>{usedChill}</span>
-              </div>
               <div className="result-line" style={{ fontWeight: "bold", fontSize: "18px" }}>
                 <span>Bagged Ambient:</span>
                 <span style={{ marginLeft: "8px" }}>{baggedAmbient}</span>
@@ -261,7 +283,7 @@ export default function BaggedTotesCard({
               { label: "Totes leaving for other shift ambient:", value: leavingAmbient, setter: setLeavingAmbient },
               { label: "Totes leaving for other shift chill:", value: leavingChill, setter: setLeavingChill },
             ].map((f, i) => (
-              <div key={i} className="bagged-row">
+              <div key={i} className="bagged-row" style={rowStyle}>
                 <span>{f.label}</span>
                 <input
                   type="number"
