@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { db } from "./firebase";
 import { doc, onSnapshot, setDoc } from "firebase/firestore";
 import "./App.css";
+import "./ShiftEOS.css";
 
 const SHIFT_EOS_DOC = doc(db, "totes", "shiftEOS");
 

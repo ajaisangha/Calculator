@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { db } from "./firebase";
 import { doc, onSnapshot, setDoc } from "firebase/firestore";
 import "./App.css";
+import "./freezer.css";
 
 const FREEZER_DOC = doc(db, "totes", "freezerCalc");
 
@@ -185,14 +186,15 @@ export default function FreezerCard() {
     showToast("Trolly Table Cleared");
   };
 
-  return (
-    <section className="data-card" style={{ paddingBottom: 30 }}>
-      <h2 className="data-title">Freezer Calculator</h2>
+ return (
+  <section className="data-card freezer-card">
+    <h2 className="data-title">Freezer Calculator</h2>
 
-      {/* ======================= TABLE 1 ======================= */}
-      <h3 style={{ marginTop: 20 }}>Finish Time Using UPH</h3>
+    {/* ================= SUB CARD 1 ================= */}
+    <div className="sub-card">
+      <h3>Finish Time Using UPH</h3>
 
-      <table className="data-table" style={{ marginTop: 12 }}>
+      <table className="data-table">
         <thead>
           <tr>
             <th>Pickers</th>
@@ -214,16 +216,17 @@ export default function FreezerCard() {
         </tbody>
       </table>
 
-      {/* Buttons for Table 1 */}
-      <div style={{ display:"flex", justifyContent:"center", gap:12, marginTop:12 }}>
+      <div className="button-row-centered">
         <button className="calculate-btn" onClick={saveUPH}>Save</button>
         <button className="clear-btn" onClick={clearUPH}>Clear</button>
       </div>
+    </div>
 
-      {/* ======================= TABLE 2 ======================= */}
-      <h3 style={{ marginTop: 40 }}>Finish Time Using Trollies</h3>
+    {/* ================= SUB CARD 2 ================= */}
+    <div className="sub-card">
+      <h3>Finish Time Using Trollies</h3>
 
-      <table className="data-table" style={{ marginTop: 12 }}>
+      <table className="data-table">
         <thead>
           <tr>
             <th>Pickers</th>
@@ -245,15 +248,16 @@ export default function FreezerCard() {
         </tbody>
       </table>
 
-      {/* Buttons for Table 2 */}
-      <div style={{ display:"flex", justifyContent:"center", gap:12, marginTop:12 }}>
+      <div className="button-row-centered">
         <button className="calculate-btn" onClick={saveTrolly}>Save</button>
         <button className="clear-btn" onClick={clearTrolly}>Clear</button>
       </div>
+    </div>
 
-      {toast.show && (
-        <div className="toast-notification-center">{toast.message}</div>
-      )}
-    </section>
-  );
+    {toast.show && (
+      <div className="toast-notification-center">{toast.message}</div>
+    )}
+  </section>
+);
+
 }

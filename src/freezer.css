@@ -1,0 +1,74 @@
+.freezer-card {
+  width: 100%;
+  max-width: 1300px;
+  min-width: 0;
+  margin: 0 auto;
+  padding-bottom: 30px;
+}
+
+.freezer-card .data-table {
+  margin-top: 12px;
+}
+
+.freezer-card h3 {
+  margin-top: 20px;
+}
+
+.freezer-card .button-row-centered {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.freezer-card .tiny-input {
+  width: 70px;
+  min-width: 70px;
+  max-width: 90px;
+}
+
+.freezer-card .data-table td,
+.freezer-card .data-table th {
+  text-align: center;
+}
+
+.freezer-card .data-table td {
+  white-space: nowrap;
+}
+
+@media (max-width: 700px) {
+  .freezer-card .button-row-centered {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .freezer-card .button-row-centered button {
+    width: 100%;
+  }
+
+  .freezer-card .tiny-input {
+    width: 56px;
+    min-width: 56px;
+    max-width: 56px;
+  }
+}
+
+.sub-card {
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 18px;
+  margin-top: 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+/* Stack nicely */
+.freezer-card {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Optional: tighter spacing inside sub cards */
+.sub-card h3 {
+  margin-bottom: 10px;
+}

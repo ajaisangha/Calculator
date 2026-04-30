@@ -1,0 +1,83 @@
+/* ===============================
+   SHIFT EOS
+=============================== */
+.shift-eos-card {
+  width: 100%;
+  max-width: 1300px;
+  min-width: 0;
+  margin: 0 auto;
+  overflow: visible !important;
+}
+
+.shift-eos-flex {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  align-items: start;
+}
+
+.shift-eos-card .table-container {
+  overflow: visible;
+}
+
+.shift-eos-card .data-table {
+  min-width: 0;
+  width: 100%;
+  table-layout: fixed;
+}
+
+.shift-eos-card .data-table th,
+.shift-eos-card .data-table td {
+  padding: 10px 8px;
+  word-break: break-word;
+}
+
+.shift-eos-card .data-table td:first-child,
+.shift-eos-card .data-table th:first-child {
+  width: 32%;
+}
+
+.shift-eos-card .tiny-input {
+  width: 90px;
+  min-width: 90px;
+  max-width: 110px;
+}
+
+.shift-eos-card .button-row-centered {
+  flex-wrap: wrap;
+}
+
+.shift-eos-flex .shift-subcard:first-child .tiny-input {
+  width: 60px;
+  min-width: 60px;
+  max-width: 70px;
+}
+
+@media (max-width: 980px) {
+  .shift-eos-flex {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 700px) {
+  .shift-eos-card .data-table {
+    min-width: 0;
+  }
+
+  .shift-eos-card .data-table td:first-child,
+  .shift-eos-card .data-table th:first-child {
+    width: 34%;
+  }
+}
+
+@media (max-width: 520px) {
+  .shift-eos-card .data-table th,
+  .shift-eos-card .data-table td {
+    padding: 8px 6px;
+    font-size: 13px;
+  }
+
+  .shift-eos-card .tiny-input {
+    max-width: 56px;
+  }
+}
