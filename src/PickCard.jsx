@@ -240,10 +240,10 @@ export default function PickAndBaggedCombinedCard() {
       <h2 className="data-title">Pick Calculator</h2>
 
       <div className="pick-subcards">
-        <div className="shift-subcard">
+        <div className="shift-subcard pick-subcard">
           <h3>Main Pick Calculator</h3>
 
-          <div className="table-container" style={{ marginTop: 16 }}>
+          <div className="table-container pick-table-wrap">
             <table className="data-table pick-table spaced-table">
               <thead>
                 <tr>
@@ -281,7 +281,7 @@ export default function PickAndBaggedCombinedCard() {
                       type="number"
                       value={ambientOutstanding}
                       onChange={(e) => setAmbientOutstanding(e.target.value)}
-                      className="pick-input"
+                      className="pick-input outstanding-input"
                     />
                   </td>
                   <td>
@@ -319,7 +319,7 @@ export default function PickAndBaggedCombinedCard() {
                       type="number"
                       value={chillOutstanding}
                       onChange={(e) => setChillOutstanding(e.target.value)}
-                      className="pick-input"
+                      className="pick-input outstanding-input"
                     />
                   </td>
                   <td>
@@ -347,10 +347,10 @@ export default function PickAndBaggedCombinedCard() {
           </div>
         </div>
 
-        <div className="shift-subcard">
+        <div className="shift-subcard pick-subcard">
           <h3>Required Pickers Calculator</h3>
 
-          <div className="table-container" style={{ marginTop: 16 }}>
+          <div className="table-container pick-table-wrap">
             <table className="data-table pick-table spaced-table">
               <thead>
                 <tr>
@@ -379,7 +379,7 @@ export default function PickAndBaggedCombinedCard() {
                       type="number"
                       value={reqAmbientOutstanding}
                       onChange={(e) => setReqAmbientOutstanding(e.target.value)}
-                      className="pick-input"
+                      className="pick-input outstanding-input"
                     />
                   </td>
                   <td>
@@ -416,7 +416,7 @@ export default function PickAndBaggedCombinedCard() {
                       type="number"
                       value={reqChillOutstanding}
                       onChange={(e) => setReqChillOutstanding(e.target.value)}
-                      className="pick-input"
+                      className="pick-input outstanding-input"
                     />
                   </td>
                   <td>

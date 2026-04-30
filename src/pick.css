@@ -1,49 +1,81 @@
 .pick-card {
   width: 100%;
-  max-width: 900px;
+  max-width: 980px;
   margin: auto;
-  padding: 14px;
+  padding: 16px;
+}
+
+.pick-subcards {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  margin-top: 14px;
+}
+
+.pick-subcard,
+.pick-card .shift-subcard {
+  width: 100%;
+  min-width: 0;
+  background: var(--subcard-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+  padding: 18px;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.1);
+  overflow: visible;
+}
+
+.pick-table-wrap {
+  margin-top: 16px;
 }
 
 .pick-card .table-container {
+  width: 100%;
   overflow-x: auto;
+  overflow-y: visible;
+  -webkit-overflow-scrolling: touch;
 }
 
 .pick-card .data-table {
+  width: 100%;
   table-layout: fixed;
+  min-width: 640px;
 }
 
 .pick-card .data-table th,
 .pick-card .data-table td {
-  padding: 8px 8px;
-  font-size: 13px;
-  line-height: 1.2;
+  padding: 11px 10px;
+  font-size: 16px;
+  line-height: 1.35;
+}
+
+.pick-card .data-table th {
+  font-weight: 700;
 }
 
 .pick-input,
 .picker-input {
-  width: 72px;
-  min-width: 72px;
+  width: 88px;
+  min-width: 88px;
 }
 
 .uph-input {
-  width: 72px;
-  min-width: 72px;
+  width: 88px;
+  min-width: 88px;
 }
 
 .outstanding-input {
-  width: 90px;
-  min-width: 90px;
+  width: 108px;
+  min-width: 108px;
 }
 
 .break-input {
-  width: 72px;
-  min-width: 72px;
+  width: 88px;
+  min-width: 88px;
 }
 
 .time-input {
-  width: 90px;
-  min-width: 90px;
+  width: 116px;
+  min-width: 116px;
 }
 
 .pick-input,
@@ -60,17 +92,11 @@
     border-color 0.2s ease,
     box-shadow 0.2s ease,
     background-color 0.2s ease;
-  padding: 4px 6px;
+  padding: 8px 9px;
   margin: 2px 0;
   text-align: center;
-  font-size: 13px;
-}
-
-.pick-subcards {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 12px;
-  margin-top: 14px;
+  font-size: 15px;
+  min-height: 40px;
 }
 
 .pick-card h2,
@@ -81,25 +107,38 @@
 
 .pick-card .center-buttons,
 .pick-card .button-row-centered {
-  margin-top: 10px;
-  gap: 10px;
+  margin-top: 12px;
+  gap: 12px;
 }
 
 .pick-card button {
-  padding: 8px 12px;
-  font-size: 13px;
+  padding: 9px 14px;
+  font-size: 14px;
 }
 
 @media (max-width: 700px) {
   .pick-card {
     max-width: 100%;
-    padding: 10px;
+    padding: 12px;
+  }
+
+  .pick-subcards {
+    gap: 12px;
+  }
+
+  .pick-subcard,
+  .pick-card .shift-subcard {
+    padding: 14px;
+  }
+
+  .pick-card .data-table {
+    min-width: 560px;
   }
 
   .pick-card .data-table th,
   .pick-card .data-table td {
-    padding: 6px 6px;
-    font-size: 12px;
+    padding: 9px 8px;
+    font-size: 14px;
   }
 
   .pick-input,
@@ -108,7 +147,8 @@
   .outstanding-input,
   .break-input,
   .time-input {
-    font-size: 12px;
-    padding: 4px 5px;
+    font-size: 14px;
+    padding: 7px 8px;
+    min-height: 38px;
   }
 }
