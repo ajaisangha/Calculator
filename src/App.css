@@ -1,3 +1,6 @@
+/* ===============================
+   BASE THEME TOKENS
+=============================== */
 :root {
   --header-height: 80px;
 
@@ -273,6 +276,9 @@
   --input-border: #e8c8ac;
 }
 
+/* ===============================
+   GLOBAL
+=============================== */
 * {
   box-sizing: border-box;
 }
@@ -337,6 +343,7 @@ h6,
   width: 100%;
   padding-top: calc(var(--header-height, 80px) + 14px);
   padding-bottom: 28px;
+  overflow-x: hidden;
 }
 
 .app-shell {
@@ -380,10 +387,9 @@ h6,
   font-weight: 600;
 }
 
-/* =======================================================================
+/* ===============================
    HEADER
-======================================================================= */
-
+=============================== */
 .header {
   position: fixed;
   top: 0;
@@ -436,10 +442,9 @@ h6,
   box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3), 0 6px 14px rgba(0, 0, 0, 0.24);
 }
 
-/* =======================================================================
+/* ===============================
    LEFT NAV
-======================================================================= */
-
+=============================== */
 .carousel-links {
   display: flex;
   flex-direction: column;
@@ -480,10 +485,9 @@ h6,
   color: var(--text-on-theme) !important;
 }
 
-/* =======================================================================
+/* ===============================
    CAROUSEL
-======================================================================= */
-
+=============================== */
 .carousel-root,
 .carousel,
 .carousel .slider-wrapper,
@@ -517,10 +521,9 @@ h6,
   display: none !important;
 }
 
-/* =======================================================================
+/* ===============================
    CARD BASE STYLE
-======================================================================= */
-
+=============================== */
 .data-card {
   width: 100%;
   max-width: 1300px;
@@ -555,10 +558,9 @@ h6,
   overflow: visible;
 }
 
-/* =======================================================================
+/* ===============================
    TABLES
-======================================================================= */
-
+=============================== */
 .table-container {
   width: 100%;
   overflow-x: auto;
@@ -602,10 +604,9 @@ h6,
   color: var(--text-heading);
 }
 
-/* =======================================================================
+/* ===============================
    BUTTONS
-======================================================================= */
-
+=============================== */
 button {
   padding: 10px 16px;
   border-radius: 10px;
@@ -657,10 +658,9 @@ button:disabled {
   box-shadow: none !important;
 }
 
-/* =======================================================================
+/* ===============================
    INPUTS
-======================================================================= */
-
+=============================== */
 input[type="number"],
 input[type="time"],
 input[type="text"],
@@ -708,10 +708,9 @@ input:focus {
   width: 130px !important;
 }
 
-/* =======================================================================
+/* ===============================
    COMMON LAYOUT HELPERS
-======================================================================= */
-
+=============================== */
 .file-controls {
   display: flex;
   flex-wrap: wrap;
@@ -839,10 +838,9 @@ input:focus {
   flex-wrap: wrap;
 }
 
-/* =======================================================================
+/* ===============================
    SHIFT EOS FIX
-======================================================================= */
-
+=============================== */
 .shift-eos-card {
   width: 100%;
   max-width: 1300px;
@@ -895,10 +893,9 @@ input:focus {
   max-width: 70px;
 }
 
-/* =======================================================================
+/* ===============================
    TOAST
-======================================================================= */
-
+=============================== */
 .toast-notification-center {
   position: fixed;
   top: 50%;
@@ -949,12 +946,23 @@ input:focus {
   margin-bottom: 16px;
 }
 
-@media (max-width: 900px) {
-  .totes-used-grid {
-    grid-template-columns: 1fr;
-  }
+.upload-card {
+  grid-column: 1 / -1;
 }
 
+.grand-total-card {
+  grid-column: 1 / -1;
+}
+
+/* one row for consignment + dollies */
+.totes-used-grid > .subcard:nth-of-type(2),
+.totes-used-grid > .subcard:nth-of-type(3) {
+  grid-column: auto;
+}
+
+/* ===============================
+   ANIMATION
+=============================== */
 @keyframes slideFadeCenter {
   0% {
     opacity: 0;
@@ -972,10 +980,9 @@ input:focus {
   }
 }
 
-/* =======================================================================
+/* ===============================
    RESPONSIVE
-======================================================================= */
-
+=============================== */
 @media (max-width: 1200px) {
   .app-layout {
     grid-template-columns: 200px minmax(0, 1fr);
@@ -1016,6 +1023,15 @@ input:focus {
 
   .shift-eos-flex {
     grid-template-columns: 1fr;
+  }
+
+  .totes-used-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .upload-card,
+  .grand-total-card {
+    grid-column: auto;
   }
 }
 
@@ -1085,6 +1101,10 @@ input:focus {
     height: 20px;
     min-width: 20px;
   }
+
+  .totes-used-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 520px) {
@@ -1128,5 +1148,223 @@ input:focus {
     height: 18px;
     min-width: 18px;
     border-width: 1.5px;
+  }
+}
+
+/* ===============================
+   TOTES USED LAYOUT OVERRIDES
+=============================== */
+.totes-used-card .totes-used-grid {
+  display: grid;
+  grid-template-columns: 1.4fr 0.9fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.totes-used-card .upload-card {
+  grid-column: 1 / -1;
+}
+
+.totes-used-card .grand-total-card {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 980px) {
+  .totes-used-card .totes-used-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .totes-used-card .upload-card,
+  .totes-used-card .grand-total-card {
+    grid-column: auto;
+  }
+}
+
+/* ===== TOTES USED CARD COMPACT LAYOUT ===== */
+.totes-used-card {
+  max-width: 1040px !important;
+  padding: 16px !important;
+}
+
+.totes-used-card .data-title {
+  margin-bottom: 12px;
+  font-size: 24px;
+}
+
+.totes-used-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  align-items: start;
+}
+
+.upload-card {
+  grid-column: 1 / -1;
+}
+
+.grand-total-card {
+  grid-column: 1 / -1;
+}
+
+.totes-used-card .subcard {
+  padding: 14px !important;
+  border-radius: 12px;
+}
+
+.totes-used-card h3 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  font-size: 18px;
+}
+
+.totes-used-card .file-controls {
+  gap: 10px;
+}
+
+.totes-used-card .duplicate-warning,
+.totes-used-card .no-data {
+  margin-top: 10px;
+  margin-bottom: 0;
+  font-size: 13px;
+}
+
+.totes-used-card .bagged-fields {
+  gap: 8px;
+}
+
+.totes-used-card .bagged-row {
+  margin-bottom: 6px;
+  gap: 10px;
+}
+
+.totes-used-card .bagged-row span {
+  font-size: 14px;
+}
+
+.totes-used-card .bagged-row input {
+  width: 95px;
+  min-width: 95px;
+  padding: 6px 8px;
+  font-size: 14px;
+}
+
+.totes-used-card .center-buttons {
+  margin-top: 10px;
+  gap: 10px;
+}
+
+.totes-used-card button {
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+.totes-used-card .bagged-result {
+  margin-top: 12px !important;
+  min-width: 0;
+}
+
+.totes-used-card .result-line {
+  font-size: 15px !important;
+  gap: 6px;
+}
+
+/* Compact summary cards inside Consignment and Grand Total */
+.totes-used-card .consignment-summary-grid,
+.totes-used-card .grand-total-grid {
+  gap: 10px !important;
+}
+
+.totes-used-card .compact-stat-card {
+  padding: 10px 8px !important;
+  border-radius: 10px !important;
+}
+
+.totes-used-card .compact-stat-label {
+  font-size: 11px !important;
+  line-height: 1.15 !important;
+}
+
+.totes-used-card .compact-stat-value {
+  font-size: 22px !important;
+  margin-top: 4px !important;
+  line-height: 1 !important;
+}
+
+.totes-used-card .compact-stat-subtext {
+  font-size: 10px !important;
+  margin-top: 2px !important;
+  line-height: 1.1 !important;
+}
+
+/* Make inline cards in your current JSX look smaller too */
+.totes-used-card [style*="font-size: 28px"] {
+  font-size: 22px !important;
+}
+
+.totes-used-card [style*="font-size: 24px"] {
+  font-size: 20px !important;
+}
+
+.totes-used-card [style*="padding: 14px"] {
+  padding: 10px !important;
+}
+
+.totes-used-card [style*="padding: 12px 10px"] {
+  padding: 9px 8px !important;
+}
+
+.totes-used-card [style*="marginTop: 20px"] {
+  margin-top: 14px !important;
+}
+
+.totes-used-card [style*="marginTop: 18px"] {
+  margin-top: 12px !important;
+}
+
+/* Tablet */
+@media (max-width: 980px) {
+  .totes-used-card {
+    max-width: 100% !important;
+    padding: 14px !important;
+  }
+
+  .totes-used-grid {
+    gap: 12px;
+  }
+}
+
+/* Phone */
+@media (max-width: 700px) {
+  .totes-used-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .upload-card,
+  .grand-total-card {
+    grid-column: auto;
+  }
+
+  .totes-used-card .subcard {
+    padding: 12px !important;
+  }
+
+  .totes-used-card .bagged-row {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .totes-used-card .bagged-row input {
+    width: 88px;
+    min-width: 88px;
+  }
+
+  .totes-used-card .center-buttons {
+    flex-direction: row;
+  }
+
+  .totes-used-card .center-buttons button {
+    width: auto;
+    flex: 1;
   }
 }

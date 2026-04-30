@@ -97,12 +97,7 @@ export default function TotesUsedCard({
   const routeSummary = routeOrder.map((route) => {
     const count = routesInfo[route.key]?.rows?.length || 0;
     const isVan = route.key === "Vans";
-
-    return {
-      ...route,
-      count,
-      isVan,
-    };
+    return { ...route, count, isVan };
   });
 
   const totalSpokeRoutes = routeSummary
@@ -119,17 +114,21 @@ export default function TotesUsedCard({
 
   const totalFrames = totalSpokeFrames + totalVanFrames + 20;
 
+  const handleClearUpload = () => {
+    clearAll();
+  };
+
   return (
     <section className="data-card totes-used-card">
       <h2 className="data-title">Totes Used</h2>
 
       <div className="totes-used-grid">
-        <div className="subcard">
+        <div className="subcard upload-card">
           <h3>Uploaded Data</h3>
 
           <div className="file-controls">
             <input type="file" accept=".csv" multiple onChange={onFileChange} />
-            <button onClick={clearAll} className="clear-btn" disabled={rows.length === 0}>
+            <button onClick={handleClearUpload} className="clear-btn" disabled={rows.length === 0}>
               Clear uploaded data
             </button>
           </div>
@@ -139,227 +138,75 @@ export default function TotesUsedCard({
           {Object.keys(routesInfo).length === 0 ? (
             <p className="no-data">No data available yet.</p>
           ) : (
-            <>
+            <div
+              style={{
+                marginTop: "18px",
+                background: "#ffffff",
+                border: "1px solid #e4edf8",
+                borderRadius: "14px",
+                padding: "16px",
+              }}
+            >
+              <h3 style={{ marginBottom: "14px" }}>Consignment Summary</h3>
+
               <div
                 style={{
-                  marginTop: "18px",
-                  background: "#ffffff",
-                  border: "1px solid #e4edf8",
-                  borderRadius: "14px",
-                  padding: "16px",
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))",
+                  gap: "12px",
                 }}
               >
-                <h3 style={{ marginBottom: "14px" }}>Consignment Summary</h3>
-
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))",
-                    gap: "12px",
-                  }}
-                >
-                  {routeSummary.map((item) => (
+                {routeSummary.map((item) => (
+                  <div
+                    key={item.key}
+                    style={{
+                      background: "#f8fbff",
+                      border: "1px solid #dbe7f6",
+                      borderRadius: "12px",
+                      padding: "12px 10px",
+                      textAlign: "center",
+                    }}
+                  >
                     <div
-                      key={item.key}
                       style={{
-                        background: "#f8fbff",
-                        border: "1px solid #dbe7f6",
-                        borderRadius: "12px",
-                        padding: "12px 10px",
-                        textAlign: "center",
+                        fontSize: "13px",
+                        fontWeight: 700,
+                        color: "#123c73",
+                        lineHeight: 1.3,
+                        minHeight: "34px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
                       }}
                     >
-                      <div
-                        style={{
-                          fontSize: "13px",
-                          fontWeight: 700,
-                          color: "#123c73",
-                          lineHeight: 1.3,
-                          minHeight: "34px",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                      >
-                        {item.short}
-                      </div>
-
-                      <div
-                        style={{
-                          fontSize: "28px",
-                          fontWeight: 800,
-                          color: "#007bff",
-                          lineHeight: 1.1,
-                          marginTop: "8px",
-                        }}
-                      >
-                        {item.count}
-                      </div>
-
-                      <div
-                        style={{
-                          fontSize: "12px",
-                          color: "#5b6472",
-                          marginTop: "4px",
-                        }}
-                      >
-                        Routes
-                      </div>
+                      {item.short}
                     </div>
-                  ))}
-                </div>
+
+                    <div
+                      style={{
+                        fontSize: "28px",
+                        fontWeight: 800,
+                        color: "#007bff",
+                        lineHeight: 1.1,
+                        marginTop: "8px",
+                      }}
+                    >
+                      {item.count}
+                    </div>
+
+                    <div
+                      style={{
+                        fontSize: "12px",
+                        color: "#5b6472",
+                        marginTop: "4px",
+                      }}
+                    >
+                      Routes
+                    </div>
+                  </div>
+                ))}
               </div>
-
-              <div className="grand-totals" style={{ marginTop: "20px" }}>
-                <h3 style={{ marginBottom: "14px" }}>Grand Totals</h3>
-
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(auto-fit, minmax(135px, 1fr))",
-                    gap: "12px",
-                  }}
-                >
-                  <div
-                    style={{
-                      background: "#ffffff",
-                      border: "1px solid #e4edf8",
-                      borderRadius: "12px",
-                      padding: "14px",
-                    }}
-                  >
-                    <div style={{ fontSize: "13px", color: "#5b6472", fontWeight: 600 }}>
-                      Total Spoke Routes
-                    </div>
-                    <div style={{ fontSize: "28px", fontWeight: 800, marginTop: "6px" }}>
-                      {totalSpokeRoutes}
-                    </div>
-                  </div>
-
-                  <div
-                    style={{
-                      background: "#ffffff",
-                      border: "1px solid #e4edf8",
-                      borderRadius: "12px",
-                      padding: "14px",
-                    }}
-                  >
-                    <div style={{ fontSize: "13px", color: "#5b6472", fontWeight: 600 }}>
-                      Total Spoke Frames
-                    </div>
-                    <div style={{ fontSize: "28px", fontWeight: 800, marginTop: "6px" }}>
-                      {totalSpokeFrames}
-                    </div>
-                  </div>
-
-                  <div
-                    style={{
-                      background: "#ffffff",
-                      border: "1px solid #e4edf8",
-                      borderRadius: "12px",
-                      padding: "14px",
-                    }}
-                  >
-                    <div style={{ fontSize: "13px", color: "#5b6472", fontWeight: 600 }}>
-                      Total Vans
-                    </div>
-                    <div style={{ fontSize: "28px", fontWeight: 800, marginTop: "6px" }}>
-                      {totalVanRoutes}
-                    </div>
-                  </div>
-
-                  <div
-                    style={{
-                      background: "#ffffff",
-                      border: "1px solid #e4edf8",
-                      borderRadius: "12px",
-                      padding: "14px",
-                    }}
-                  >
-                    <div style={{ fontSize: "13px", color: "#5b6472", fontWeight: 600 }}>
-                      Total Van Frames
-                    </div>
-                    <div style={{ fontSize: "28px", fontWeight: 800, marginTop: "6px" }}>
-                      {totalVanFrames}
-                    </div>
-                  </div>
-
-                  <div
-  style={{
-    background: "#edf5ff",
-    border: "1px solid #cfe0f8",
-    borderRadius: "10px",
-    padding: "10px 12px",
-    minHeight: "82px",
-  }}
->
-  <div
-    style={{
-      fontSize: "12px",
-      color: "#123c73",
-      fontWeight: 700,
-      lineHeight: 1.15,
-    }}
-  >
-    Total Frames
-  </div>
-  <div
-    style={{
-      fontSize: "24px",
-      fontWeight: 900,
-      marginTop: "4px",
-      color: "#007bff",
-      lineHeight: 1,
-    }}
-  >
-    {totalFrames}
-  </div>
-  <div
-    style={{
-      fontSize: "10px",
-      color: "#5b6472",
-      marginTop: "3px",
-      lineHeight: 1.15,
-    }}
-  >
-    Spoke frames + van frames + 20
-  </div>
-</div>
-
-<div
-  style={{
-    background: "#f4f9ff",
-    border: "1px solid #cfe0f8",
-    borderRadius: "10px",
-    padding: "10px 12px",
-    minHeight: "82px",
-  }}
->
-  <div
-    style={{
-      fontSize: "12px",
-      color: "#123c73",
-      fontWeight: 700,
-      lineHeight: 1.15,
-    }}
-  >
-    Total Totes
-  </div>
-  <div
-    style={{
-      fontSize: "24px",
-      fontWeight: 900,
-      marginTop: "4px",
-      color: "#007bff",
-      lineHeight: 1,
-    }}
-  >
-    {grandTotals.total}
-  </div>
-</div>
-                </div>
-              </div>
-            </>
+            </div>
           )}
         </div>
 
@@ -416,6 +263,157 @@ export default function TotesUsedCard({
               </div>
             </div>
           )}
+        </div>
+
+        <div className="subcard grand-total-card">
+          <h3>Grand Total</h3>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(135px, 1fr))",
+              gap: "12px",
+              marginTop: "6px",
+            }}
+          >
+            <div
+              style={{
+                background: "#ffffff",
+                border: "1px solid #e4edf8",
+                borderRadius: "12px",
+                padding: "14px",
+              }}
+            >
+              <div style={{ fontSize: "13px", color: "#5b6472", fontWeight: 600 }}>
+                Total Spoke Routes
+              </div>
+              <div style={{ fontSize: "28px", fontWeight: 800, marginTop: "6px" }}>
+                {totalSpokeRoutes}
+              </div>
+            </div>
+
+            <div
+              style={{
+                background: "#ffffff",
+                border: "1px solid #e4edf8",
+                borderRadius: "12px",
+                padding: "14px",
+              }}
+            >
+              <div style={{ fontSize: "13px", color: "#5b6472", fontWeight: 600 }}>
+                Total Spoke Frames
+              </div>
+              <div style={{ fontSize: "28px", fontWeight: 800, marginTop: "6px" }}>
+                {totalSpokeFrames}
+              </div>
+            </div>
+
+            <div
+              style={{
+                background: "#ffffff",
+                border: "1px solid #e4edf8",
+                borderRadius: "12px",
+                padding: "14px",
+              }}
+            >
+              <div style={{ fontSize: "13px", color: "#5b6472", fontWeight: 600 }}>
+                Total Vans
+              </div>
+              <div style={{ fontSize: "28px", fontWeight: 800, marginTop: "6px" }}>
+                {totalVanRoutes}
+              </div>
+            </div>
+
+            <div
+              style={{
+                background: "#ffffff",
+                border: "1px solid #e4edf8",
+                borderRadius: "12px",
+                padding: "14px",
+              }}
+            >
+              <div style={{ fontSize: "13px", color: "#5b6472", fontWeight: 600 }}>
+                Total Van Frames
+              </div>
+              <div style={{ fontSize: "28px", fontWeight: 800, marginTop: "6px" }}>
+                {totalVanFrames}
+              </div>
+            </div>
+
+            <div
+              style={{
+                background: "#edf5ff",
+                border: "1px solid #cfe0f8",
+                borderRadius: "10px",
+                padding: "10px 12px",
+                minHeight: "82px",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "12px",
+                  color: "#123c73",
+                  fontWeight: 700,
+                  lineHeight: 1.15,
+                }}
+              >
+                Total Frames
+              </div>
+              <div
+                style={{
+                  fontSize: "24px",
+                  fontWeight: 900,
+                  marginTop: "4px",
+                  color: "#007bff",
+                  lineHeight: 1,
+                }}
+              >
+                {totalFrames}
+              </div>
+              <div
+                style={{
+                  fontSize: "10px",
+                  color: "#5b6472",
+                  marginTop: "3px",
+                  lineHeight: 1.15,
+                }}
+              >
+                Spoke frames + van frames + 20
+              </div>
+            </div>
+
+            <div
+              style={{
+                background: "#f4f9ff",
+                border: "1px solid #cfe0f8",
+                borderRadius: "10px",
+                padding: "10px 12px",
+                minHeight: "82px",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "12px",
+                  color: "#123c73",
+                  fontWeight: 700,
+                  lineHeight: 1.15,
+                }}
+              >
+                Total Totes
+              </div>
+              <div
+                style={{
+                  fontSize: "24px",
+                  fontWeight: 900,
+                  marginTop: "4px",
+                  color: "#007bff",
+                  lineHeight: 1,
+                }}
+              >
+                {grandTotals.total}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
