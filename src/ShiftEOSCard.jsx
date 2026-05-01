@@ -97,7 +97,6 @@ export default function ShiftEOSCard() {
     actualProductivity < 270 ? "prod-red" : actualProductivity < 285 ? "prod-orange" : "prod-green";
 
   const targetClass = "prod-green";
-  const aboutClass = "prod-green";
 
   const saveShiftStaffing = async () => {
     const numericRows = shiftData.map((row) => ({
@@ -176,8 +175,8 @@ export default function ShiftEOSCard() {
                   <th>Department</th>
                   <th>Present</th>
                   <th>Absent</th>
-                  <th>VTO</th>
-                  <th>OT</th>
+                  <th>VTO Hours</th>
+                  <th>OT Hours</th>
                 </tr>
               </thead>
 
@@ -365,8 +364,8 @@ export default function ShiftEOSCard() {
                       className="tiny-input"
                     />
                   </td>
-                  <td className={aboutClass}>About</td>
-                  <td className={aboutClass} style={{ fontWeight: "bold" }}>
+                  <td >About</td>
+                  <td  style={{ fontWeight: "bold" }}>
                     {difference.toFixed(2)}
                   </td>
                 </tr>
