@@ -364,7 +364,7 @@ export default function ShiftEOSCard() {
                       className="tiny-input"
                     />
                   </td>
-                  <td >About</td>
+                  <td >Difference</td>
                   <td  style={{ fontWeight: "bold" }}>
                     {difference.toFixed(2)}
                   </td>
