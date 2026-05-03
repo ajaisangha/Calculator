@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { doc, onSnapshot, setDoc } from "firebase/firestore";
 import { db } from "./firebase";
 import "./App.css";
-import "./totesused.css"
+import "./totesused.css";
 
 const TOTESDOC = doc(db, "totes", "totesUsed");
 
@@ -95,10 +95,23 @@ export default function TotesUsedCard({
     { key: "9:15 Etobicoke Spoke", short: "9:15 ES" },
   ];
 
+  const getRowOvercapacity = (row) => {
+    let overcapacity = 0;
+
+    if ((row.ambient || 0) > 40) overcapacity += 1;
+    if (((row.chilled || 0) + (row.freezer || 0)) > 40) overcapacity += 1;
+
+    return overcapacity;
+  };
+
+  const totalOvercapacity = rows.reduce((sum, row) => sum + getRowOvercapacity(row), 0);
+
   const routeSummary = routeOrder.map((route) => {
-    const count = routesInfo[route.key]?.rows?.length || 0;
+    const routeRows = routesInfo[route.key]?.rows || [];
+    const count = routeRows.length;
+    const overcapacity = routeRows.reduce((sum, row) => sum + getRowOvercapacity(row), 0);
     const isVan = route.key === "Vans";
-    return { ...route, count, isVan };
+    return { ...route, count, overcapacity, isVan };
   });
 
   const totalSpokeRoutes = routeSummary
@@ -204,8 +217,55 @@ export default function TotesUsedCard({
                     >
                       Routes
                     </div>
+
+                    <div
+                      style={{
+                        fontSize: "12px",
+                        color: item.overcapacity > 0 ? "#d9534f" : "#5b6472",
+                        fontWeight: 700,
+                        marginTop: "6px",
+                      }}
+                    >
+                      OC: {item.overcapacity}
+                    </div>
                   </div>
                 ))}
+              </div>
+
+              <div
+                style={{
+                  marginTop: "14px",
+                  background: "#edf5ff",
+                  border: "1px solid #cfe0f8",
+                  borderRadius: "12px",
+                  padding: "12px 14px",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  gap: "12px",
+                  flexWrap: "wrap",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: "14px",
+                    fontWeight: 700,
+                    color: "#123c73",
+                  }}
+                >
+                  Total Overcapacity
+                </div>
+
+                <div
+                  style={{
+                    fontSize: "26px",
+                    fontWeight: 900,
+                    color: totalOvercapacity > 0 ? "#d9534f" : "#007bff",
+                    lineHeight: 1,
+                  }}
+                >
+                  {totalOvercapacity}
+                </div>
               </div>
             </div>
           )}
