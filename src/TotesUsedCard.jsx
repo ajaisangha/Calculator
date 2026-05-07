@@ -23,6 +23,11 @@ export default function TotesUsedCard({
   const [dolliesUsed, setDolliesUsed] = useState("");
   const [dolliesEmpty, setDolliesEmpty] = useState("");
   const [dolliesResult, setDolliesResult] = useState(null);
+
+  const [currentDollies, setCurrentDollies] = useState("");
+  const [dolliesNeeded, setDolliesNeeded] = useState("");
+  const [dolliesDifference, setDolliesDifference] = useState(null);
+
   const [toast, setToast] = useState({ show: false, message: "" });
 
   const showToast = (message) => {
@@ -38,6 +43,10 @@ export default function TotesUsedCard({
       setDolliesUsed(d.dolliesUsed ?? "");
       setDolliesEmpty(d.dolliesEmpty ?? "");
       setDolliesResult(d.dolliesResult ?? null);
+
+      setCurrentDollies(d.currentDollies ?? "");
+      setDolliesNeeded(d.dolliesNeeded ?? "");
+      setDolliesDifference(d.dolliesDifference ?? null);
     });
 
     return unsub;
@@ -83,6 +92,42 @@ export default function TotesUsedCard({
     );
 
     showToast("Dollies cleared");
+  };
+
+  const calculateDolliesDifference = async () => {
+    const result = parseNumber(currentDollies) - parseNumber(dolliesNeeded);
+
+    setDolliesDifference(result);
+
+    await setDoc(
+      TOTESDOC,
+      {
+        currentDollies,
+        dolliesNeeded,
+        dolliesDifference: result,
+      },
+      { merge: true }
+    );
+
+    showToast("Dollies difference saved");
+  };
+
+  const clearDolliesDifference = async () => {
+    setCurrentDollies("");
+    setDolliesNeeded("");
+    setDolliesDifference(null);
+
+    await setDoc(
+      TOTESDOC,
+      {
+        currentDollies: "",
+        dolliesNeeded: "",
+        dolliesDifference: null,
+      },
+      { merge: true }
+    );
+
+    showToast("Dollies difference cleared");
   };
 
   const routeOrder = [
@@ -256,7 +301,7 @@ export default function TotesUsedCard({
                     color: "#123c73",
                   }}
                 >
-                  Total Overcapacity Totes
+                  Total Overcapacity
                 </div>
 
                 <div
@@ -277,56 +322,131 @@ export default function TotesUsedCard({
         <div className="subcard">
           <h3>Dollies</h3>
 
-          <div className="bagged-fields">
-            <div className="bagged-row">
-              <span>Dollies Received</span>
-              <input
-                type="number"
-                value={dolliesReceived}
-                onChange={(e) => setDolliesReceived(e.target.value)}
-              />
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+              gap: "12px",
+              alignItems: "start",
+            }}
+          >
+            <div
+              style={{
+                minWidth: 0,
+                background: "#f8fbff",
+                border: "1px solid #dbe7f6",
+                borderRadius: "12px",
+                padding: "12px",
+              }}
+            >
+              <div style={{ fontWeight: 700, marginBottom: "10px", color: "#123c73", fontSize: "14px" }}>
+                Dollies
+              </div>
+
+              <div className="bagged-fields">
+                <div className="bagged-row">
+                  <span>Dollies Received</span>
+                  <input
+                    type="number"
+                    value={dolliesReceived}
+                    onChange={(e) => setDolliesReceived(e.target.value)}
+                  />
+                </div>
+
+                <div className="bagged-row">
+                  <span>Dollies Used</span>
+                  <input
+                    type="number"
+                    value={dolliesUsed}
+                    onChange={(e) => setDolliesUsed(e.target.value)}
+                  />
+                </div>
+
+                <div className="bagged-row">
+                  <span>Dollies Empty</span>
+                  <input
+                    type="number"
+                    value={dolliesEmpty}
+                    onChange={(e) => setDolliesEmpty(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="center-buttons">
+                <button className="calculate-btn" onClick={calculateDollies}>
+                  Calculate
+                </button>
+                <button className="clear-btn" onClick={clearDollies}>
+                  Clear
+                </button>
+              </div>
+
+              {dolliesResult !== null && (
+                <div className="bagged-result" style={{ marginTop: 20 }}>
+                  <div className="result-line" style={{ fontWeight: "bold", fontSize: 18 }}>
+                    <span>Dollies Dekitted</span>
+                    <span style={{ marginLeft: 8 }}>{dolliesResult}</span>
+                  </div>
+                  <div className="result-line" style={{ fontWeight: "bold", fontSize: 18 }}>
+                    <span>Totes Dekitted</span>
+                    <span style={{ marginLeft: 8 }}>{dolliesResult * 15}</span>
+                  </div>
+                </div>
+              )}
             </div>
 
-            <div className="bagged-row">
-              <span>Dollies Used</span>
-              <input
-                type="number"
-                value={dolliesUsed}
-                onChange={(e) => setDolliesUsed(e.target.value)}
-              />
-            </div>
+            <div
+              style={{
+                minWidth: 0,
+                background: "#f8fbff",
+                border: "1px solid #dbe7f6",
+                borderRadius: "12px",
+                padding: "12px",
+              }}
+            >
+              <div style={{ fontWeight: 700, marginBottom: "10px", color: "#123c73", fontSize: "14px" }}>
+                Dollies Difference
+              </div>
 
-            <div className="bagged-row">
-              <span>Dollies Empty</span>
-              <input
-                type="number"
-                value={dolliesEmpty}
-                onChange={(e) => setDolliesEmpty(e.target.value)}
-              />
+              <div className="bagged-fields">
+                <div className="bagged-row">
+                  <span>Current Dollies</span>
+                  <input
+                    type="number"
+                    value={currentDollies}
+                    onChange={(e) => setCurrentDollies(e.target.value)}
+                  />
+                </div>
+
+                <div className="bagged-row">
+                  <span>Dollies Needed</span>
+                  <input
+                    type="number"
+                    value={dolliesNeeded}
+                    onChange={(e) => setDolliesNeeded(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="center-buttons">
+                <button className="calculate-btn" onClick={calculateDolliesDifference}>
+                  Calculate
+                </button>
+                <button className="clear-btn" onClick={clearDolliesDifference}>
+                  Clear
+                </button>
+              </div>
+
+              {dolliesDifference !== null && (
+                <div className="bagged-result" style={{ marginTop: 20 }}>
+                  <div className="result-line" style={{ fontWeight: "bold", fontSize: 18 }}>
+                    <span>Difference</span>
+                    <span style={{ marginLeft: 8 }}>{dolliesDifference}</span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
-
-          <div className="center-buttons">
-            <button className="calculate-btn" onClick={calculateDollies}>
-              Calculate
-            </button>
-            <button className="clear-btn" onClick={clearDollies}>
-              Clear
-            </button>
-          </div>
-
-          {dolliesResult !== null && (
-            <div className="bagged-result" style={{ marginTop: 20 }}>
-              <div className="result-line" style={{ fontWeight: "bold", fontSize: 18 }}>
-                <span>Dollies Dekitted</span>
-                <span style={{ marginLeft: 8 }}>{dolliesResult}</span>
-              </div>
-              <div className="result-line" style={{ fontWeight: "bold", fontSize: 18 }}>
-                <span>Totes Dekitted</span>
-                <span style={{ marginLeft: 8 }}>{dolliesResult * 15}</span>
-              </div>
-            </div>
-          )}
         </div>
 
         <div className="subcard grand-total-card">
