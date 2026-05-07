@@ -96,20 +96,23 @@ export default function TotesUsedCard({
   ];
 
   const getRowOvercapacity = (row) => {
-    let overcapacity = 0;
+    const ambientOver = (row.ambient || 0) > 40 ? (row.ambient || 0) - 40 : 0;
+    const chillFreezerTotal = (row.chilled || 0) + (row.freezer || 0);
+    const chillFreezerOver = chillFreezerTotal > 40 ? chillFreezerTotal - 40 : 0;
 
-    if ((row.ambient || 0) > 40) overcapacity += 1;
-    if (((row.chilled || 0) + (row.freezer || 0)) > 40) overcapacity += 1;
-
-    return overcapacity;
+    return {
+      ambient: ambientOver,
+      chillFreezer: chillFreezerOver,
+      total: ambientOver + chillFreezerOver,
+    };
   };
 
-  const totalOvercapacity = rows.reduce((sum, row) => sum + getRowOvercapacity(row), 0);
+  const totalOvercapacity = rows.reduce((sum, row) => sum + getRowOvercapacity(row).total, 0);
 
   const routeSummary = routeOrder.map((route) => {
     const routeRows = routesInfo[route.key]?.rows || [];
     const count = routeRows.length;
-    const overcapacity = routeRows.reduce((sum, row) => sum + getRowOvercapacity(row), 0);
+    const overcapacity = routeRows.reduce((sum, row) => sum + getRowOvercapacity(row).total, 0);
     const isVan = route.key === "Vans";
     return { ...route, count, overcapacity, isVan };
   });
@@ -253,7 +256,7 @@ export default function TotesUsedCard({
                     color: "#123c73",
                   }}
                 >
-                  Total Overcapacity
+                  Total Overcapacity Totes
                 </div>
 
                 <div

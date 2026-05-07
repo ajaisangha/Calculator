@@ -47,10 +47,18 @@ function parseToteCell(cell) {
   if (!cell && cell !== 0) return 0;
   const str = String(cell).trim();
   if (!str) return 0;
+
+  const slashMatch = str.match(/^\s*-?\d+\s*\/\s*(-?\d+)\s*$/);
+  if (slashMatch) {
+    const denominator = parseInt(slashMatch[1], 10);
+    return Number.isNaN(denominator) ? 0 : Math.abs(denominator);
+  }
+
   const matches = str.match(/-?\d+/g);
   if (!matches) return 0;
+
   const nums = matches.map((n) => parseInt(n, 10)).filter((n) => !Number.isNaN(n));
-  return nums.length ? Math.max(...nums.map(Math.abs), 0) : 0;
+  return nums.length ? Math.abs(nums[0]) : 0;
 }
 
 function getColumnKeys(headers) {
