@@ -292,14 +292,14 @@ export default function App() {
                   <div className="carousel-slide">
                     <BaggedTotesCard
                       grandTotals={grandTotals}
-                      receivedAmbient={receivedAmbient}
+                      /*receivedAmbient={receivedAmbient}
                       receivedChill={receivedChill}
                       currentAmbient={currentAmbient}
                       currentChill={currentChill}
                       setReceivedAmbient={setReceivedAmbient}
                       setReceivedChill={setReceivedChill}
                       setCurrentAmbient={setCurrentAmbient}
-                      setCurrentChill={setCurrentChill}
+                      setCurrentChill={setCurrentChill}*/
                     />
                   </div>
 

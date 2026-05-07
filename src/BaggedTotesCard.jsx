@@ -2,25 +2,17 @@ import React, { useState, useEffect } from "react";
 import { db } from "./firebase";
 import { doc, setDoc, onSnapshot } from "firebase/firestore";
 import "./App.css";
-import "./BaggedTotes.css"
+import "./BaggedTotes.css";
 
 const BAGGED_TOTES_DOC = doc(db, "totes", "baggedTotes");
 
-export default function BaggedTotesCard({
-  grandTotals,
-  receivedAmbient,
-  receivedChill,
-  currentAmbient,
-  currentChill,
-  setReceivedAmbient,
-  setReceivedChill,
-  setCurrentAmbient,
-  setCurrentChill,
-}) {
+export default function BaggedTotesCard({ grandTotals }) {
+  const [receivedAmbient, setReceivedAmbient] = useState("");
+  const [receivedChill, setReceivedChill] = useState("");
+  const [currentAmbient, setCurrentAmbient] = useState("");
+  const [currentChill, setCurrentChill] = useState("");
   const [baggedAmbient, setBaggedAmbient] = useState(null);
   const [baggedChill, setBaggedChill] = useState(null);
-  const [usedAmbient, setUsedAmbient] = useState(0);
-  const [usedChill, setUsedChill] = useState(0);
 
   const [currentAmbient2, setCurrentAmbient2] = useState("");
   const [currentChill2, setCurrentChill2] = useState("");
@@ -49,8 +41,6 @@ export default function BaggedTotesCard({
       setCurrentChill(d.currentChill || "");
       setBaggedAmbient(d.baggedAmbient ?? null);
       setBaggedChill(d.baggedChill ?? null);
-      setUsedAmbient(d.usedAmbient ?? 0);
-      setUsedChill(d.usedChill ?? 0);
 
       setCurrentAmbient2(d.currentAmbient2 || "");
       setCurrentChill2(d.currentChill2 || "");
@@ -63,7 +53,7 @@ export default function BaggedTotesCard({
     });
 
     return () => unsub();
-  }, [setReceivedAmbient, setReceivedChill, setCurrentAmbient, setCurrentChill]);
+  }, []);
 
   const calculateBaggedTotes = async () => {
     const ambientReceivedNum = parseInt(receivedAmbient, 10) || 0;
@@ -71,16 +61,11 @@ export default function BaggedTotesCard({
     const currentAmbientNum = parseInt(currentAmbient, 10) || 0;
     const currentChillNum = parseInt(currentChill, 10) || 0;
 
-    const ambient = (grandTotals.ambient || 0) + currentAmbientNum - ambientReceivedNum;
-    const chill = (grandTotals.chilled || 0) + currentChillNum - chillReceivedNum;
-
-    const ambientUsed = (grandTotals.ambient || 0) - ambientReceivedNum;
-    const chillUsed = (grandTotals.chilled || 0) - chillReceivedNum;
+    const ambient = ((grandTotals?.ambient || 0) + currentAmbientNum) - ambientReceivedNum;
+    const chill = ((grandTotals?.chilled || 0) + currentChillNum) - chillReceivedNum;
 
     setBaggedAmbient(ambient);
     setBaggedChill(chill);
-    setUsedAmbient(ambientUsed);
-    setUsedChill(chillUsed);
 
     await setDoc(
       BAGGED_TOTES_DOC,
@@ -91,8 +76,6 @@ export default function BaggedTotesCard({
         currentChill,
         baggedAmbient: ambient,
         baggedChill: chill,
-        usedAmbient: ambientUsed,
-        usedChill: chillUsed,
       },
       { merge: true }
     );
@@ -107,8 +90,6 @@ export default function BaggedTotesCard({
     setCurrentChill("");
     setBaggedAmbient(null);
     setBaggedChill(null);
-    setUsedAmbient(0);
-    setUsedChill(0);
 
     await setDoc(
       BAGGED_TOTES_DOC,
@@ -119,8 +100,6 @@ export default function BaggedTotesCard({
         currentChill: "",
         baggedAmbient: null,
         baggedChill: null,
-        usedAmbient: 0,
-        usedChill: 0,
       },
       { merge: true }
     );
@@ -204,12 +183,12 @@ export default function BaggedTotesCard({
           <div className="bagged-fields">
             <div className="bagged-row" style={rowStyle}>
               <span>Ambient Totes Used:</span>
-              <span style={{ fontSize: 25, fontWeight: "bold" }}>{usedAmbient ?? 0}</span>
+              <span style={{ fontSize: 25, fontWeight: "bold" }}>{grandTotals?.ambient || 0}</span>
             </div>
 
             <div className="bagged-row" style={rowStyle}>
               <span>Chill Totes Used:</span>
-              <span style={{ fontSize: 25, fontWeight: "bold" }}>{usedChill ?? 0}</span>
+              <span style={{ fontSize: 25, fontWeight: "bold" }}>{grandTotals?.chilled || 0}</span>
             </div>
 
             <div className="bagged-row" style={rowStyle}>

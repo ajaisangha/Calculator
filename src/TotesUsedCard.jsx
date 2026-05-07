@@ -301,7 +301,7 @@ export default function TotesUsedCard({
                     color: "#123c73",
                   }}
                 >
-                  Total Overcapacity
+                  Total Overcapacity Totes
                 </div>
 
                 <div
