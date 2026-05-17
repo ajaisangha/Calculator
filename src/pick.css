@@ -116,6 +116,77 @@
   font-size: 14px;
 }
 
+/* UPH History compact layout */
+.uph-history-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 12px;
+}
+
+.uph-zone-card {
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  background: linear-gradient(180deg, var(--card-bg-start), var(--subcard-bg));
+  padding: 12px;
+}
+
+.uph-zone-title {
+  margin: 0 0 10px;
+  color: var(--text-heading);
+  text-align: center;
+}
+
+.uph-zone-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.uph-history-row {
+  border: 1px solid var(--table-border);
+  border-radius: 10px;
+  background: var(--table-row);
+  padding: 10px;
+}
+
+.uph-slot {
+  font-weight: 700;
+  color: var(--text-heading);
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.uph-history-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.uph-history-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.uph-history-field label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.uph-history-field .pick-input {
+  width: 100%;
+  min-width: 0;
+}
+
+@media (max-width: 900px) {
+  .uph-history-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 700px) {
   .pick-card {
     max-width: 100%;
@@ -150,5 +221,9 @@
     font-size: 14px;
     padding: 7px 8px;
     min-height: 38px;
+  }
+
+  .uph-history-fields {
+    grid-template-columns: 1fr;
   }
 }

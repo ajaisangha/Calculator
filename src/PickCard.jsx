@@ -6,6 +6,27 @@ import "./pick.css";
 
 const PICK_DOC = doc(db, "totes", "pickCalculator");
 
+const HISTORY_SLOTS = ["12am - 1am", "1am - 2am", "3am - 4am"];
+const HISTORY_ZONES = ["ambient", "chill", "freezer"];
+
+const createEmptyHistory = () => ({
+  ambient: {
+    "12am - 1am": { uph: "", pickers: "" },
+    "1am - 2am": { uph: "", pickers: "" },
+    "3am - 4am": { uph: "", pickers: "" },
+  },
+  chill: {
+    "12am - 1am": { uph: "", pickers: "" },
+    "1am - 2am": { uph: "", pickers: "" },
+    "3am - 4am": { uph: "", pickers: "" },
+  },
+  freezer: {
+    "12am - 1am": { uph: "", pickers: "" },
+    "1am - 2am": { uph: "", pickers: "" },
+    "3am - 4am": { uph: "", pickers: "" },
+  },
+});
+
 export default function PickAndBaggedCombinedCard() {
   const [ambientPickers, setAmbientPickers] = useState("");
   const [chillPickers, setChillPickers] = useState("");
@@ -17,16 +38,7 @@ export default function PickAndBaggedCombinedCard() {
   const [ambientBreak1, setAmbientBreak1] = useState("");
   const [chillBreak1, setChillBreak1] = useState("");
 
-  const [reqAmbientUPH, setReqAmbientUPH] = useState("");
-  const [reqChillUPH, setReqChillUPH] = useState("");
-  const [reqAmbientOutstanding, setReqAmbientOutstanding] = useState("");
-  const [reqChillOutstanding, setReqChillOutstanding] = useState("");
-  const [reqAmbientFinish, setReqAmbientFinish] = useState("");
-  const [reqChillFinish, setReqChillFinish] = useState("");
-  const [reqAmbientBreak, setReqAmbientBreak] = useState("");
-  const [reqChillBreak, setReqChillBreak] = useState("");
-  const [reqAmbientResult, setReqAmbientResult] = useState(null);
-  const [reqChillResult, setReqChillResult] = useState(null);
+  const [uphHistory, setUphHistory] = useState(createEmptyHistory());
 
   const [toast, setToast] = useState({ show: false, message: "" });
   const showToast = (m) => {
@@ -49,16 +61,19 @@ export default function PickAndBaggedCombinedCard() {
       setAmbientBreak1(d.ambientBreak1 || "");
       setChillBreak1(d.chillBreak1 || "");
 
-      setReqAmbientUPH(d.reqAmbientUPH || "");
-      setReqChillUPH(d.reqChillUPH || "");
-      setReqAmbientOutstanding(d.reqAmbientOutstanding || "");
-      setReqChillOutstanding(d.reqChillOutstanding || "");
-      setReqAmbientFinish(d.reqAmbientFinish || "");
-      setReqChillFinish(d.reqChillFinish || "");
-      setReqAmbientBreak(d.reqAmbientBreak || "");
-      setReqChillBreak(d.reqChillBreak || "");
-      setReqAmbientResult(d.reqAmbientResult ?? null);
-      setReqChillResult(d.reqChillResult ?? null);
+      const savedHistory = d.uphHistory || {};
+      const nextHistory = createEmptyHistory();
+
+      HISTORY_ZONES.forEach((zone) => {
+        HISTORY_SLOTS.forEach((slot) => {
+          nextHistory[zone][slot] = {
+            uph: savedHistory?.[zone]?.[slot]?.uph || "",
+            pickers: savedHistory?.[zone]?.[slot]?.pickers || "",
+          };
+        });
+      });
+
+      setUphHistory(nextHistory);
     });
 
     return () => unsub();
@@ -83,24 +98,6 @@ export default function PickAndBaggedCombinedCard() {
     h = h % 12 || 12;
 
     return `${h}:${m} ${ampm}`;
-  };
-
-  const getHoursRemaining = (finishTime, breakMinutes) => {
-    if (!finishTime) return 0;
-    const now = new Date();
-    const [hh, mm] = finishTime.split(":").map(Number);
-
-    let finish = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hh, mm);
-
-    if (finish <= now) finish.setDate(finish.getDate() + 1);
-
-    let hours = (finish - now) / 3600000;
-    const breakHours = (parseFloat(breakMinutes) || 0) / 60;
-
-    hours -= breakHours;
-    if (hours < 0) hours = 0;
-
-    return hours;
   };
 
   const savePickCalc = async () => {
@@ -147,77 +144,43 @@ export default function PickAndBaggedCombinedCard() {
     );
   };
 
-  const calculateRequiredPickers = async () => {
-    const ambHours = getHoursRemaining(reqAmbientFinish, reqAmbientBreak);
-    const chlHours = getHoursRemaining(reqChillFinish, reqChillBreak);
-
-    const ambReq =
-      ambHours > 0
-        ? Math.ceil(
-            (parseFloat(reqAmbientOutstanding) || 0) /
-              (ambHours * (parseFloat(reqAmbientUPH) || 1))
-          )
-        : 0;
-
-    const chlReq =
-      chlHours > 0
-        ? Math.ceil(
-            (parseFloat(reqChillOutstanding) || 0) /
-              (chlHours * (parseFloat(reqChillUPH) || 1))
-          )
-        : 0;
-
-    setReqAmbientResult(ambReq);
-    setReqChillResult(chlReq);
-
-    await setDoc(
-      PICK_DOC,
-      {
-        reqAmbientUPH,
-        reqChillUPH,
-        reqAmbientOutstanding,
-        reqChillOutstanding,
-        reqAmbientFinish,
-        reqChillFinish,
-        reqAmbientBreak,
-        reqChillBreak,
-        reqAmbientResult: ambReq,
-        reqChillResult: chlReq,
+  const updateHistoryCell = (zone, slot, field, value) => {
+    setUphHistory((prev) => ({
+      ...prev,
+      [zone]: {
+        ...prev[zone],
+        [slot]: {
+          ...prev[zone][slot],
+          [field]: value,
+        },
       },
-      { merge: true }
-    );
-
-    showToast("Required Pickers Calculated");
+    }));
   };
 
-  const clearRequiredPickers = async () => {
-    setReqAmbientUPH("");
-    setReqChillUPH("");
-    setReqAmbientOutstanding("");
-    setReqChillOutstanding("");
-    setReqAmbientFinish("");
-    setReqChillFinish("");
-    setReqAmbientBreak("");
-    setReqChillBreak("");
-    setReqAmbientResult(null);
-    setReqChillResult(null);
+  const saveUphHistory = async () => {
+    await setDoc(
+      PICK_DOC,
+      {
+        uphHistory,
+      },
+      { merge: true }
+    );
+    showToast("UPH History Saved");
+  };
+
+  const clearUphHistory = async () => {
+    const emptyHistory = createEmptyHistory();
+    setUphHistory(emptyHistory);
 
     await setDoc(
       PICK_DOC,
       {
-        reqAmbientUPH: "",
-        reqChillUPH: "",
-        reqAmbientOutstanding: "",
-        reqChillOutstanding: "",
-        reqAmbientFinish: "",
-        reqChillFinish: "",
-        reqAmbientBreak: "",
-        reqChillBreak: "",
-        reqAmbientResult: null,
-        reqChillResult: null,
+        uphHistory: emptyHistory,
       },
       { merge: true }
     );
+
+    showToast("UPH History Cleared");
   };
 
   const ambProjected = projected(ambientUPH, ambientPickers);
@@ -348,106 +311,59 @@ export default function PickAndBaggedCombinedCard() {
         </div>
 
         <div className="shift-subcard pick-subcard">
-          <h3>Required Pickers Calculator</h3>
+          <h3>UPH History</h3>
 
-          <div className="table-container pick-table-wrap">
-            <table className="data-table pick-table spaced-table">
-              <thead>
-                <tr>
-                  <th>Zone</th>
-                  <th>UPH</th>
-                  <th>Outstanding</th>
-                  <th>Finish By</th>
-                  <th>Break (min)</th>
-                  <th>Pickers Required</th>
-                </tr>
-              </thead>
+          <div className="uph-history-grid">
+            {HISTORY_ZONES.map((zone) => (
+              <div key={zone} className="uph-zone-card">
+                <h4 className="uph-zone-title">
+                  {zone.charAt(0).toUpperCase() + zone.slice(1)}
+                </h4>
 
-              <tbody>
-                <tr>
-                  <td>Ambient</td>
-                  <td>
-                    <input
-                      type="number"
-                      value={reqAmbientUPH}
-                      onChange={(e) => setReqAmbientUPH(e.target.value)}
-                      className="pick-input"
-                    />
-                  </td>
-                  <td>
-                    <input
-                      type="number"
-                      value={reqAmbientOutstanding}
-                      onChange={(e) => setReqAmbientOutstanding(e.target.value)}
-                      className="pick-input outstanding-input"
-                    />
-                  </td>
-                  <td>
-                    <input
-                      type="time"
-                      value={reqAmbientFinish}
-                      onChange={(e) => setReqAmbientFinish(e.target.value)}
-                      className="time-input"
-                    />
-                  </td>
-                  <td>
-                    <input
-                      type="number"
-                      value={reqAmbientBreak}
-                      onChange={(e) => setReqAmbientBreak(e.target.value)}
-                      className="break-input"
-                    />
-                  </td>
-                  <td>{reqAmbientResult ?? "-"}</td>
-                </tr>
+                <div className="uph-zone-rows">
+                  {HISTORY_SLOTS.map((slot) => (
+                    <div key={`${zone}-${slot}`} className="uph-history-row">
+                      <div className="uph-slot">{slot}</div>
 
-                <tr>
-                  <td>Chill</td>
-                  <td>
-                    <input
-                      type="number"
-                      value={reqChillUPH}
-                      onChange={(e) => setReqChillUPH(e.target.value)}
-                      className="pick-input"
-                    />
-                  </td>
-                  <td>
-                    <input
-                      type="number"
-                      value={reqChillOutstanding}
-                      onChange={(e) => setReqChillOutstanding(e.target.value)}
-                      className="pick-input outstanding-input"
-                    />
-                  </td>
-                  <td>
-                    <input
-                      type="time"
-                      value={reqChillFinish}
-                      onChange={(e) => setReqChillFinish(e.target.value)}
-                      className="time-input"
-                    />
-                  </td>
-                  <td>
-                    <input
-                      type="number"
-                      value={reqChillBreak}
-                      onChange={(e) => setReqChillBreak(e.target.value)}
-                      className="break-input"
-                    />
-                  </td>
-                  <td>{reqChillResult ?? "-"}</td>
-                </tr>
-              </tbody>
-            </table>
+                      <div className="uph-history-fields">
+                        <div className="uph-history-field">
+                          <label>UPH</label>
+                          <input
+                            type="number"
+                            value={uphHistory[zone][slot].uph}
+                            onChange={(e) =>
+                              updateHistoryCell(zone, slot, "uph", e.target.value)
+                            }
+                            className="pick-input"
+                          />
+                        </div>
 
-            <div className="center-buttons">
-              <button className="calculate-btn" onClick={calculateRequiredPickers}>
-                Calculate
-              </button>
-              <button className="clear-btn" onClick={clearRequiredPickers}>
-                Clear
-              </button>
-            </div>
+                        <div className="uph-history-field">
+                          <label>Pickers</label>
+                          <input
+                            type="number"
+                            value={uphHistory[zone][slot].pickers}
+                            onChange={(e) =>
+                              updateHistoryCell(zone, slot, "pickers", e.target.value)
+                            }
+                            className="pick-input"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="center-buttons">
+            <button className="calculate-btn" onClick={saveUphHistory}>
+              Save
+            </button>
+            <button className="clear-btn" onClick={clearUphHistory}>
+              Clear
+            </button>
           </div>
         </div>
       </div>
