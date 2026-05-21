@@ -7,6 +7,8 @@ import "./freezer.css";
 const FREEZER_DOC = doc(db, "totes", "freezerCalc");
 
 export default function FreezerCard() {
+  const [activeMethod, setActiveMethod] = useState("uph");
+
   // -----------------------------
   // STATE — TABLE 1 (UPH method)
   // -----------------------------
@@ -60,11 +62,10 @@ export default function FreezerCard() {
   // Convert hours → formatted time
   // ----------------------------------------------------
   const calculateFinishTime = (hours, breakMinutes) => {
-    if (!hours || hours <= 0) return "-";
+    if (!hours || hours <= 0 || !Number.isFinite(hours)) return "-";
 
     const now = new Date();
     const breakHrs = (parseFloat(breakMinutes) || 0) / 60;
-
     const finalHours = hours + breakHrs;
     const finish = new Date(now.getTime() + finalHours * 3600000);
 
@@ -80,21 +81,28 @@ export default function FreezerCard() {
   // AUTO-CALCULATE (UPH TABLE)
   // ----------------------------------------------------
   useEffect(() => {
-    const hours =
-      (parseFloat(outstandingUPH) || 0) /
-      ((parseFloat(pickersUPH) || 0) * (parseFloat(uph) || 0));
+    const totalRate = (parseFloat(pickersUPH) || 0) * (parseFloat(uph) || 0);
+    if (!totalRate) {
+      setResultUPH("-");
+      return;
+    }
 
+    const hours = (parseFloat(outstandingUPH) || 0) / totalRate;
     setResultUPH(calculateFinishTime(hours, breakUPH));
   }, [pickersUPH, uph, outstandingUPH, breakUPH]);
 
   // ----------------------------------------------------
-  // AUTO-CALCULATE (TROLLY TABLE)
+  // AUTO-CALCULATE (TROLLEY TABLE)
   // ----------------------------------------------------
   useEffect(() => {
-    const hours =
-      (parseFloat(outstandingTrolly) || 0) /
-      ((parseFloat(pickersTrolly) || 0) * (parseFloat(trollyRate) || 0));
+    const totalRate =
+      (parseFloat(pickersTrolly) || 0) * (parseFloat(trollyRate) || 0);
+    if (!totalRate) {
+      setResultTrolly("-");
+      return;
+    }
 
+    const hours = (parseFloat(outstandingTrolly) || 0) / totalRate;
     setResultTrolly(calculateFinishTime(hours, breakTrolly));
   }, [pickersTrolly, trollyRate, outstandingTrolly, breakTrolly]);
 
@@ -125,7 +133,7 @@ export default function FreezerCard() {
     setUPH("");
     setOutstandingUPH("");
     setBreakUPH("");
-    setResultUPH("");
+    setResultUPH("-");
 
     await setDoc(
       FREEZER_DOC,
@@ -169,7 +177,7 @@ export default function FreezerCard() {
     setTrollyRate("");
     setOutstandingTrolly("");
     setBreakTrolly("");
-    setResultTrolly("");
+    setResultTrolly("-");
 
     await setDoc(
       FREEZER_DOC,
@@ -186,78 +194,167 @@ export default function FreezerCard() {
     showToast("Trolly Table Cleared");
   };
 
- return (
-  <section className="data-card freezer-card">
-    <h2 className="data-title">Freezer Calculator</h2>
+  return (
+    <section className="data-card freezer-card">
+      <h2 className="data-title">Freezer Calculator</h2>
 
-    {/* ================= SUB CARD 1 ================= */}
-    <div className="sub-card">
-      <h3>Finish Time Using UPH</h3>
+      <div className="freezer-method-toggle">
+        <label className={`freezer-radio-option ${activeMethod === "uph" ? "active" : ""}`}>
+          <input
+            type="radio"
+            name="freezerMethod"
+            value="uph"
+            checked={activeMethod === "uph"}
+            onChange={() => setActiveMethod("uph")}
+          />
+          <span>UPH Method</span>
+        </label>
 
-      <table className="data-table">
-        <thead>
-          <tr>
-            <th>Pickers</th>
-            <th>UPH</th>
-            <th>Outstanding</th>
-            <th>Break (min)</th>
-            <th>Finish Time</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          <tr>
-            <td><input type="number" value={pickersUPH} onChange={(e)=>setPickersUPH(e.target.value)} className="tiny-input"/></td>
-            <td><input type="number" value={uph} onChange={(e)=>setUPH(e.target.value)} className="tiny-input"/></td>
-            <td><input type="number" value={outstandingUPH} onChange={(e)=>setOutstandingUPH(e.target.value)} className="tiny-input"/></td>
-            <td><input type="number" value={breakUPH} onChange={(e)=>setBreakUPH(e.target.value)} className="tiny-input"/></td>
-            <td style={{ fontWeight:"bold" }}>{resultUPH || "-"}</td>
-          </tr>
-        </tbody>
-      </table>
-
-      <div className="button-row-centered">
-        <button className="calculate-btn" onClick={saveUPH}>Save</button>
-        <button className="clear-btn" onClick={clearUPH}>Clear</button>
+        <label
+          className={`freezer-radio-option ${activeMethod === "trolly" ? "active" : ""}`}
+        >
+          <input
+            type="radio"
+            name="freezerMethod"
+            value="trolly"
+            checked={activeMethod === "trolly"}
+            onChange={() => setActiveMethod("trolly")}
+          />
+          <span>Trolly Method</span>
+        </label>
       </div>
-    </div>
 
-    {/* ================= SUB CARD 2 ================= */}
-    <div className="sub-card">
-      <h3>Finish Time Using Trollies</h3>
+      {activeMethod === "uph" && (
+        <div className="sub-card">
+          <h3>Finish Time Using UPH</h3>
 
-      <table className="data-table">
-        <thead>
-          <tr>
-            <th>Pickers</th>
-            <th>Trolly/hr</th>
-            <th>Outstanding Trollies</th>
-            <th>Break (min)</th>
-            <th>Finish Time</th>
-          </tr>
-        </thead>
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Pickers</th>
+                <th>UPH</th>
+                <th>Outstanding</th>
+                <th>Break (min)</th>
+                <th>Finish Time</th>
+              </tr>
+            </thead>
 
-        <tbody>
-          <tr>
-            <td><input type="number" value={pickersTrolly} onChange={(e)=>setPickersTrolly(e.target.value)} className="tiny-input"/></td>
-            <td><input type="number" value={trollyRate} onChange={(e)=>setTrollyRate(e.target.value)} className="tiny-input"/></td>
-            <td><input type="number" value={outstandingTrolly} onChange={(e)=>setOutstandingTrolly(e.target.value)} className="tiny-input"/></td>
-            <td><input type="number" value={breakTrolly} onChange={(e)=>setBreakTrolly(e.target.value)} className="tiny-input"/></td>
-            <td style={{ fontWeight:"bold" }}>{resultTrolly || "-"}</td>
-          </tr>
-        </tbody>
-      </table>
+            <tbody>
+              <tr>
+                <td>
+                  <input
+                    type="number"
+                    value={pickersUPH}
+                    onChange={(e) => setPickersUPH(e.target.value)}
+                    className="tiny-input"
+                  />
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    value={uph}
+                    onChange={(e) => setUPH(e.target.value)}
+                    className="tiny-input"
+                  />
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    value={outstandingUPH}
+                    onChange={(e) => setOutstandingUPH(e.target.value)}
+                    className="tiny-input"
+                  />
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    value={breakUPH}
+                    onChange={(e) => setBreakUPH(e.target.value)}
+                    className="tiny-input"
+                  />
+                </td>
+                <td style={{ fontWeight: "bold" }}>{resultUPH || "-"}</td>
+              </tr>
+            </tbody>
+          </table>
 
-      <div className="button-row-centered">
-        <button className="calculate-btn" onClick={saveTrolly}>Save</button>
-        <button className="clear-btn" onClick={clearTrolly}>Clear</button>
-      </div>
-    </div>
+          <div className="button-row-centered">
+            <button className="calculate-btn" onClick={saveUPH}>
+              Save
+            </button>
+            <button className="clear-btn" onClick={clearUPH}>
+              Clear
+            </button>
+          </div>
+        </div>
+      )}
 
-    {toast.show && (
-      <div className="toast-notification-center">{toast.message}</div>
-    )}
-  </section>
-);
+      {activeMethod === "trolly" && (
+        <div className="sub-card">
+          <h3>Finish Time Using Trollies</h3>
 
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Pickers</th>
+                <th>Trolly/hr</th>
+                <th>Outstanding Trollies</th>
+                <th>Break (min)</th>
+                <th>Finish Time</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              <tr>
+                <td>
+                  <input
+                    type="number"
+                    value={pickersTrolly}
+                    onChange={(e) => setPickersTrolly(e.target.value)}
+                    className="tiny-input"
+                  />
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    value={trollyRate}
+                    onChange={(e) => setTrollyRate(e.target.value)}
+                    className="tiny-input"
+                  />
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    value={outstandingTrolly}
+                    onChange={(e) => setOutstandingTrolly(e.target.value)}
+                    className="tiny-input"
+                  />
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    value={breakTrolly}
+                    onChange={(e) => setBreakTrolly(e.target.value)}
+                    className="tiny-input"
+                  />
+                </td>
+                <td style={{ fontWeight: "bold" }}>{resultTrolly || "-"}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div className="button-row-centered">
+            <button className="calculate-btn" onClick={saveTrolly}>
+              Save
+            </button>
+            <button className="clear-btn" onClick={clearTrolly}>
+              Clear
+            </button>
+          </div>
+        </div>
+      )}
+
+      {toast.show && <div className="toast-notification-center">{toast.message}</div>}
+    </section>
+  );
 }
