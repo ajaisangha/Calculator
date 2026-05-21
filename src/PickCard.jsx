@@ -6,7 +6,7 @@ import "./pick.css";
 
 const PICK_DOC = doc(db, "totes", "pickCalculator");
 
-const HISTORY_SLOTS = ["12am - 1am", "1am - 2am", "3am - 4am"];
+const HISTORY_SLOTS = ["12am - 1am", "1am - 2am", "3am - 4am", "4am - 5am"];
 const HISTORY_ZONES = ["ambient", "chill", "freezer"];
 
 const createEmptyHistory = () => ({
@@ -14,16 +14,19 @@ const createEmptyHistory = () => ({
     "12am - 1am": { uph: "", pickers: "" },
     "1am - 2am": { uph: "", pickers: "" },
     "3am - 4am": { uph: "", pickers: "" },
+    "4am - 5am": { uph: "", pickers: "" },
   },
   chill: {
     "12am - 1am": { uph: "", pickers: "" },
     "1am - 2am": { uph: "", pickers: "" },
     "3am - 4am": { uph: "", pickers: "" },
+    "4am - 5am": { uph: "", pickers: "" },
   },
   freezer: {
     "12am - 1am": { uph: "", pickers: "" },
     "1am - 2am": { uph: "", pickers: "" },
     "3am - 4am": { uph: "", pickers: "" },
+    "4am - 5am": { uph: "", pickers: "" },
   },
 });
 
@@ -34,13 +37,11 @@ export default function PickAndBaggedCombinedCard() {
   const [chillUPH, setChillUPH] = useState("");
   const [ambientOutstanding, setAmbientOutstanding] = useState("");
   const [chillOutstanding, setChillOutstanding] = useState("");
-
   const [ambientBreak1, setAmbientBreak1] = useState("");
   const [chillBreak1, setChillBreak1] = useState("");
-
   const [uphHistory, setUphHistory] = useState(createEmptyHistory());
-
   const [toast, setToast] = useState({ show: false, message: "" });
+
   const showToast = (m) => {
     setToast({ show: true, message: m });
     setTimeout(() => setToast({ show: false, message: "" }), 1800);
@@ -49,7 +50,7 @@ export default function PickAndBaggedCombinedCard() {
   useEffect(() => {
     const unsub = onSnapshot(PICK_DOC, (snap) => {
       if (!snap.exists()) return;
-      const d = snap.data();
+      const d = snap.data() || {};
 
       setAmbientPickers(d.ambientPickers || "");
       setChillPickers(d.chillPickers || "");
@@ -57,7 +58,6 @@ export default function PickAndBaggedCombinedCard() {
       setChillUPH(d.chillUPH || "");
       setAmbientOutstanding(d.ambientOutstanding || "");
       setChillOutstanding(d.chillOutstanding || "");
-
       setAmbientBreak1(d.ambientBreak1 || "");
       setChillBreak1(d.chillBreak1 || "");
 
@@ -79,8 +79,7 @@ export default function PickAndBaggedCombinedCard() {
     return () => unsub();
   }, []);
 
-  const projected = (uph, pickers) =>
-    (parseFloat(uph) || 0) * (parseFloat(pickers) || 0);
+  const projected = (uph, pickers) => (parseFloat(uph) || 0) * (parseFloat(pickers) || 0);
 
   const finishingTime = (outstanding, proj, breakMinutes) => {
     if (!proj || proj <= 0) return "-";
@@ -330,7 +329,7 @@ export default function PickAndBaggedCombinedCard() {
                           <label>UPH</label>
                           <input
                             type="number"
-                            value={uphHistory[zone][slot].uph}
+                            value={uphHistory?.[zone]?.[slot]?.uph || ""}
                             onChange={(e) =>
                               updateHistoryCell(zone, slot, "uph", e.target.value)
                             }
@@ -342,7 +341,7 @@ export default function PickAndBaggedCombinedCard() {
                           <label>Pickers</label>
                           <input
                             type="number"
-                            value={uphHistory[zone][slot].pickers}
+                            value={uphHistory?.[zone]?.[slot]?.pickers || ""}
                             onChange={(e) =>
                               updateHistoryCell(zone, slot, "pickers", e.target.value)
                             }
