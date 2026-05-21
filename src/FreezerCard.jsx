@@ -27,6 +27,18 @@ export default function FreezerCard() {
   const [breakTrolly, setBreakTrolly] = useState("");
   const [resultTrolly, setResultTrolly] = useState("");
 
+  // -----------------------------
+  // STATE — TABLE 3 (Ishant method)
+  // -----------------------------
+  const [ishantPickers, setIshantPickers] = useState("");
+  const [ishantTrolliesLeft, setIshantTrolliesLeft] = useState("");
+  const [ishantPicksLeft, setIshantPicksLeft] = useState("");
+  const [ishantPicksPerHour, setIshantPicksPerHour] = useState("");
+  const [ishantBreak, setIshantBreak] = useState("");
+  const [ishantUPH, setIshantUPH] = useState("");
+  const [ishantPicksDoneTime, setIshantPicksDoneTime] = useState("");
+  const [ishantTrolleyDoneTime, setIshantTrolleyDoneTime] = useState("");
+
   // Toast
   const [toast, setToast] = useState({ show: false, message: "" });
   const showToast = (msg) => {
@@ -40,7 +52,7 @@ export default function FreezerCard() {
   useEffect(() => {
     const unsub = onSnapshot(FREEZER_DOC, (snap) => {
       if (!snap.exists()) return;
-      const d = snap.data();
+      const d = snap.data() || {};
 
       setPickersUPH(d.pickersUPH || "");
       setUPH(d.uph || "");
@@ -53,10 +65,34 @@ export default function FreezerCard() {
       setOutstandingTrolly(d.outstandingTrolly || "");
       setBreakTrolly(d.breakTrolly || "");
       setResultTrolly(d.resultTrolly || "");
+
+      setIshantPickers(d.ishantPickers || "");
+      setIshantTrolliesLeft(d.ishantTrolliesLeft || "");
+      setIshantPicksLeft(d.ishantPicksLeft || "");
+      setIshantPicksPerHour(d.ishantPicksPerHour || "");
+      setIshantBreak(d.ishantBreak || "");
+      setIshantUPH(d.ishantUPH || "");
+      setIshantPicksDoneTime(d.ishantPicksDoneTime || "");
+      setIshantTrolleyDoneTime(d.ishantTrolleyDoneTime || "");
     });
 
     return () => unsub();
   }, []);
+
+  const formatTimeFromNow = (hoursToAdd, breakMinutes = 0) => {
+    if (!Number.isFinite(hoursToAdd) || hoursToAdd < 0) return "-";
+
+    const now = new Date();
+    const totalMs = (hoursToAdd * 60 + (parseFloat(breakMinutes) || 0)) * 60000;
+    const finish = new Date(now.getTime() + totalMs);
+
+    let hh = finish.getHours();
+    const mm = finish.getMinutes().toString().padStart(2, "0");
+    const ampm = hh >= 12 ? "PM" : "AM";
+    hh = hh % 12 || 12;
+
+    return `${hh}:${mm} ${ampm}`;
+  };
 
   // ----------------------------------------------------
   // Convert hours → formatted time
@@ -105,6 +141,44 @@ export default function FreezerCard() {
     const hours = (parseFloat(outstandingTrolly) || 0) / totalRate;
     setResultTrolly(calculateFinishTime(hours, breakTrolly));
   }, [pickersTrolly, trollyRate, outstandingTrolly, breakTrolly]);
+
+  // ----------------------------------------------------
+  // AUTO-CALCULATE (ISHANT TABLE)
+  // ----------------------------------------------------
+  useEffect(() => {
+    const pickers = parseFloat(ishantPickers) || 0;
+    const trolliesLeft = parseFloat(ishantTrolliesLeft) || 0;
+    const picksLeft = parseFloat(ishantPicksLeft) || 0;
+    const picksPerHour = parseFloat(ishantPicksPerHour) || 0;
+    const breakMinutes = parseFloat(ishantBreak) || 0;
+
+    if (pickers > 0 && picksPerHour > 0) {
+      setIshantUPH((picksPerHour / pickers).toFixed(2));
+    } else {
+      setIshantUPH("");
+    }
+
+    if (picksLeft > 0 && picksPerHour > 0) {
+      const picksHours = picksLeft / picksPerHour;
+      setIshantPicksDoneTime(formatTimeFromNow(picksHours, breakMinutes));
+    } else {
+      setIshantPicksDoneTime("-");
+    }
+
+    if (trolliesLeft > 0 && pickers > 0) {
+      const trolleyDivisor = picksPerHour >= 1000 ? 1.25 : 1.5;
+      const trolleyHours = (trolliesLeft / trolleyDivisor) / pickers;
+      setIshantTrolleyDoneTime(formatTimeFromNow(trolleyHours, breakMinutes));
+    } else {
+      setIshantTrolleyDoneTime("-");
+    }
+  }, [
+    ishantPickers,
+    ishantTrolliesLeft,
+    ishantPicksLeft,
+    ishantPicksPerHour,
+    ishantBreak,
+  ]);
 
   // ----------------------------------------------------
   // SAVE TABLE 1 ONLY
@@ -194,6 +268,59 @@ export default function FreezerCard() {
     showToast("Trolly Table Cleared");
   };
 
+  // ----------------------------------------------------
+  // SAVE TABLE 3 ONLY
+  // ----------------------------------------------------
+  const saveIshant = async () => {
+    await setDoc(
+      FREEZER_DOC,
+      {
+        ishantPickers,
+        ishantTrolliesLeft,
+        ishantPicksLeft,
+        ishantPicksPerHour,
+        ishantBreak,
+        ishantUPH,
+        ishantPicksDoneTime,
+        ishantTrolleyDoneTime,
+      },
+      { merge: true }
+    );
+
+    showToast("Ishant Method Saved");
+  };
+
+  // ----------------------------------------------------
+  // CLEAR TABLE 3 ONLY
+  // ----------------------------------------------------
+  const clearIshant = async () => {
+    setIshantPickers("");
+    setIshantTrolliesLeft("");
+    setIshantPicksLeft("");
+    setIshantPicksPerHour("");
+    setIshantBreak("");
+    setIshantUPH("");
+    setIshantPicksDoneTime("-");
+    setIshantTrolleyDoneTime("-");
+
+    await setDoc(
+      FREEZER_DOC,
+      {
+        ishantPickers: "",
+        ishantTrolliesLeft: "",
+        ishantPicksLeft: "",
+        ishantPicksPerHour: "",
+        ishantBreak: "",
+        ishantUPH: "",
+        ishantPicksDoneTime: "",
+        ishantTrolleyDoneTime: "",
+      },
+      { merge: true }
+    );
+
+    showToast("Ishant Method Cleared");
+  };
+
   return (
     <section className="data-card freezer-card">
       <h2 className="data-title">Freezer Calculator</h2>
@@ -221,6 +348,19 @@ export default function FreezerCard() {
             onChange={() => setActiveMethod("trolly")}
           />
           <span>Trolly Method</span>
+        </label>
+
+        <label
+          className={`freezer-radio-option ${activeMethod === "ishant" ? "active" : ""}`}
+        >
+          <input
+            type="radio"
+            name="freezerMethod"
+            value="ishant"
+            checked={activeMethod === "ishant"}
+            onChange={() => setActiveMethod("ishant")}
+          />
+          <span>Ishant Method</span>
         </label>
       </div>
 
@@ -348,6 +488,84 @@ export default function FreezerCard() {
               Save
             </button>
             <button className="clear-btn" onClick={clearTrolly}>
+              Clear
+            </button>
+          </div>
+        </div>
+      )}
+
+      {activeMethod === "ishant" && (
+        <div className="sub-card">
+          <h3>Ishant Method</h3>
+
+          <table className="data-table ishant-table">
+            <thead>
+              <tr>
+                <th>Pickers</th>
+                <th>Trollies Left</th>
+                <th>Picks Left</th>
+                <th>Picks/Hour</th>
+                <th>Break (min)</th>
+                <th>Resulted UPH</th>
+                <th>Picks Done At</th>
+                <th>Trollies Done At</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              <tr>
+                <td>
+                  <input
+                    type="number"
+                    value={ishantPickers}
+                    onChange={(e) => setIshantPickers(e.target.value)}
+                    className="tiny-input"
+                  />
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    value={ishantTrolliesLeft}
+                    onChange={(e) => setIshantTrolliesLeft(e.target.value)}
+                    className="tiny-input"
+                  />
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    value={ishantPicksLeft}
+                    onChange={(e) => setIshantPicksLeft(e.target.value)}
+                    className="tiny-input"
+                  />
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    value={ishantPicksPerHour}
+                    onChange={(e) => setIshantPicksPerHour(e.target.value)}
+                    className="tiny-input"
+                  />
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    value={ishantBreak}
+                    onChange={(e) => setIshantBreak(e.target.value)}
+                    className="tiny-input"
+                  />
+                </td>
+                <td style={{ fontWeight: "bold" }}>{ishantUPH || "-"}</td>
+                <td style={{ fontWeight: "bold" }}>{ishantPicksDoneTime || "-"}</td>
+                <td style={{ fontWeight: "bold" }}>{ishantTrolleyDoneTime || "-"}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div className="button-row-centered">
+            <button className="calculate-btn" onClick={saveIshant}>
+              Save
+            </button>
+            <button className="clear-btn" onClick={clearIshant}>
               Clear
             </button>
           </div>
