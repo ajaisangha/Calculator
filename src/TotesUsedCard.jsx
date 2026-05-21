@@ -173,7 +173,7 @@ export default function TotesUsedCard({
     .reduce((sum, r) => sum + r.count, 0);
 
   const totalVanFrames = totalVanRoutes * 4;
-
+  const totalRoutes = totalSpokeRoutes + totalVanRoutes;
   const totalFrames = totalSpokeFrames + totalVanFrames + 20;
 
   const handleClearUpload = () => {
@@ -389,7 +389,10 @@ export default function TotesUsedCard({
                   </div>
                   <div className="result-line" style={{ fontWeight: "bold", fontSize: 18 }}>
                     <span>Totes Dekitted</span>
-                    <span style={{ marginLeft: 8 }}>{dolliesResult * 15}</span>
+                    <span style={{ marginLeft: 8 }}>{dolliesResult * 20}</span>
+                  </div>
+                  <div  style={{fontSize: 12, textAlign: 'left' }}>
+                    <span>*Totes Dekitted = Frames x 20</span>
                   </div>
                 </div>
               )}
@@ -521,6 +524,22 @@ export default function TotesUsedCard({
               </div>
               <div style={{ fontSize: "28px", fontWeight: 800, marginTop: "6px" }}>
                 {totalVanFrames}
+              </div>
+            </div>
+
+            <div
+              style={{
+                background: "#ffffff",
+                border: "1px solid #e4edf8",
+                borderRadius: "12px",
+                padding: "14px",
+              }}
+            >
+              <div style={{ fontSize: "13px", color: "#5b6472", fontWeight: 600 }}>
+                Total Routes
+              </div>
+              <div style={{ fontSize: "28px", fontWeight: 800, marginTop: "6px" }}>
+                {totalRoutes}
               </div>
             </div>
 
