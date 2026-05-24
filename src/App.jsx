@@ -8,6 +8,7 @@ import BaggedTotesCard from "./BaggedTotesCard";
 import PickAndBaggedCombinedCard from "./PickCard";
 import ShiftEOSCard from "./ShiftEOSCard";
 import FreezerCard from "./FreezerCard";
+import BarcodeCard from "./Barcode";
 import { Carousel } from "react-responsive-carousel";
 import "react-responsive-carousel/lib/styles/carousel.min.css";
 
@@ -263,6 +264,9 @@ export default function App() {
                 <button onClick={() => setSlideIndex(4)} className={slideIndex === 4 ? "active" : ""}>
                   Freezer Calculator
                 </button>
+                <button onClick={() => setSlideIndex(5)} className={slideIndex === 5 ? "active" : ""}>
+                  Barcode Generator
+                </button>
               </nav>
             </aside>
 
@@ -313,6 +317,10 @@ export default function App() {
 
                   <div className="carousel-slide">
                     <FreezerCard />
+                  </div>
+
+                  <div className="carousel-slide">
+                    <BarcodeCard />
                   </div>
                 </Carousel>
               </div>
