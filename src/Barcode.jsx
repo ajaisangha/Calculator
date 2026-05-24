@@ -3,7 +3,6 @@ import JsBarcode from "jsbarcode";
 import { doc, onSnapshot, setDoc } from "firebase/firestore";
 import { db } from "./firebase";
 import "./barcode.css";
-import "./App.css";
 
 const BARCODE_DOC = doc(db, "totes", "barcodeGenerator");
 
@@ -47,6 +46,64 @@ export default function BarcodeCard() {
     } catch (error) {
       clearSvg();
       setHasBarcode(false);
+    }
+  };
+
+  const copyBarcode = async () => {
+    if (!barcodeRef.current || !hasBarcode) return;
+
+    try {
+      const svgElement = barcodeRef.current;
+      const serializer = new XMLSerializer();
+      const svgString = serializer.serializeToString(svgElement);
+      const svgBlob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
+      const svgUrl = URL.createObjectURL(svgBlob);
+
+      const img = new Image();
+      img.onload = async () => {
+        try {
+          const canvas = document.createElement("canvas");
+          const width = img.width || 600;
+          const height = img.height || 160;
+          canvas.width = width;
+          canvas.height = height;
+
+          const ctx = canvas.getContext("2d");
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(0, 0, width, height);
+          ctx.drawImage(img, 0, 0);
+
+          canvas.toBlob(async (blob) => {
+            try {
+              if (!blob) {
+                showToast("Copy failed");
+                return;
+              }
+
+              await navigator.clipboard.write([
+                new ClipboardItem({
+                  "image/png": blob,
+                }),
+              ]);
+
+              showToast("Barcode Copied");
+            } catch (err) {
+              showToast("Clipboard copy not supported");
+            }
+          }, "image/png");
+        } finally {
+          URL.revokeObjectURL(svgUrl);
+        }
+      };
+
+      img.onerror = () => {
+        URL.revokeObjectURL(svgUrl);
+        showToast("Copy failed");
+      };
+
+      img.src = svgUrl;
+    } catch (error) {
+      showToast("Copy failed");
     }
   };
 
@@ -149,10 +206,20 @@ export default function BarcodeCard() {
         </div>
 
         <div className="barcode-preview-box">
-          {(!hasBarcode && !savedBarcodeText) && (
+          {!hasBarcode && !savedBarcodeText && (
             <div className="barcode-empty">Generated barcode will appear here</div>
           )}
           <svg ref={barcodeRef} className="barcode-svg" />
+        </div>
+
+        <div className="barcode-copy-row">
+          <button
+            className="calculate-btn copy-btn"
+            onClick={copyBarcode}
+            disabled={!hasBarcode}
+          >
+            Copy
+          </button>
         </div>
       </div>
 

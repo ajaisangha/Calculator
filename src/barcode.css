@@ -58,6 +58,12 @@
   overflow-x: auto;
 }
 
+.barcode-copy-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 10px;
+}
+
 .barcode-empty {
   font-size: 15px;
   color: var(--text-muted, #6b7c93);
@@ -67,6 +73,11 @@
 .barcode-svg {
   max-width: 100%;
   height: auto;
+}
+
+.copy-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 @media (max-width: 700px) {
@@ -83,6 +94,14 @@
   }
 
   .barcode-button-row button {
+    width: 100%;
+  }
+
+  .barcode-copy-row {
+    justify-content: stretch;
+  }
+
+  .barcode-copy-row .copy-btn {
     width: 100%;
   }
 
