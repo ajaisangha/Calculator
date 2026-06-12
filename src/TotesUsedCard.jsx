@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { doc, onSnapshot, setDoc } from "firebase/firestore";
 import { db } from "./firebase";
 import "./App.css";
@@ -27,6 +27,8 @@ export default function TotesUsedCard({
   const [currentDollies, setCurrentDollies] = useState("");
   const [dolliesNeeded, setDolliesNeeded] = useState("");
   const [dolliesDifference, setDolliesDifference] = useState(null);
+
+  const [showOvercapacityModal, setShowOvercapacityModal] = useState(false);
 
   const [toast, setToast] = useState({ show: false, message: "" });
 
@@ -152,7 +154,23 @@ export default function TotesUsedCard({
     };
   };
 
-  const totalOvercapacity = rows.reduce((sum, row) => sum + getRowOvercapacity(row).total, 0);
+  const overcapacityRows = useMemo(() => {
+    return rows
+      .map((row) => {
+        const over = getRowOvercapacity(row);
+        return {
+          ...row,
+          ambientOver: over.ambient,
+          chillFreezerOver: over.chillFreezer,
+          totalOver: over.total,
+          chillFreezerCombined: (row.chilled || 0) + (row.freezer || 0),
+        };
+      })
+      .filter((row) => row.totalOver > 0)
+      .sort((a, b) => b.totalOver - a.totalOver);
+  }, [rows]);
+
+  const totalOvercapacity = overcapacityRows.reduce((sum, row) => sum + row.totalOver, 0);
 
   const routeSummary = routeOrder.map((route) => {
     const routeRows = routesInfo[route.key]?.rows || [];
@@ -280,7 +298,11 @@ export default function TotesUsedCard({
                 ))}
               </div>
 
-              <div
+              <button
+                type="button"
+                className="overcapacity-summary-btn"
+                onClick={() => setShowOvercapacityModal(true)}
+                disabled={overcapacityRows.length === 0}
                 style={{
                   marginTop: "14px",
                   background: "#edf5ff",
@@ -292,6 +314,8 @@ export default function TotesUsedCard({
                   alignItems: "center",
                   gap: "12px",
                   flexWrap: "wrap",
+                  width: "100%",
+                  cursor: overcapacityRows.length > 0 ? "pointer" : "default",
                 }}
               >
                 <div
@@ -314,7 +338,7 @@ export default function TotesUsedCard({
                 >
                   {totalOvercapacity}
                 </div>
-              </div>
+              </button>
             </div>
           )}
         </div>
@@ -391,7 +415,7 @@ export default function TotesUsedCard({
                     <span>Totes Dekitted</span>
                     <span style={{ marginLeft: 8 }}>{dolliesResult * 20}</span>
                   </div>
-                  <div  style={{fontSize: 12, textAlign: 'left' }}>
+                  <div style={{ fontSize: 12, textAlign: "left" }}>
                     <span>*Totes Dekitted = Frames x 20</span>
                   </div>
                 </div>
@@ -619,6 +643,58 @@ export default function TotesUsedCard({
           </div>
         </div>
       </div>
+
+      {showOvercapacityModal && (
+        <div className="totes-modal-overlay" onClick={() => setShowOvercapacityModal(false)}>
+          <div className="totes-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="totes-modal-header">
+              <div>
+                <h3>Overcapacity Route Details</h3>
+                <p>Total Overcapacity Totes: {totalOvercapacity}</p>
+              </div>
+              <button
+                type="button"
+                className="totes-modal-close"
+                onClick={() => setShowOvercapacityModal(false)}
+                aria-label="Close modal"
+              />
+            </div>
+
+            <div className="totes-modal-body">
+              {overcapacityRows.length === 0 ? (
+                <p className="no-data">No overcapacity routes found.</p>
+              ) : (
+                <div className="totes-modal-table-wrap">
+                  <table className="totes-modal-table">
+                    <thead>
+                      <tr>
+                        <th>Route</th>
+                        <th>Dispatch</th>
+                        <th>Consignment</th>
+                        <th>Amb Totes</th>
+                        <th>Chill + Freezer</th>
+                        <th>Overcapacity</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {overcapacityRows.map((row) => (
+                        <tr key={row.consignment}>
+                          <td>{row.route}</td>
+                          <td>{row.dispatchTime || row.dispatch || "-"}</td>
+                          <td>{row.consignment}</td>
+                          <td>{row.ambient || 0}</td>
+                          <td>{row.chillFreezerCombined}</td>
+                          <td>{row.totalOver}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {toast.show && <div className="toast-notification-center">{toast.message}</div>}
     </section>
