@@ -113,6 +113,29 @@ export default function FreezerCard() {
     return `${hh}:${mm} ${ampm}`;
   };
 
+  const resetAllTablesState = () => {
+    setPickersUPH("");
+    setUPH("");
+    setOutstandingUPH("");
+    setBreakUPH("");
+    setResultUPH("-");
+
+    setPickersTrolly("");
+    setTrollyRate("");
+    setOutstandingTrolly("");
+    setBreakTrolly("");
+    setResultTrolly("-");
+
+    setIshantPickers("");
+    setIshantTrolliesLeft("");
+    setIshantPicksLeft("");
+    setIshantPicksPerHour("");
+    setIshantBreak("");
+    setIshantUPH("");
+    setIshantPicksDoneTime("-");
+    setIshantTrolleyDoneTime("-");
+  };
+
   // ----------------------------------------------------
   // AUTO-CALCULATE (UPH TABLE)
   // ----------------------------------------------------
@@ -321,48 +344,90 @@ export default function FreezerCard() {
     showToast("Ishant Method Cleared");
   };
 
+  // ----------------------------------------------------
+  // CLEAR ALL TABLES
+  // ----------------------------------------------------
+  const clearAllTables = async () => {
+    resetAllTablesState();
+
+    await setDoc(
+      FREEZER_DOC,
+      {
+        pickersUPH: "",
+        uph: "",
+        outstandingUPH: "",
+        breakUPH: "",
+        resultUPH: "",
+        pickersTrolly: "",
+        trollyRate: "",
+        outstandingTrolly: "",
+        breakTrolly: "",
+        resultTrolly: "",
+        ishantPickers: "",
+        ishantTrolliesLeft: "",
+        ishantPicksLeft: "",
+        ishantPicksPerHour: "",
+        ishantBreak: "",
+        ishantUPH: "",
+        ishantPicksDoneTime: "",
+        ishantTrolleyDoneTime: "",
+      },
+      { merge: true }
+    );
+
+    showToast("All Freezer Tables Cleared");
+  };
+
   return (
     <section className="data-card freezer-card">
       <h2 className="data-title">Freezer Calculator</h2>
 
-      <div className="freezer-method-toggle">
-        <label className={`freezer-radio-option ${activeMethod === "uph" ? "active" : ""}`}>
-          <input
-            type="radio"
-            name="freezerMethod"
-            value="uph"
-            checked={activeMethod === "uph"}
-            onChange={() => setActiveMethod("uph")}
-          />
-          <span>UPH Method</span>
-        </label>
+      <div className="freezer-top-bar">
+  <div className="freezer-method-toggle">
+    <label className={`freezer-radio-option ${activeMethod === "uph" ? "active" : ""}`}>
+      <input
+        type="radio"
+        name="freezerMethod"
+        value="uph"
+        checked={activeMethod === "uph"}
+        onChange={() => setActiveMethod("uph")}
+      />
+      <span>UPH Method</span>
+    </label>
 
-        <label
-          className={`freezer-radio-option ${activeMethod === "trolly" ? "active" : ""}`}
-        >
-          <input
-            type="radio"
-            name="freezerMethod"
-            value="trolly"
-            checked={activeMethod === "trolly"}
-            onChange={() => setActiveMethod("trolly")}
-          />
-          <span>Trolly Method</span>
-        </label>
+    <label
+      className={`freezer-radio-option ${activeMethod === "trolly" ? "active" : ""}`}
+    >
+      <input
+        type="radio"
+        name="freezerMethod"
+        value="trolly"
+        checked={activeMethod === "trolly"}
+        onChange={() => setActiveMethod("trolly")}
+      />
+      <span>Trolly Method</span>
+    </label>
 
-        <label
-          className={`freezer-radio-option ${activeMethod === "ishant" ? "active" : ""}`}
-        >
-          <input
-            type="radio"
-            name="freezerMethod"
-            value="ishant"
-            checked={activeMethod === "ishant"}
-            onChange={() => setActiveMethod("ishant")}
-          />
-          <span>Ishant Method</span>
-        </label>
-      </div>
+    <label
+      className={`freezer-radio-option ${activeMethod === "ishant" ? "active" : ""}`}
+    >
+      <input
+        type="radio"
+        name="freezerMethod"
+        value="ishant"
+        checked={activeMethod === "ishant"}
+        onChange={() => setActiveMethod("ishant")}
+      />
+      <span>Ishant Method</span>
+    </label>
+  </div>
+
+  <div className="freezer-clear-all-row">
+    <button className="clear-btn freezer-clear-all-btn" onClick={clearAllTables}>
+      Clear All
+    </button>
+  </div>
+</div>
 
       {activeMethod === "uph" && (
         <div className="sub-card">

@@ -8,12 +8,21 @@
   flex-direction: column;
 }
 
+.freezer-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 14px;
+  width: 100%;
+}
+
 .freezer-method-toggle {
   display: flex;
   justify-content: center;
   gap: 12px;
   flex-wrap: wrap;
-  margin-top: 14px;
+  flex: 1;
 }
 
 .freezer-radio-option {
@@ -79,7 +88,23 @@
   white-space: nowrap;
 }
 
+.freezer-clear-all-row {
+  display: flex;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+
+.freezer-clear-all-btn {
+  min-width: 140px;
+  white-space: nowrap;
+}
+
 @media (max-width: 700px) {
+  .freezer-top-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
   .freezer-method-toggle {
     flex-direction: column;
     align-items: stretch;
@@ -87,6 +112,14 @@
 
   .freezer-radio-option {
     justify-content: center;
+    width: 100%;
+  }
+
+  .freezer-clear-all-row {
+    justify-content: stretch;
+  }
+
+  .freezer-clear-all-btn {
     width: 100%;
   }
 
