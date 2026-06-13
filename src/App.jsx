@@ -280,7 +280,7 @@ export default function App() {
                   showIndicators={false}
                   infiniteLoop={false}
                   swipeable
-                  emulateTouch
+                  emulateTouch={false}
                 >
                   <div className="carousel-slide">
                     <TotesUsedCard
@@ -322,7 +322,7 @@ export default function App() {
                   <div className="carousel-slide">
                     <BarcodeCard />
                   </div>
-                </Carousel>
+                </Carousel>                
               </div>
             </section>
           </div>
