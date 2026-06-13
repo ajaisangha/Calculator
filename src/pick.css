@@ -13,6 +13,21 @@
   align-items: start;
 }
 
+.pick-main-card {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.pick-history-card {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+}
+
+.pick-avg-card {
+  grid-column: 1;
+  grid-row: 2;
+}
+
 .pick-subcard,
 .pick-card .shift-subcard {
   width: 100%;
@@ -117,6 +132,42 @@
   font-size: 14px;
 }
 
+/* AVG UPH */
+.avg-uph-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.avg-uph-box {
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  background: linear-gradient(180deg, var(--card-bg-start), var(--subcard-bg));
+  padding: 18px;
+  text-align: center;
+}
+
+.avg-uph-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.avg-uph-value {
+  font-size: 34px;
+  font-weight: 800;
+  color: var(--text-heading);
+  line-height: 1.1;
+  margin-bottom: 8px;
+}
+
+.avg-uph-meta {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
 /* UPH History compact layout */
 .uph-history-grid {
   display: grid;
@@ -198,13 +249,21 @@
     grid-template-columns: 1fr;
   }
 
+  .pick-main-card,
+  .pick-history-card,
+  .pick-avg-card {
+    grid-column: auto;
+    grid-row: auto;
+  }
+
   .uph-history-grid {
     grid-template-columns: repeat(3, minmax(170px, 1fr));
   }
 }
 
 @media (max-width: 900px) {
-  .uph-history-grid {
+  .uph-history-grid,
+  .avg-uph-grid {
     grid-template-columns: 1fr;
   }
 }

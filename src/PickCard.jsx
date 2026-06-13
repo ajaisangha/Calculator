@@ -99,6 +99,24 @@ export default function PickAndBaggedCombinedCard() {
     return `${h}:${m} ${ampm}`;
   };
 
+  const getAverageUPH = (zone) => {
+    const values = HISTORY_SLOTS
+      .map((slot) => parseFloat(uphHistory?.[zone]?.[slot]?.uph))
+      .filter((value) => Number.isFinite(value) && value > 0);
+
+    if (!values.length) return "-";
+
+    const average = values.reduce((sum, value) => sum + value, 0) / values.length;
+    return Math.round(average).toString();
+  };
+
+  const getFilledUPHCount = (zone) => {
+    return HISTORY_SLOTS.filter((slot) => {
+      const value = parseFloat(uphHistory?.[zone]?.[slot]?.uph);
+      return Number.isFinite(value) && value > 0;
+    }).length;
+  };
+
   const savePickCalc = async () => {
     await setDoc(
       PICK_DOC,
@@ -141,6 +159,8 @@ export default function PickAndBaggedCombinedCard() {
       },
       { merge: true }
     );
+
+    showToast("Pick Calculator Cleared");
   };
 
   const updateHistoryCell = (zone, slot, field, value) => {
@@ -197,12 +217,18 @@ export default function PickAndBaggedCombinedCard() {
     chillBreak1
   );
 
+  const ambientAvgUPH = getAverageUPH("ambient");
+  const chillAvgUPH = getAverageUPH("chill");
+
+  const ambientAvgCount = getFilledUPHCount("ambient");
+  const chillAvgCount = getFilledUPHCount("chill");
+
   return (
     <section className="data-card pick-card" style={{ position: "relative" }}>
       <h2 className="data-title">Pick Calculator</h2>
 
       <div className="pick-subcards">
-        <div className="shift-subcard pick-subcard">
+        <div className="shift-subcard pick-subcard pick-main-card">
           <h3>Main Pick Calculator</h3>
 
           <div className="table-container pick-table-wrap">
@@ -309,7 +335,7 @@ export default function PickAndBaggedCombinedCard() {
           </div>
         </div>
 
-        <div className="shift-subcard pick-subcard">
+        <div className="shift-subcard pick-subcard pick-history-card">
           <h3>UPH History</h3>
 
           <div className="uph-history-grid">
@@ -363,6 +389,28 @@ export default function PickAndBaggedCombinedCard() {
             <button className="clear-btn" onClick={clearUphHistory}>
               Clear
             </button>
+          </div>
+        </div>
+
+        <div className="shift-subcard pick-subcard pick-avg-card">
+          <h3>AVG UPH</h3>
+
+          <div className="avg-uph-grid">
+            <div className="avg-uph-box">
+              <div className="avg-uph-label">Ambient AVG UPH</div>
+              <div className="avg-uph-value">{ambientAvgUPH}</div>
+              <div className="avg-uph-meta">
+                Based on {ambientAvgCount} filled UPH field{ambientAvgCount === 1 ? "" : "s"}
+              </div>
+            </div>
+
+            <div className="avg-uph-box">
+              <div className="avg-uph-label">Chill AVG UPH</div>
+              <div className="avg-uph-value">{chillAvgUPH}</div>
+              <div className="avg-uph-meta">
+                Based on {chillAvgCount} filled UPH field{chillAvgCount === 1 ? "" : "s"}
+              </div>
+            </div>
           </div>
         </div>
       </div>

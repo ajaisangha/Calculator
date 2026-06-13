@@ -328,7 +328,7 @@ export default function ShiftEOSCard() {
                   <td>Inbound + Outbound</td>
                   <td>{totalIO.toFixed(2)}</td>
                   <td>Inbound Needed</td>
-                  <td>{inboundNeeded.toFixed(2)}</td>
+                  <td>{Math.round(inboundNeeded).toString()}</td>
                 </tr>
 
                 <tr className="bold">
