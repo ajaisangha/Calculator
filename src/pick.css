@@ -7,7 +7,7 @@
 
 .pick-subcards {
   display: grid;
-  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr);
   gap: 18px;
   margin-top: 14px;
   align-items: start;
@@ -18,13 +18,13 @@
   grid-row: 1;
 }
 
-.pick-history-card {
+.pick-avg-card {
   grid-column: 2;
-  grid-row: 1 / span 2;
+  grid-row: 1;
 }
 
-.pick-avg-card {
-  grid-column: 1;
+.pick-history-card {
+  grid-column: 1 / -1;
   grid-row: 2;
 }
 
@@ -135,7 +135,7 @@
 /* AVG UPH */
 .avg-uph-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   gap: 16px;
   margin-top: 12px;
 }
@@ -168,76 +168,106 @@
   color: var(--text-muted);
 }
 
-/* UPH History compact layout */
-.uph-history-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(180px, 1fr));
-  gap: 16px;
-  margin-top: 12px;
+.pick-history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
 }
 
-.uph-zone-card {
+.history-shift-toggle {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.history-radio-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 1px solid var(--card-border);
+  border-radius: 999px;
+  background: var(--input-bg);
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.history-radio-option.active {
+  background: var(--card-bg-start);
+  border-color: var(--text-muted);
+}
+
+.history-radio-option input {
+  margin: 0;
+}
+
+.coming-soon-box {
+  margin-top: 12px;
   border: 1px solid var(--card-border);
   border-radius: 12px;
   background: linear-gradient(180deg, var(--card-bg-start), var(--subcard-bg));
-  padding: 14px;
-  min-width: 0;
-}
-
-.uph-zone-title {
-  margin: 0 0 10px;
-  color: var(--text-heading);
+  padding: 28px 18px;
   text-align: center;
-}
-
-.uph-zone-rows {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.uph-history-row {
-  border: 1px solid var(--table-border);
-  border-radius: 10px;
-  background: var(--table-row);
-  padding: 10px;
-}
-
-.uph-slot {
+  font-size: 18px;
   font-weight: 700;
   color: var(--text-heading);
-  margin-bottom: 8px;
-  text-align: center;
 }
 
-.uph-history-fields {
+/* Horizontal UPH history */
+.uph-history-horizontal {
   display: grid;
-  grid-template-columns: minmax(90px, 1.3fr) minmax(58px, 0.7fr);
-  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 14px;
+  align-items: start;
 }
 
-.uph-history-field {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+.uph-time-card {
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  background: linear-gradient(180deg, var(--card-bg-start), var(--subcard-bg));
+  padding: 12px;
   min-width: 0;
 }
 
-.uph-history-field label {
-  font-size: 13px;
+.uph-time-title {
+  margin: 0 0 10px;
+  text-align: center;
+  color: var(--text-heading);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.uph-time-table {
+  display: grid;
+  grid-template-columns: minmax(70px, 1fr) minmax(62px, 0.9fr) minmax(62px, 0.9fr);
+  gap: 8px;
+  align-items: center;
+}
+
+.uph-time-head {
+  font-size: 12px;
   font-weight: 700;
   color: var(--text-muted);
   text-align: center;
 }
 
-.uph-history-fields .uph-history-field:first-child .pick-input {
-  width: 100%;
-  min-width: 90px;
+.uph-time-zone {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-heading);
 }
 
-.uph-history-fields .uph-history-field:last-child .pick-input {
+.compact-history-input {
   width: 100%;
-  min-width: 52px;
+  min-width: 0;
+  padding: 7px 8px;
+  font-size: 13px;
+  min-height: 36px;
 }
 
 @media (max-width: 1250px) {
@@ -250,21 +280,24 @@
   }
 
   .pick-main-card,
-  .pick-history-card,
-  .pick-avg-card {
+  .pick-avg-card,
+  .pick-history-card {
     grid-column: auto;
     grid-row: auto;
   }
 
-  .uph-history-grid {
-    grid-template-columns: repeat(3, minmax(170px, 1fr));
+  .avg-uph-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 900px) {
-  .uph-history-grid,
   .avg-uph-grid {
     grid-template-columns: 1fr;
+  }
+
+  .uph-history-horizontal {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -304,7 +337,41 @@
     min-height: 38px;
   }
 
-  .uph-history-fields {
+  .pick-history-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .history-shift-toggle {
+    justify-content: stretch;
+  }
+
+  .history-radio-option {
+    justify-content: center;
+    width: 100%;
+  }
+
+  .uph-history-horizontal {
     grid-template-columns: 1fr;
+  }
+
+  .uph-time-table {
+    grid-template-columns: minmax(68px, 1fr) minmax(58px, 0.9fr) minmax(58px, 0.9fr);
+    gap: 6px;
+  }
+
+  .uph-time-title {
+    font-size: 14px;
+  }
+
+  .uph-time-zone,
+  .uph-time-head {
+    font-size: 12px;
+  }
+
+  .compact-history-input {
+    font-size: 12px;
+    padding: 6px 6px;
+    min-height: 34px;
   }
 }

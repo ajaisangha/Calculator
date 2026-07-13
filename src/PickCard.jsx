@@ -6,23 +6,33 @@ import "./pick.css";
 
 const PICK_DOC = doc(db, "totes", "pickCalculator");
 
-const HISTORY_SLOTS = ["12am - 1am", "1am - 2am", "3am - 4am", "4am - 5am"];
-const HISTORY_ZONES = ["ambient", "chill", "freezer"];
+const HISTORY_SLOTS = [
+  "8PM - 9PM",
+  "9PM - 10PM",
+  "10PM - 11PM",
+  "12am - 1am",
+  "1am - 2am",
+  "3am - 4am",
+  "4am - 5am",
+];
 
-const createEmptyHistory = () => ({
+const HISTORY_ZONES = ["ambient", "chill"];
+const SHIFT_OPTIONS = ["night", "day"];
+
+const createEmptyZoneHistory = () => ({
   ambient: {
+    "8PM - 9PM": { uph: "", pickers: "" },
+    "9PM - 10PM": { uph: "", pickers: "" },
+    "10PM - 11PM": { uph: "", pickers: "" },
     "12am - 1am": { uph: "", pickers: "" },
     "1am - 2am": { uph: "", pickers: "" },
     "3am - 4am": { uph: "", pickers: "" },
     "4am - 5am": { uph: "", pickers: "" },
   },
   chill: {
-    "12am - 1am": { uph: "", pickers: "" },
-    "1am - 2am": { uph: "", pickers: "" },
-    "3am - 4am": { uph: "", pickers: "" },
-    "4am - 5am": { uph: "", pickers: "" },
-  },
-  freezer: {
+    "8PM - 9PM": { uph: "", pickers: "" },
+    "9PM - 10PM": { uph: "", pickers: "" },
+    "10PM - 11PM": { uph: "", pickers: "" },
     "12am - 1am": { uph: "", pickers: "" },
     "1am - 2am": { uph: "", pickers: "" },
     "3am - 4am": { uph: "", pickers: "" },
@@ -30,7 +40,14 @@ const createEmptyHistory = () => ({
   },
 });
 
+const createEmptyShiftHistory = () => ({
+  night: createEmptyZoneHistory(),
+  day: createEmptyZoneHistory(),
+});
+
 export default function PickAndBaggedCombinedCard() {
+  const [selectedShift, setSelectedShift] = useState("night");
+
   const [ambientPickers, setAmbientPickers] = useState("");
   const [chillPickers, setChillPickers] = useState("");
   const [ambientUPH, setAmbientUPH] = useState("");
@@ -39,7 +56,7 @@ export default function PickAndBaggedCombinedCard() {
   const [chillOutstanding, setChillOutstanding] = useState("");
   const [ambientBreak1, setAmbientBreak1] = useState("");
   const [chillBreak1, setChillBreak1] = useState("");
-  const [uphHistory, setUphHistory] = useState(createEmptyHistory());
+  const [uphHistory, setUphHistory] = useState(createEmptyShiftHistory());
   const [toast, setToast] = useState({ show: false, message: "" });
 
   const showToast = (m) => {
@@ -60,18 +77,38 @@ export default function PickAndBaggedCombinedCard() {
       setChillOutstanding(d.chillOutstanding || "");
       setAmbientBreak1(d.ambientBreak1 || "");
       setChillBreak1(d.chillBreak1 || "");
+      setSelectedShift(d.selectedShift || "night");
 
       const savedHistory = d.uphHistory || {};
-      const nextHistory = createEmptyHistory();
+      const nextHistory = createEmptyShiftHistory();
 
-      HISTORY_ZONES.forEach((zone) => {
-        HISTORY_SLOTS.forEach((slot) => {
-          nextHistory[zone][slot] = {
-            uph: savedHistory?.[zone]?.[slot]?.uph || "",
-            pickers: savedHistory?.[zone]?.[slot]?.pickers || "",
-          };
+      const isLegacyShape =
+        savedHistory &&
+        !savedHistory.night &&
+        !savedHistory.day &&
+        typeof savedHistory === "object";
+
+      if (isLegacyShape) {
+        HISTORY_ZONES.forEach((zone) => {
+          HISTORY_SLOTS.forEach((slot) => {
+            nextHistory.night[zone][slot] = {
+              uph: savedHistory?.[zone]?.[slot]?.uph || "",
+              pickers: savedHistory?.[zone]?.[slot]?.pickers || "",
+            };
+          });
         });
-      });
+      } else {
+        SHIFT_OPTIONS.forEach((shift) => {
+          HISTORY_ZONES.forEach((zone) => {
+            HISTORY_SLOTS.forEach((slot) => {
+              nextHistory[shift][zone][slot] = {
+                uph: savedHistory?.[shift]?.[zone]?.[slot]?.uph || "",
+                pickers: savedHistory?.[shift]?.[zone]?.[slot]?.pickers || "",
+              };
+            });
+          });
+        });
+      }
 
       setUphHistory(nextHistory);
     });
@@ -99,9 +136,9 @@ export default function PickAndBaggedCombinedCard() {
     return `${h}:${m} ${ampm}`;
   };
 
-  const getAverageUPH = (zone) => {
+  const getAverageUPH = (shift, zone) => {
     const values = HISTORY_SLOTS
-      .map((slot) => parseFloat(uphHistory?.[zone]?.[slot]?.uph))
+      .map((slot) => parseFloat(uphHistory?.[shift]?.[zone]?.[slot]?.uph))
       .filter((value) => Number.isFinite(value) && value > 0);
 
     if (!values.length) return "-";
@@ -110,11 +147,23 @@ export default function PickAndBaggedCombinedCard() {
     return Math.round(average).toString();
   };
 
-  const getFilledUPHCount = (zone) => {
+  const getFilledUPHCount = (shift, zone) => {
     return HISTORY_SLOTS.filter((slot) => {
-      const value = parseFloat(uphHistory?.[zone]?.[slot]?.uph);
+      const value = parseFloat(uphHistory?.[shift]?.[zone]?.[slot]?.uph);
       return Number.isFinite(value) && value > 0;
     }).length;
+  };
+
+  const saveSelectedShift = async (shift) => {
+    setSelectedShift(shift);
+
+    await setDoc(
+      PICK_DOC,
+      {
+        selectedShift: shift,
+      },
+      { merge: true }
+    );
   };
 
   const savePickCalc = async () => {
@@ -163,14 +212,17 @@ export default function PickAndBaggedCombinedCard() {
     showToast("Pick Calculator Cleared");
   };
 
-  const updateHistoryCell = (zone, slot, field, value) => {
+  const updateHistoryCell = (shift, zone, slot, field, value) => {
     setUphHistory((prev) => ({
       ...prev,
-      [zone]: {
-        ...prev[zone],
-        [slot]: {
-          ...prev[zone][slot],
-          [field]: value,
+      [shift]: {
+        ...prev[shift],
+        [zone]: {
+          ...prev[shift][zone],
+          [slot]: {
+            ...prev[shift][zone][slot],
+            [field]: value,
+          },
         },
       },
     }));
@@ -188,7 +240,7 @@ export default function PickAndBaggedCombinedCard() {
   };
 
   const clearUphHistory = async () => {
-    const emptyHistory = createEmptyHistory();
+    const emptyHistory = createEmptyShiftHistory();
     setUphHistory(emptyHistory);
 
     await setDoc(
@@ -217,11 +269,11 @@ export default function PickAndBaggedCombinedCard() {
     chillBreak1
   );
 
-  const ambientAvgUPH = getAverageUPH("ambient");
-  const chillAvgUPH = getAverageUPH("chill");
+  const ambientAvgUPH = getAverageUPH(selectedShift, "ambient");
+  const chillAvgUPH = getAverageUPH(selectedShift, "chill");
 
-  const ambientAvgCount = getFilledUPHCount("ambient");
-  const chillAvgCount = getFilledUPHCount("chill");
+  const ambientAvgCount = getFilledUPHCount(selectedShift, "ambient");
+  const chillAvgCount = getFilledUPHCount(selectedShift, "chill");
 
   return (
     <section className="data-card pick-card" style={{ position: "relative" }}>
@@ -335,65 +387,8 @@ export default function PickAndBaggedCombinedCard() {
           </div>
         </div>
 
-        <div className="shift-subcard pick-subcard pick-history-card">
-          <h3>UPH History</h3>
-
-          <div className="uph-history-grid">
-            {HISTORY_ZONES.map((zone) => (
-              <div key={zone} className="uph-zone-card">
-                <h4 className="uph-zone-title">
-                  {zone.charAt(0).toUpperCase() + zone.slice(1)}
-                </h4>
-
-                <div className="uph-zone-rows">
-                  {HISTORY_SLOTS.map((slot) => (
-                    <div key={`${zone}-${slot}`} className="uph-history-row">
-                      <div className="uph-slot">{slot}</div>
-
-                      <div className="uph-history-fields">
-                        <div className="uph-history-field">
-                          <label>UPH</label>
-                          <input
-                            type="number"
-                            value={uphHistory?.[zone]?.[slot]?.uph || ""}
-                            onChange={(e) =>
-                              updateHistoryCell(zone, slot, "uph", e.target.value)
-                            }
-                            className="pick-input"
-                          />
-                        </div>
-
-                        <div className="uph-history-field">
-                          <label>Pickers</label>
-                          <input
-                            type="number"
-                            value={uphHistory?.[zone]?.[slot]?.pickers || ""}
-                            onChange={(e) =>
-                              updateHistoryCell(zone, slot, "pickers", e.target.value)
-                            }
-                            className="pick-input"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="center-buttons">
-            <button className="calculate-btn" onClick={saveUphHistory}>
-              Save
-            </button>
-            <button className="clear-btn" onClick={clearUphHistory}>
-              Clear
-            </button>
-          </div>
-        </div>
-
         <div className="shift-subcard pick-subcard pick-avg-card">
-          <h3>AVG UPH</h3>
+          <h3>AVG UPH ({selectedShift === "night" ? "Night Shift" : "Day Shift"})</h3>
 
           <div className="avg-uph-grid">
             <div className="avg-uph-box">
@@ -411,6 +406,105 @@ export default function PickAndBaggedCombinedCard() {
                 Based on {chillAvgCount} filled UPH field{chillAvgCount === 1 ? "" : "s"}
               </div>
             </div>
+          </div>
+        </div>
+
+        <div className="shift-subcard pick-subcard pick-history-card">
+          <div className="pick-history-header">
+            <h3>UPH History</h3>
+
+            <div className="history-shift-toggle">
+              <label className={`history-radio-option ${selectedShift === "night" ? "active" : ""}`}>
+                <input
+                  type="radio"
+                  name="historyShift"
+                  value="night"
+                  checked={selectedShift === "night"}
+                  onChange={() => saveSelectedShift("night")}
+                />
+                <span>Night Shift</span>
+              </label>
+
+              <label className={`history-radio-option ${selectedShift === "day" ? "active" : ""}`}>
+                <input
+                  type="radio"
+                  name="historyShift"
+                  value="day"
+                  checked={selectedShift === "day"}
+                  onChange={() => saveSelectedShift("day")}
+                />
+                <span>Day Shift</span>
+              </label>
+            </div>
+          </div>
+
+          {selectedShift === "day" ? (
+            <div className="coming-soon-box">Coming soon</div>
+          ) : (
+            <div className="uph-history-horizontal">
+              {HISTORY_SLOTS.map((slot) => (
+                <div key={`${selectedShift}-${slot}`} className="uph-time-card">
+                  <h4 className="uph-time-title">{slot}</h4>
+
+                  <div className="uph-time-table">
+                    <div className="uph-time-head">Zone</div>
+                    <div className="uph-time-head">UPH</div>
+                    <div className="uph-time-head">Pickers</div>
+
+                    {HISTORY_ZONES.map((zone) => (
+                      <React.Fragment key={`${slot}-${zone}`}>
+                        <div className="uph-time-zone">
+                          {zone.charAt(0).toUpperCase() + zone.slice(1)}
+                        </div>
+
+                        <div>
+                          <input
+                            type="number"
+                            value={uphHistory?.[selectedShift]?.[zone]?.[slot]?.uph || ""}
+                            onChange={(e) =>
+                              updateHistoryCell(
+                                selectedShift,
+                                zone,
+                                slot,
+                                "uph",
+                                e.target.value
+                              )
+                            }
+                            className="pick-input compact-history-input"
+                          />
+                        </div>
+
+                        <div>
+                          <input
+                            type="number"
+                            value={uphHistory?.[selectedShift]?.[zone]?.[slot]?.pickers || ""}
+                            onChange={(e) =>
+                              updateHistoryCell(
+                                selectedShift,
+                                zone,
+                                slot,
+                                "pickers",
+                                e.target.value
+                              )
+                            }
+                            className="pick-input compact-history-input"
+                          />
+                        </div>
+                      </React.Fragment>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="center-buttons">
+            <button className="calculate-btn" onClick={saveUphHistory}>
+              Save
+            </button>
+            <button className="clear-btn" onClick={clearUphHistory}>
+              Clear
+            </button>
           </div>
         </div>
       </div>
