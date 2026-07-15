@@ -71,7 +71,8 @@ function getColumnKeys(headers) {
     chilledKey: pickCol("Completed.*Totes.*Chill") || pickCol("chill|chilled"),
     freezerKey: pickCol("Completed.*Totes.*Freezer") || pickCol("freezer"),
     shipmentKey: pickCol("^Shipment$") || pickCol("shipment"),
-    dispatchKey: pickCol("Dispatch time") || pickCol("dispatch time") || pickCol("Dispatch Time"),
+    dispatchKey:
+      pickCol("Dispatch time") || pickCol("dispatch time") || pickCol("Dispatch Time"),
   };
 }
 
@@ -169,7 +170,7 @@ export default function App() {
     Array.from(files).forEach((file) => {
       Papa.parse(file, {
         header: true,
-        skipEmptyLines: true,
+    skipEmptyLines: true,
         transformHeader: (h) => h.trim(),
         complete: async (results) => {
           const dataRows = results.data;
@@ -283,46 +284,58 @@ export default function App() {
                   emulateTouch={false}
                 >
                   <div className="carousel-slide">
-                    <TotesUsedCard
-                      rows={rows}
-                      routesInfo={routesInfo}
-                      grandTotals={grandTotals}
-                      duplicateMessage={duplicateMessage}
-                      onFileChange={onFileChange}
-                      clearAll={clearAll}
-                    />
+                    <div className="slide-scroll-area">
+                      <TotesUsedCard
+                        rows={rows}
+                        routesInfo={routesInfo}
+                        grandTotals={grandTotals}
+                        duplicateMessage={duplicateMessage}
+                        onFileChange={onFileChange}
+                        clearAll={clearAll}
+                      />
+                    </div>
                   </div>
 
                   <div className="carousel-slide">
-                    <BaggedTotesCard
-                      grandTotals={grandTotals}
-                      /*receivedAmbient={receivedAmbient}
-                      receivedChill={receivedChill}
-                      currentAmbient={currentAmbient}
-                      currentChill={currentChill}
-                      setReceivedAmbient={setReceivedAmbient}
-                      setReceivedChill={setReceivedChill}
-                      setCurrentAmbient={setCurrentAmbient}
-                      setCurrentChill={setCurrentChill}*/
-                    />
+                    <div className="slide-scroll-area">
+                      <BaggedTotesCard
+                        grandTotals={grandTotals}
+                        /*receivedAmbient={receivedAmbient}
+                        receivedChill={receivedChill}
+                        currentAmbient={currentAmbient}
+                        currentChill={currentChill}
+                        setReceivedAmbient={setReceivedAmbient}
+                        setReceivedChill={setReceivedChill}
+                        setCurrentAmbient={setCurrentAmbient}
+                        setCurrentChill={setCurrentChill}*/
+                      />
+                    </div>
                   </div>
 
                   <div className="carousel-slide">
-                    <PickAndBaggedCombinedCard />
+                    <div className="slide-scroll-area">
+                      <PickAndBaggedCombinedCard />
+                    </div>
                   </div>
 
                   <div className="carousel-slide">
-                    <ShiftEOSCard />
+                    <div className="slide-scroll-area">
+                      <ShiftEOSCard />
+                    </div>
                   </div>
 
                   <div className="carousel-slide">
-                    <FreezerCard />
+                    <div className="slide-scroll-area">
+                      <FreezerCard />
+                    </div>
                   </div>
 
                   <div className="carousel-slide">
-                    <BarcodeCard />
+                    <div className="slide-scroll-area">
+                      <BarcodeCard />
+                    </div>
                   </div>
-                </Carousel>                
+                </Carousel>
               </div>
             </section>
           </div>
