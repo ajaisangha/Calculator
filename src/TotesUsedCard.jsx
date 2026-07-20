@@ -669,7 +669,7 @@ export default function TotesUsedCard({
                     <thead>
                       <tr>
                         <th>Route</th>
-                        <th>Dispatch</th>
+                        <th>Route ID</th>
                         <th>Consignment</th>
                         <th>Amb Totes</th>
                         <th>Chill + Freezer</th>
@@ -680,7 +680,7 @@ export default function TotesUsedCard({
                       {overcapacityRows.map((row) => (
                         <tr key={row.consignment}>
                           <td>{row.route}</td>
-                          <td>{row.dispatchTime || row.dispatch || "-"}</td>
+                          <td>{row.shipment || "-"}</td>
                           <td>{row.consignment}</td>
                           <td>{row.ambient || 0}</td>
                           <td>{row.chillFreezerCombined}</td>

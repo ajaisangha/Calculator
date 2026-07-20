@@ -199,6 +199,7 @@ export default function App() {
             newRows.push({
               consignment,
               route,
+              shipment: shipmentKey ? String(r[shipmentKey] || "").trim() : "",
               ambient: ambientKey ? parseToteCell(r[ambientKey]) : 0,
               chilled: chilledKey ? parseToteCell(r[chilledKey]) : 0,
               freezer: freezerKey ? parseToteCell(r[freezerKey]) : 0,
