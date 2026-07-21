@@ -6,43 +6,57 @@ import "./pick.css";
 
 const PICK_DOC = doc(db, "totes", "pickCalculator");
 
-const HISTORY_SLOTS = [
+const NIGHT_HISTORY_SLOTS = [
   "8PM - 9PM",
   "9PM - 10PM",
   "10PM - 11PM",
-  "12am - 1am",
-  "1am - 2am",
-  "3am - 4am",
-  "4am - 5am",
+  "12AM - 1AM",
+  "1AM - 2AM",
+  "3AM - 4AM",
+  "4AM - 5AM",
+];
+
+const DAY_HISTORY_SLOTS = [
+  "7AM - 8AM",
+  "8AM - 9AM",
+  "9AM - 10AM",
+  "10AM - 11AM",
 ];
 
 const HISTORY_ZONES = ["ambient", "chill"];
 const SHIFT_OPTIONS = ["night", "day"];
 
+const SHIFT_SLOTS = {
+  night: NIGHT_HISTORY_SLOTS,
+  day: DAY_HISTORY_SLOTS,
+};
+
+const createZoneHistoryForSlots = (slots) =>
+  slots.reduce((acc, slot) => {
+    acc[slot] = { uph: "", pickers: "" };
+    return acc;
+  }, {});
+
 const createEmptyZoneHistory = () => ({
   ambient: {
-    "8PM - 9PM": { uph: "", pickers: "" },
-    "9PM - 10PM": { uph: "", pickers: "" },
-    "10PM - 11PM": { uph: "", pickers: "" },
-    "12am - 1am": { uph: "", pickers: "" },
-    "1am - 2am": { uph: "", pickers: "" },
-    "3am - 4am": { uph: "", pickers: "" },
-    "4am - 5am": { uph: "", pickers: "" },
+    ...createZoneHistoryForSlots(NIGHT_HISTORY_SLOTS),
+    ...createZoneHistoryForSlots(DAY_HISTORY_SLOTS),
   },
   chill: {
-    "8PM - 9PM": { uph: "", pickers: "" },
-    "9PM - 10PM": { uph: "", pickers: "" },
-    "10PM - 11PM": { uph: "", pickers: "" },
-    "12am - 1am": { uph: "", pickers: "" },
-    "1am - 2am": { uph: "", pickers: "" },
-    "3am - 4am": { uph: "", pickers: "" },
-    "4am - 5am": { uph: "", pickers: "" },
+    ...createZoneHistoryForSlots(NIGHT_HISTORY_SLOTS),
+    ...createZoneHistoryForSlots(DAY_HISTORY_SLOTS),
   },
 });
 
 const createEmptyShiftHistory = () => ({
-  night: createEmptyZoneHistory(),
-  day: createEmptyZoneHistory(),
+  night: {
+    ambient: createZoneHistoryForSlots(NIGHT_HISTORY_SLOTS),
+    chill: createZoneHistoryForSlots(NIGHT_HISTORY_SLOTS),
+  },
+  day: {
+    ambient: createZoneHistoryForSlots(DAY_HISTORY_SLOTS),
+    chill: createZoneHistoryForSlots(DAY_HISTORY_SLOTS),
+  },
 });
 
 export default function PickAndBaggedCombinedCard() {
@@ -90,7 +104,7 @@ export default function PickAndBaggedCombinedCard() {
 
       if (isLegacyShape) {
         HISTORY_ZONES.forEach((zone) => {
-          HISTORY_SLOTS.forEach((slot) => {
+          NIGHT_HISTORY_SLOTS.forEach((slot) => {
             nextHistory.night[zone][slot] = {
               uph: savedHistory?.[zone]?.[slot]?.uph || "",
               pickers: savedHistory?.[zone]?.[slot]?.pickers || "",
@@ -99,8 +113,8 @@ export default function PickAndBaggedCombinedCard() {
         });
       } else {
         SHIFT_OPTIONS.forEach((shift) => {
-          HISTORY_ZONES.forEach((zone) => {
-            HISTORY_SLOTS.forEach((slot) => {
+          SHIFT_SLOTS[shift].forEach((slot) => {
+            HISTORY_ZONES.forEach((zone) => {
               nextHistory[shift][zone][slot] = {
                 uph: savedHistory?.[shift]?.[zone]?.[slot]?.uph || "",
                 pickers: savedHistory?.[shift]?.[zone]?.[slot]?.pickers || "",
@@ -137,7 +151,7 @@ export default function PickAndBaggedCombinedCard() {
   };
 
   const getAverageUPH = (shift, zone) => {
-    const values = HISTORY_SLOTS
+    const values = SHIFT_SLOTS[shift]
       .map((slot) => parseFloat(uphHistory?.[shift]?.[zone]?.[slot]?.uph))
       .filter((value) => Number.isFinite(value) && value > 0);
 
@@ -148,7 +162,7 @@ export default function PickAndBaggedCombinedCard() {
   };
 
   const getFilledUPHCount = (shift, zone) => {
-    return HISTORY_SLOTS.filter((slot) => {
+    return SHIFT_SLOTS[shift].filter((slot) => {
       const value = parseFloat(uphHistory?.[shift]?.[zone]?.[slot]?.uph);
       return Number.isFinite(value) && value > 0;
     }).length;
@@ -438,65 +452,61 @@ export default function PickAndBaggedCombinedCard() {
             </div>
           </div>
 
-          {selectedShift === "day" ? (
-            <div className="coming-soon-box">Coming soon</div>
-          ) : (
-            <div className="uph-history-horizontal">
-              {HISTORY_SLOTS.map((slot) => (
-                <div key={`${selectedShift}-${slot}`} className="uph-time-card">
-                  <h4 className="uph-time-title">{slot}</h4>
+          <div className="uph-history-horizontal">
+            {SHIFT_SLOTS[selectedShift].map((slot) => (
+              <div key={`${selectedShift}-${slot}`} className="uph-time-card">
+                <h4 className="uph-time-title">{slot}</h4>
 
-                  <div className="uph-time-table">
-                    <div className="uph-time-head">Zone</div>
-                    <div className="uph-time-head">UPH</div>
-                    <div className="uph-time-head">Pickers</div>
+                <div className="uph-time-table">
+                  <div className="uph-time-head">Zone</div>
+                  <div className="uph-time-head">UPH</div>
+                  <div className="uph-time-head">Pickers</div>
 
-                    {HISTORY_ZONES.map((zone) => (
-                      <React.Fragment key={`${slot}-${zone}`}>
-                        <div className="uph-time-zone">
-                          {zone.charAt(0).toUpperCase() + zone.slice(1)}
-                        </div>
+                  {HISTORY_ZONES.map((zone) => (
+                    <React.Fragment key={`${slot}-${zone}`}>
+                      <div className="uph-time-zone">
+                        {zone.charAt(0).toUpperCase() + zone.slice(1)}
+                      </div>
 
-                        <div>
-                          <input
-                            type="number"
-                            value={uphHistory?.[selectedShift]?.[zone]?.[slot]?.uph || ""}
-                            onChange={(e) =>
-                              updateHistoryCell(
-                                selectedShift,
-                                zone,
-                                slot,
-                                "uph",
-                                e.target.value
-                              )
-                            }
-                            className="pick-input compact-history-input"
-                          />
-                        </div>
+                      <div>
+                        <input
+                          type="number"
+                          value={uphHistory?.[selectedShift]?.[zone]?.[slot]?.uph || ""}
+                          onChange={(e) =>
+                            updateHistoryCell(
+                              selectedShift,
+                              zone,
+                              slot,
+                              "uph",
+                              e.target.value
+                            )
+                          }
+                          className="pick-input compact-history-input"
+                        />
+                      </div>
 
-                        <div>
-                          <input
-                            type="number"
-                            value={uphHistory?.[selectedShift]?.[zone]?.[slot]?.pickers || ""}
-                            onChange={(e) =>
-                              updateHistoryCell(
-                                selectedShift,
-                                zone,
-                                slot,
-                                "pickers",
-                                e.target.value
-                              )
-                            }
-                            className="pick-input compact-history-input"
-                          />
-                        </div>
-                      </React.Fragment>
-                    ))}
-                  </div>
+                      <div>
+                        <input
+                          type="number"
+                          value={uphHistory?.[selectedShift]?.[zone]?.[slot]?.pickers || ""}
+                          onChange={(e) =>
+                            updateHistoryCell(
+                              selectedShift,
+                              zone,
+                              slot,
+                              "pickers",
+                              e.target.value
+                            )
+                          }
+                          className="pick-input compact-history-input"
+                        />
+                      </div>
+                    </React.Fragment>
+                  ))}
                 </div>
-              ))}
-            </div>
-          )}
+              </div>
+            ))}
+          </div>
 
           <div className="center-buttons">
             <button className="calculate-btn" onClick={saveUphHistory}>
