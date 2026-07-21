@@ -7,7 +7,7 @@ import TotesUsedCard from "./TotesUsedCard";
 import BaggedTotesCard from "./BaggedTotesCard";
 import PickAndBaggedCombinedCard from "./PickCard";
 import ShiftEOSCard from "./ShiftEOSCard";
-import FreezerCard from "./FreezerCard";
+import FrameloadFreezer from "./FrameloadFreezer";
 import BarcodeCard from "./Barcode";
 import { Carousel } from "react-responsive-carousel";
 import "react-responsive-carousel/lib/styles/carousel.min.css";
@@ -170,7 +170,7 @@ export default function App() {
     Array.from(files).forEach((file) => {
       Papa.parse(file, {
         header: true,
-    skipEmptyLines: true,
+        skipEmptyLines: true,
         transformHeader: (h) => h.trim(),
         complete: async (results) => {
           const dataRows = results.data;
@@ -264,7 +264,7 @@ export default function App() {
                   Shift EOS
                 </button>
                 <button onClick={() => setSlideIndex(4)} className={slideIndex === 4 ? "active" : ""}>
-                  Freezer Calculator
+                  Frameload/Freezer
                 </button>
                 <button onClick={() => setSlideIndex(5)} className={slideIndex === 5 ? "active" : ""}>
                   Barcode Generator
@@ -327,7 +327,7 @@ export default function App() {
 
                   <div className="carousel-slide">
                     <div className="slide-scroll-area">
-                      <FreezerCard />
+                      <FrameloadFreezer grandTotals={grandTotals}/>
                     </div>
                   </div>
 

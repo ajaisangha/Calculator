@@ -3,18 +3,9 @@
   max-width: 900px;
   min-width: 0;
   margin: 0 auto;
-  padding-bottom: 30px;
+  padding-bottom: 24px;
   display: flex;
   flex-direction: column;
-}
-
-.freezer-top-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-top: 14px;
-  width: 100%;
 }
 
 .freezer-method-toggle {
@@ -23,6 +14,11 @@
   gap: 12px;
   flex-wrap: wrap;
   flex: 1;
+}
+
+.freezer-sub-toggle {
+  margin-top: 10px;
+  margin-bottom: 14px;
 }
 
 .freezer-radio-option {
@@ -36,6 +32,7 @@
   cursor: pointer;
   font-weight: 600;
   transition: all 0.2s ease;
+  font-size: 15px;
 }
 
 .freezer-radio-option.active {
@@ -51,32 +48,66 @@
   background: #ffffff;
   border-radius: 10px;
   padding: 18px;
-  margin-top: 20px;
+  margin-top: 22px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
-.freezer-card .data-table {
-  margin-top: 12px;
+.compact-sub-card {
+  padding: 18px;
 }
 
-.freezer-card h3,
-.sub-card h3 {
-  margin-top: 0;
-  margin-bottom: 10px;
+.sub-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.sub-card-header h3 {
+  margin: 0;
+  text-align: left;
+  font-size: 20px;
+}
+
+.subcard-clear-all-btn {
+  min-width: 110px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.freezer-card .data-table {
+  margin-top: 10px;
+}
+
+.compact-table th,
+.compact-table td {
+  padding: 12px 10px;
+  font-size: 15px;
+}
+
+.compact-table th {
+  font-weight: 700;
 }
 
 .freezer-card .button-row-centered {
   display: flex;
   justify-content: center;
   gap: 12px;
-  margin-top: 12px;
+  margin-top: 14px;
   flex-wrap: wrap;
 }
 
+.compact-buttons button {
+  min-width: 120px;
+}
+
 .freezer-card .tiny-input {
-  width: 70px;
-  min-width: 70px;
-  max-width: 90px;
+  width: 72px;
+  min-width: 72px;
+  max-width: 82px;
+  font-size: 15px;
+  padding: 6px 8px;
 }
 
 .freezer-card .data-table td,
@@ -88,23 +119,7 @@
   white-space: nowrap;
 }
 
-.freezer-clear-all-row {
-  display: flex;
-  justify-content: flex-end;
-  flex-shrink: 0;
-}
-
-.freezer-clear-all-btn {
-  min-width: 140px;
-  white-space: nowrap;
-}
-
 @media (max-width: 700px) {
-  .freezer-top-bar {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
   .freezer-method-toggle {
     flex-direction: column;
     align-items: stretch;
@@ -113,13 +128,19 @@
   .freezer-radio-option {
     justify-content: center;
     width: 100%;
+    font-size: 15px;
   }
 
-  .freezer-clear-all-row {
-    justify-content: stretch;
+  .sub-card-header {
+    flex-direction: column;
+    align-items: stretch;
   }
 
-  .freezer-clear-all-btn {
+  .sub-card-header h3 {
+    text-align: center;
+  }
+
+  .subcard-clear-all-btn {
     width: 100%;
   }
 
@@ -133,8 +154,20 @@
   }
 
   .freezer-card .tiny-input {
-    width: 56px;
-    min-width: 56px;
-    max-width: 56px;
+    width: 68px;
+    min-width: 68px;
+    max-width: 68px;
+    font-size: 15px;
+  }
+
+  .compact-table th,
+  .compact-table td {
+    padding: 8px 6px;
+    font-size: 14px;
+  }
+
+  .sub-card {
+    padding: 14px;
+    margin-top: 24px;
   }
 }
