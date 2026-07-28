@@ -7,13 +7,12 @@ import "./pick.css";
 const PICK_DOC = doc(db, "totes", "pickCalculator");
 
 const NIGHT_HISTORY_SLOTS = [
-  "8PM - 9PM",
-  "9PM - 10PM",
-  "10PM - 11PM",
-  "12AM - 1AM",
-  "1AM - 2AM",
-  "3AM - 4AM",
-  "4AM - 5AM",
+  "8:30PM - 9:30PM",
+  "9:30PM - 10:30PM",
+  "12:00AM - 1:00AM",
+  "1:00AM - 2:00AM",
+  "3:00AM - 4:00AM",
+  "4:00AM - 5:00AM",
 ];
 
 const DAY_HISTORY_SLOTS = [
