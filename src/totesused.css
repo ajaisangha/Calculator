@@ -507,3 +507,106 @@ html[data-theme="orange"] .totes-modal-close {
     font-size: 18px;
   }
 }
+
+.route-delete-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 22px 0 14px;
+  color: #5b6472;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.route-delete-divider::before,
+.route-delete-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: #dbe7f6;
+}
+
+.route-delete-search-btn {
+  display: block;
+  width: 100%;
+}
+
+.consignment-search-input {
+  max-width: 100%;
+  text-align: left;
+}
+
+.consignment-search-help {
+  margin: 12px 0 0;
+  color: #5b6472;
+  font-size: 13px;
+}
+
+.consignment-results {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 250px;
+  margin-top: 16px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.consignment-result-row {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 12px;
+  border: 1px solid #dbe7f6;
+  border-radius: 8px;
+  background: #f8fbff;
+  color: #123c73;
+  cursor: pointer;
+  text-align: left;
+}
+
+.consignment-result-row:hover,
+.consignment-result-row.selected {
+  border-color: #7fb0f8;
+  background: #eaf3ff;
+}
+
+.consignment-result-id {
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.consignment-result-route {
+  color: #5b6472;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.selected-consignment-info {
+  margin-top: 16px;
+  padding: 12px;
+  border: 1px solid #cfe0f8;
+  border-radius: 8px;
+  background: #edf5ff;
+  color: #123c73;
+  line-height: 1.5;
+}
+
+.route-delete-actions button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+@media (max-width: 600px) {
+  .consignment-result-row {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .consignment-result-route {
+    text-align: left;
+  }
+}

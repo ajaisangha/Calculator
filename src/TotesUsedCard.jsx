@@ -19,6 +19,7 @@ export default function TotesUsedCard({
   onFileChange,
   clearAll,
   deleteRoutesFromRoute,
+  deleteConsignment={deleteConsignment}
 }) {
   const [dolliesReceived, setDolliesReceived] = useState("");
   const [dolliesUsed, setDolliesUsed] = useState("");
@@ -36,6 +37,10 @@ export default function TotesUsedCard({
   const [showRouteDeleteModal, setShowRouteDeleteModal] = useState(false);
   const [selectedRoute, setSelectedRoute] = useState(null);
   const [routesToDelete, setRoutesToDelete] = useState("");
+
+  const [showConsignmentDeleteModal, setShowConsignmentDeleteModal] = useState(false);
+  const [consignmentSearch, setConsignmentSearch] = useState("");
+  const [selectedConsignment, setSelectedConsignment] = useState(null);
 
   const showToast = (message) => {
     setToast({ show: true, message });
@@ -245,6 +250,49 @@ const handleDeleteAllRoutes = async () => {
   await deleteRoutesFromRoute(selectedRoute.key, selectedRoute.count, true);
   showToast(`All ${selectedRoute.short} routes deleted`);
   closeRouteDeleteModal();
+};
+
+const openConsignmentDeleteModal = () => {
+  setShowRouteDeleteModal(false);
+  setConsignmentSearch("");
+  setSelectedConsignment(null);
+  setShowConsignmentDeleteModal(true);
+};
+
+const closeConsignmentDeleteModal = () => {
+  setShowConsignmentDeleteModal(false);
+  setConsignmentSearch("");
+  setSelectedConsignment(null);
+};
+
+const normalizedConsignmentSearch = consignmentSearch.trim().toLowerCase();
+
+const consignmentMatches = normalizedConsignmentSearch
+  ? rows
+      .filter((row) =>
+        String(row.consignment || "")
+          .trim()
+          .toLowerCase()
+          .includes(normalizedConsignmentSearch)
+      )
+      .slice(0, 20)
+  : [];
+
+const handleDeleteConsignment = async () => {
+  if (!selectedConsignment) {
+    showToast("Select a consignment to delete");
+    return;
+  }
+
+  const wasDeleted = await deleteConsignment(selectedConsignment.consignment);
+
+  if (!wasDeleted) {
+    showToast("Consignment was not found or could not be deleted");
+    return;
+  }
+
+  showToast(`Consignment ${selectedConsignment.consignment} deleted`);
+  closeConsignmentDeleteModal();
 };
 
   return (
@@ -731,7 +779,8 @@ const handleDeleteAllRoutes = async () => {
       <div className="totes-modal-body route-delete-modal-body">
         <p className="route-delete-message">
           Enter how many routes you want to remove. This removes the most
-          recently uploaded consignments for <strong>{selectedRoute.short}</strong>.
+          recently uploaded consignments for{" "}
+          <strong>{selectedRoute.short}</strong>.
         </p>
 
         <label className="route-delete-label" htmlFor="routes-to-delete">
@@ -767,10 +816,125 @@ const handleDeleteAllRoutes = async () => {
           </button>
         </div>
 
+        <div className="route-delete-divider">
+          <span>OR</span>
+        </div>
+
+        <button
+          type="button"
+          className="calculate-btn route-delete-search-btn"
+          onClick={openConsignmentDeleteModal}
+        >
+          Search by Consignment
+        </button>
+
         <button
           type="button"
           className="route-delete-cancel"
           onClick={closeRouteDeleteModal}
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
+{showConsignmentDeleteModal && (
+  <div className="totes-modal-overlay" onClick={closeConsignmentDeleteModal}>
+    <div
+      className="totes-modal route-delete-modal"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="totes-modal-header">
+        <div>
+          <h3>Delete by Consignment</h3>
+          <p>Search uploaded data using the Consignment column.</p>
+        </div>
+
+        <button
+          type="button"
+          className="totes-modal-close"
+          onClick={closeConsignmentDeleteModal}
+          aria-label="Close consignment search modal"
+        />
+      </div>
+
+      <div className="totes-modal-body route-delete-modal-body">
+        <label className="route-delete-label" htmlFor="consignment-search">
+          Search consignment
+        </label>
+
+        <input
+          id="consignment-search"
+          className="route-delete-input consignment-search-input"
+          type="text"
+          value={consignmentSearch}
+          onChange={(e) => {
+            setConsignmentSearch(e.target.value);
+            setSelectedConsignment(null);
+          }}
+          placeholder="Enter consignment number"
+          autoFocus
+        />
+
+        {!normalizedConsignmentSearch && (
+          <p className="consignment-search-help">
+            Enter a full or partial consignment number to search.
+          </p>
+        )}
+
+        {normalizedConsignmentSearch && consignmentMatches.length === 0 && (
+          <p className="no-data consignment-search-help">
+            No matching consignments found.
+          </p>
+        )}
+
+        {consignmentMatches.length > 0 && (
+          <div className="consignment-results">
+            {consignmentMatches.map((row) => (
+              <button
+                key={row.consignment}
+                type="button"
+                className={`consignment-result-row ${
+                  selectedConsignment?.consignment === row.consignment
+                    ? "selected"
+                    : ""
+                }`}
+                onClick={() => setSelectedConsignment(row)}
+              >
+                <span className="consignment-result-id">{row.consignment}</span>
+                <span className="consignment-result-route">
+                  {row.route || "Unknown route"}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {selectedConsignment && (
+          <div className="selected-consignment-info">
+            Selected: <strong>{selectedConsignment.consignment}</strong>
+            <br />
+            Route: <strong>{selectedConsignment.route || "Unknown"}</strong>
+          </div>
+        )}
+
+        <div className="route-delete-actions">
+          <button
+            type="button"
+            className="clear-btn"
+            onClick={handleDeleteConsignment}
+            disabled={!selectedConsignment}
+          >
+            Delete Selected Consignment
+          </button>
+        </div>
+
+        <button
+          type="button"
+          className="route-delete-cancel"
+          onClick={closeConsignmentDeleteModal}
         >
           Cancel
         </button>

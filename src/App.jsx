@@ -271,6 +271,37 @@ export default function App() {
   }
 };
 
+const deleteConsignment = async (consignment) => {
+  const normalizedConsignment = String(consignment || "").trim().toLowerCase();
+
+  if (!normalizedConsignment) {
+    return false;
+  }
+
+  const matchedRow = rows.find(
+    (row) =>
+      String(row.consignment || "").trim().toLowerCase() === normalizedConsignment
+  );
+
+  if (!matchedRow) {
+    return false;
+  }
+
+  const updatedRows = rows.filter(
+    (row) =>
+      String(row.consignment || "").trim().toLowerCase() !== normalizedConsignment
+  );
+
+  try {
+    await setDoc(DATADOC, { rows: updatedRows }, { merge: true });
+    setDuplicateMessage("");
+    return true;
+  } catch (err) {
+    console.error("Delete consignment error:", err);
+    return false;
+  }
+};
+
   if (loading) return <p className="app-loading">Loading...</p>;
 
   return (
@@ -325,6 +356,7 @@ export default function App() {
                         onFileChange={onFileChange}
                         clearAll={clearAll}
                         deleteRoutesFromRoute={deleteRoutesFromRoute}
+                        deleteConsignment={deleteConsignment}
                       />
                     </div>
                   </div>
