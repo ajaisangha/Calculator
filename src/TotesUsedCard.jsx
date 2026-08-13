@@ -19,7 +19,7 @@ export default function TotesUsedCard({
   onFileChange,
   clearAll,
   deleteRoutesFromRoute,
-  deleteConsignment={deleteConsignment}
+  deleteConsignment,
 }) {
   const [dolliesReceived, setDolliesReceived] = useState("");
   const [dolliesUsed, setDolliesUsed] = useState("");
@@ -752,6 +752,66 @@ const handleDeleteConsignment = async () => {
           </div>
         </div>
       </div>
+
+{showOvercapacityModal && (
+  <div
+    className="totes-modal-overlay"
+    onClick={() => setShowOvercapacityModal(false)}
+  >
+    <div
+      className="totes-modal"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="totes-modal-header">
+        <div>
+          <h3>Overcapacity Route Details</h3>
+          <p>Total Overcapacity Totes: {totalOvercapacity}</p>
+        </div>
+
+        <button
+          type="button"
+          className="totes-modal-close"
+          onClick={() => setShowOvercapacityModal(false)}
+          aria-label="Close overcapacity modal"
+        />
+      </div>
+
+      <div className="totes-modal-body">
+        {overcapacityRows.length === 0 ? (
+          <p className="no-data">No overcapacity routes found.</p>
+        ) : (
+          <div className="totes-modal-table-wrap">
+            <table className="totes-modal-table">
+              <thead>
+                <tr>
+                  <th>Route</th>
+                  <th>Route ID</th>
+                  <th>Consignment</th>
+                  <th>Amb Totes</th>
+                  <th>Chill + Freezer</th>
+                  <th>Overcapacity</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {overcapacityRows.map((row) => (
+                  <tr key={row.consignment}>
+                    <td>{row.route}</td>
+                    <td>{row.shipment || "-"}</td>
+                    <td>{row.consignment}</td>
+                    <td>{row.ambient || 0}</td>
+                    <td>{row.chillFreezerCombined}</td>
+                    <td>{row.totalOver}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  </div>
+)}
 
       {showRouteDeleteModal && selectedRoute && (
   <div className="totes-modal-overlay" onClick={closeRouteDeleteModal}>
