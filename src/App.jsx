@@ -91,8 +91,8 @@ function getRouteName(row, shipmentKey, dispatchKey) {
   if (dispatchTime === "02:30" || dispatchTime === "2:30") return "2:30 Etobicoke Spoke";
   if (dispatchTime === "03:00" || dispatchTime === "3:00") return "3:00 Etobicoke Spoke";
   if (dispatchTime === "05:30" || dispatchTime === "5:30") return "5:30 Etobicoke Spoke";
-  if (dispatchTime === "08:45" || dispatchTime === "8:45") return "8:45 Etobicoke Spoke";
-  if (dispatchTime === "09:15" || dispatchTime === "9:15") return "9:15 Etobicoke Spoke";
+  if (dispatchTime === "09:30" || dispatchTime === "9:30") return "9:30 Etobicoke Spoke";
+  if (dispatchTime === "10:00" || dispatchTime === "10:00") return "10:00 Etobicoke Spoke";
 
   return "Spoke";
 }
