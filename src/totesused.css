@@ -325,6 +325,102 @@ html[data-theme="orange"] .totes-modal-close {
   background: #fbfdff;
 }
 
+.route-summary-card {
+  width: 100%;
+  appearance: none;
+  color: inherit;
+  font: inherit;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+
+.route-summary-card:hover:not(:disabled) {
+  transform: translateY(-2px);
+  border-color: #7fb0f8 !important;
+  background: #edf5ff !important;
+  box-shadow: 0 6px 14px rgba(0, 123, 255, 0.12);
+}
+
+.route-summary-card:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.route-summary-card:disabled {
+  opacity: 0.65;
+}
+
+.route-delete-modal {
+  width: min(100%, 520px);
+}
+
+.route-delete-modal-body {
+  padding: 20px;
+}
+
+.route-delete-message {
+  margin: 0 0 18px;
+  color: #3e4a59;
+  line-height: 1.5;
+}
+
+.route-delete-label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #123c73;
+}
+
+.route-delete-input {
+  width: 100%;
+  max-width: 220px;
+  padding: 10px 12px;
+  border: 1px solid #cfe0f8;
+  border-radius: 8px;
+  font-size: 16px;
+  text-align: center;
+}
+
+.route-delete-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.route-delete-actions button {
+  flex: 1;
+  min-width: 180px;
+}
+
+.route-delete-cancel {
+  display: block;
+  margin: 16px auto 0;
+  color: #5b6472;
+  text-decoration: underline;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+@media (max-width: 600px) {
+  .route-delete-actions {
+    flex-direction: column;
+  }
+
+  .route-delete-actions button {
+    width: 100%;
+  }
+
+  .route-delete-input {
+    max-width: 100%;
+  }
+}
+
 @media (max-width: 980px) {
   .totes-used-grid {
     grid-template-columns: 1fr;

@@ -18,6 +18,7 @@ export default function TotesUsedCard({
   duplicateMessage,
   onFileChange,
   clearAll,
+  deleteRoutesFromRoute,
 }) {
   const [dolliesReceived, setDolliesReceived] = useState("");
   const [dolliesUsed, setDolliesUsed] = useState("");
@@ -31,6 +32,10 @@ export default function TotesUsedCard({
   const [showOvercapacityModal, setShowOvercapacityModal] = useState(false);
 
   const [toast, setToast] = useState({ show: false, message: "" });
+
+  const [showRouteDeleteModal, setShowRouteDeleteModal] = useState(false);
+  const [selectedRoute, setSelectedRoute] = useState(null);
+  const [routesToDelete, setRoutesToDelete] = useState("");
 
   const showToast = (message) => {
     setToast({ show: true, message });
@@ -198,6 +203,50 @@ export default function TotesUsedCard({
     clearAll();
   };
 
+  const openRouteDeleteModal = (route) => {
+  if (!route.count) return;
+
+  setSelectedRoute(route);
+  setRoutesToDelete("");
+  setShowRouteDeleteModal(true);
+};
+
+const closeRouteDeleteModal = () => {
+  setShowRouteDeleteModal(false);
+  setSelectedRoute(null);
+  setRoutesToDelete("");
+};
+
+const handleDeleteSomeRoutes = async () => {
+  if (!selectedRoute) return;
+
+  const amount = parseInt(routesToDelete, 10);
+
+  if (!Number.isInteger(amount) || amount < 1) {
+    showToast("Enter at least 1 route to delete");
+    return;
+  }
+
+  if (amount > selectedRoute.count) {
+    showToast(`Only ${selectedRoute.count} route(s) available`);
+    return;
+  }
+
+  await deleteRoutesFromRoute(selectedRoute.key, amount, false);
+  showToast(
+    `${amount} ${selectedRoute.short} route${amount === 1 ? "" : "s"} deleted`
+  );
+  closeRouteDeleteModal();
+};
+
+const handleDeleteAllRoutes = async () => {
+  if (!selectedRoute) return;
+
+  await deleteRoutesFromRoute(selectedRoute.key, selectedRoute.count, true);
+  showToast(`All ${selectedRoute.short} routes deleted`);
+  closeRouteDeleteModal();
+};
+
   return (
     <section className="data-card totes-used-card">
       <h2 className="data-title">Totes Used</h2>
@@ -230,118 +279,130 @@ export default function TotesUsedCard({
               <h3 style={{ marginBottom: "14px" }}>Consignment Summary</h3>
 
               <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))",
-                  gap: "12px",
-                }}
-              >
-                {routeSummary.map((item) => (
-                  <div
-                    key={item.key}
-                    style={{
-                      background: "#f8fbff",
-                      border: "1px solid #dbe7f6",
-                      borderRadius: "12px",
-                      padding: "12px 10px",
-                      textAlign: "center",
-                    }}
-                  >
-                    <div
-                      style={{
-                        fontSize: "13px",
-                        fontWeight: 700,
-                        color: "#123c73",
-                        lineHeight: 1.3,
-                        minHeight: "34px",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      {item.short}
-                    </div>
+  style={{
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))",
+    gap: "12px",
+  }}
+>
+  {routeSummary.map((item) => (
+    <button
+      key={item.key}
+      type="button"
+      className="route-summary-card"
+      onClick={() => openRouteDeleteModal(item)}
+      disabled={item.count === 0}
+      title={
+        item.count > 0
+          ? `Manage uploaded routes for ${item.short}`
+          : `No uploaded routes for ${item.short}`
+      }
+      style={{
+        background: "#f8fbff",
+        border: "1px solid #dbe7f6",
+        borderRadius: "12px",
+        padding: "12px 10px",
+        textAlign: "center",
+        cursor: item.count > 0 ? "pointer" : "default",
+      }}
+    >
+      <div
+        style={{
+          fontSize: "13px",
+          fontWeight: 700,
+          color: "#123c73",
+          lineHeight: 1.3,
+          minHeight: "34px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        {item.short}
+      </div>
 
-                    <div
-                      style={{
-                        fontSize: "28px",
-                        fontWeight: 800,
-                        color: "#007bff",
-                        lineHeight: 1.1,
-                        marginTop: "8px",
-                      }}
-                    >
-                      {item.count}
-                    </div>
+      <div
+        style={{
+          fontSize: "28px",
+          fontWeight: 800,
+          color: "#007bff",
+          lineHeight: 1.1,
+          marginTop: "8px",
+        }}
+      >
+        {item.count}
+      </div>
 
-                    <div
-                      style={{
-                        fontSize: "12px",
-                        color: "#5b6472",
-                        marginTop: "4px",
-                      }}
-                    >
-                      Routes
-                    </div>
+      <div
+        style={{
+          fontSize: "12px",
+          color: "#5b6472",
+          marginTop: "4px",
+        }}
+      >
+        Routes
+      </div>
 
-                    <div
-                      style={{
-                        fontSize: "12px",
-                        color: item.overcapacity > 0 ? "#d9534f" : "#5b6472",
-                        fontWeight: 700,
-                        marginTop: "6px",
-                      }}
-                    >
-                      OC: {item.overcapacity}
-                    </div>
-                  </div>
-                ))}
-              </div>
+      <div
+        style={{
+          fontSize: "12px",
+          color: item.overcapacity > 0 ? "#d9534f" : "#5b6472",
+          fontWeight: 700,
+          marginTop: "6px",
+        }}
+      >
+        OC: {item.overcapacity}
+      </div>
 
-              <button
-                type="button"
-                className="overcapacity-summary-btn"
-                onClick={() => setShowOvercapacityModal(true)}
-                disabled={overcapacityRows.length === 0}
-                style={{
-                  marginTop: "14px",
-                  background: "#edf5ff",
-                  border: "1px solid #cfe0f8",
-                  borderRadius: "12px",
-                  padding: "12px 14px",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  gap: "12px",
-                  flexWrap: "wrap",
-                  width: "100%",
-                  cursor: overcapacityRows.length > 0 ? "pointer" : "default",
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: "14px",
-                    fontWeight: 700,
-                    color: "#123c73",
-                  }}
-                >
-                  Total Overcapacity Totes
-                </div>
+      
+    </button>
+  ))}
+</div>
 
-                <div
-                  style={{
-                    fontSize: "26px",
-                    fontWeight: 900,
-                    color: totalOvercapacity > 0 ? "#d9534f" : "#007bff",
-                    lineHeight: 1,
-                  }}
-                >
-                  {totalOvercapacity}
-                </div>
-              </button>
-            </div>
-          )}
-        </div>
+<button
+  type="button"
+  className="overcapacity-summary-btn"
+  onClick={() => setShowOvercapacityModal(true)}
+  disabled={overcapacityRows.length === 0}
+  style={{
+    marginTop: "14px",
+    background: "#edf5ff",
+    border: "1px solid #cfe0f8",
+    borderRadius: "12px",
+    padding: "12px 14px",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: "12px",
+    flexWrap: "wrap",
+    width: "100%",
+    cursor: overcapacityRows.length > 0 ? "pointer" : "default",
+  }}
+>
+  <div
+    style={{
+      fontSize: "14px",
+      fontWeight: 700,
+      color: "#123c73",
+    }}
+  >
+    Total Overcapacity Totes
+  </div>
+
+  <div
+    style={{
+      fontSize: "26px",
+      fontWeight: 900,
+      color: totalOvercapacity > 0 ? "#d9534f" : "#007bff",
+      lineHeight: 1,
+    }}
+  >
+    {totalOvercapacity}
+  </div>
+</button>
+</div>
+)}
+</div>
 
         <div className="subcard">
           <h3>Dollies</h3>
@@ -644,57 +705,79 @@ export default function TotesUsedCard({
         </div>
       </div>
 
-      {showOvercapacityModal && (
-        <div className="totes-modal-overlay" onClick={() => setShowOvercapacityModal(false)}>
-          <div className="totes-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="totes-modal-header">
-              <div>
-                <h3>Overcapacity Route Details</h3>
-                <p>Total Overcapacity Totes: {totalOvercapacity}</p>
-              </div>
-              <button
-                type="button"
-                className="totes-modal-close"
-                onClick={() => setShowOvercapacityModal(false)}
-                aria-label="Close modal"
-              />
-            </div>
-
-            <div className="totes-modal-body">
-              {overcapacityRows.length === 0 ? (
-                <p className="no-data">No overcapacity routes found.</p>
-              ) : (
-                <div className="totes-modal-table-wrap">
-                  <table className="totes-modal-table">
-                    <thead>
-                      <tr>
-                        <th>Route</th>
-                        <th>Route ID</th>
-                        <th>Consignment</th>
-                        <th>Amb Totes</th>
-                        <th>Chill + Freezer</th>
-                        <th>Overcapacity</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {overcapacityRows.map((row) => (
-                        <tr key={row.consignment}>
-                          <td>{row.route}</td>
-                          <td>{row.shipment || "-"}</td>
-                          <td>{row.consignment}</td>
-                          <td>{row.ambient || 0}</td>
-                          <td>{row.chillFreezerCombined}</td>
-                          <td>{row.totalOver}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          </div>
+      {showRouteDeleteModal && selectedRoute && (
+  <div className="totes-modal-overlay" onClick={closeRouteDeleteModal}>
+    <div
+      className="totes-modal route-delete-modal"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="totes-modal-header">
+        <div>
+          <h3>Manage {selectedRoute.short} Routes</h3>
+          <p>
+            {selectedRoute.count} uploaded route
+            {selectedRoute.count === 1 ? "" : "s"} available
+          </p>
         </div>
-      )}
+
+        <button
+          type="button"
+          className="totes-modal-close"
+          onClick={closeRouteDeleteModal}
+          aria-label="Close route deletion modal"
+        />
+      </div>
+
+      <div className="totes-modal-body route-delete-modal-body">
+        <p className="route-delete-message">
+          Enter how many routes you want to remove. This removes the most
+          recently uploaded consignments for <strong>{selectedRoute.short}</strong>.
+        </p>
+
+        <label className="route-delete-label" htmlFor="routes-to-delete">
+          Number of routes to delete
+        </label>
+
+        <input
+          id="routes-to-delete"
+          className="route-delete-input"
+          type="number"
+          min="1"
+          max={selectedRoute.count}
+          value={routesToDelete}
+          onChange={(e) => setRoutesToDelete(e.target.value)}
+          placeholder={`1 - ${selectedRoute.count}`}
+        />
+
+        <div className="route-delete-actions">
+          <button
+            type="button"
+            className="calculate-btn"
+            onClick={handleDeleteSomeRoutes}
+          >
+            Delete Selected Amount
+          </button>
+
+          <button
+            type="button"
+            className="clear-btn"
+            onClick={handleDeleteAllRoutes}
+          >
+            Delete All Routes
+          </button>
+        </div>
+
+        <button
+          type="button"
+          className="route-delete-cancel"
+          onClick={closeRouteDeleteModal}
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+)}
 
       {toast.show && <div className="toast-notification-center">{toast.message}</div>}
     </section>

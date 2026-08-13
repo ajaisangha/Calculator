@@ -240,6 +240,37 @@ export default function App() {
     }
   };
 
+  const deleteRoutesFromRoute = async (routeName, amount, deleteAll = false) => {
+  const routeRows = rows.filter((row) => row.route === routeName);
+
+  if (!routeRows.length) return;
+
+  const numberToDelete = deleteAll
+    ? routeRows.length
+    : Math.min(Math.max(parseInt(amount, 10) || 0, 0), routeRows.length);
+
+  if (!numberToDelete) return;
+
+  // New CSV rows are appended to the end of the array.
+  // Therefore, this removes the most recently uploaded rows for that route.
+  const consignmentsToDelete = new Set(
+    routeRows
+      .slice(-numberToDelete)
+      .map((row) => row.consignment)
+  );
+
+  const updatedRows = rows.filter(
+    (row) => !consignmentsToDelete.has(row.consignment)
+  );
+
+  try {
+    await setDoc(DATADOC, { rows: updatedRows }, { merge: true });
+    setDuplicateMessage("");
+  } catch (err) {
+    console.error("Delete route data error:", err);
+  }
+};
+
   if (loading) return <p className="app-loading">Loading...</p>;
 
   return (
@@ -293,6 +324,7 @@ export default function App() {
                         duplicateMessage={duplicateMessage}
                         onFileChange={onFileChange}
                         clearAll={clearAll}
+                        deleteRoutesFromRoute={deleteRoutesFromRoute}
                       />
                     </div>
                   </div>
