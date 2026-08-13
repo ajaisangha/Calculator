@@ -294,7 +294,7 @@ const handleDeleteAllRoutes = async () => {
       disabled={item.count === 0}
       title={
         item.count > 0
-          ? `Manage uploaded routes for ${item.short}`
+          ? `Click to delete uploaded ${item.short} routes`
           : `No uploaded routes for ${item.short}`
       }
       style={{
