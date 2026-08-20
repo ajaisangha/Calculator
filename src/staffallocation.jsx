@@ -355,26 +355,20 @@ export default function StaffAllocation() {
 
                   return (
                     <td key={subGroup.key}>
-                      <label
-                        className="sr-only"
-                        htmlFor={`staff-${subGroup.key}`}
-                      >
-                        {subGroup.label}
-                      </label>
-
-                      <input
-                        id={`staff-${subGroup.key}`}
-                        type="number"
-                        min="0"
-                        inputMode="numeric"
-                        value={allocation[subGroup.key]}
-                        onChange={(event) =>
-                          updateAllocation(subGroup.key, event.target.value)
-                        }
-                        className="staff-allocation-input"
-                        placeholder="0"
-                      />
-                    </td>
+                        <input
+                            id={`staff-${subGroup.key}`}
+                            type="number"
+                            min="0"
+                            inputMode="numeric"
+                            aria-label={subGroup.label}
+                            value={allocation[subGroup.key]}
+                            onChange={(event) =>
+                            updateAllocation(subGroup.key, event.target.value)
+                            }
+                            className="staff-allocation-input"
+                            placeholder="0"
+                        />
+                        </td>
                   );
                 })
               )}
