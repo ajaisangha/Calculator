@@ -5,6 +5,7 @@ import "./App.css";
 import "./staffallocation.css";
 
 const SHIFT_EOS_DOC = doc(db, "totes", "shiftEOS");
+const PICK_DOC = doc(db, "totes", "pickCalculator");
 const STAFF_ALLOCATION_DOC = doc(db, "totes", "staffAllocation");
 
 const staffGroups = [
@@ -12,10 +13,10 @@ const staffGroups = [
     name: "Pick",
     className: "pick-group",
     subGroups: [
-      { key: "ambientPick", label: "Ambient Pick" },
-      { key: "chillPick", label: "Chill Pick" },
-      { key: "bagging", label: "Bagging" },
-      { key: "baggingRunner", label: "Bagging Runner" },
+      { key: "ambientPick", label: "Ambient Pick", calculated: true },
+      { key: "chillPick", label: "Chill Pick", calculated: true },
+      { key: "bagging", label: "Bagging", calculated: true },
+      { key: "baggingRunner", label: "Bagging Runner", editable: true },
       { key: "totalPick", label: "Total Pick", calculated: true },
     ],
   },
@@ -23,8 +24,8 @@ const staffGroups = [
     name: "Freezer",
     className: "freezer-group",
     subGroups: [
-      { key: "freezerPick", label: "Freezer Pick" },
-      { key: "freezerDecant", label: "Freezer Decant" },
+      { key: "freezerPick", label: "Freezer Pick", calculated: true },
+      { key: "freezerDecant", label: "Freezer Decant", editable: true },
       { key: "totalFreezer", label: "Total Freezer", calculated: true },
     ],
   },
@@ -32,8 +33,8 @@ const staffGroups = [
     name: "Inbound",
     className: "inbound-group",
     subGroups: [
-      { key: "decant", label: "Decant" },
-      { key: "mhe", label: "MHE" },
+      { key: "decant", label: "Decant", calculated: true },
+      { key: "mhe", label: "MHE", editable: true },
       { key: "totalInbound", label: "Total Inbound", calculated: true },
     ],
   },
@@ -41,39 +42,116 @@ const staffGroups = [
     name: "Dispatch",
     className: "dispatch-group",
     subGroups: [
-      { key: "frameload", label: "Frameload" },
-      { key: "bt", label: "BT" },
-      { key: "vanLoad", label: "Van Load" },
-      { key: "dekit", label: "Dekit" },
+      { key: "frameload", label: "Frameload", editable: true },
+      { key: "bt", label: "BT", editable: true },
+      { key: "vanLoad", label: "Van Load", editable: true },
+      { key: "dekit", label: "Dekit", editable: true },
       { key: "totalDispatch", label: "Total Dispatch", calculated: true },
     ],
   },
   {
     name: "IC",
     className: "ic-group",
-    subGroups: [{ key: "totalIC", label: "Total IC" }],
+    subGroups: [{ key: "totalIC", label: "Total IC", editable: true }],
   },
 ];
 
 const emptyAllocation = {
+  baggingRunner: 1,
+  freezerDecant: 0,
+  mhe: 1,
+  frameload: 3,
+  bt: 2,
+  vanLoad: 1,
+  dekit: 1,
+  totalIC: 2,
+};
+
+const emptyWorkInputs = {
+  ambientOutstanding: "",
+  chillOutstanding: "",
+  ambientUPH: "",
+  chillUPH: "",
+  pickCompletionTime: "",
+
+  baggingOutstanding: "",
+  baggingUPH: "",
+  baggingCompletionTime: "",
+
+  freezerOutstanding: "",
+  freezerUPH: "",
+  freezerCompletionTime: "",
+
+  inboundUPH: "",
+  inboundCompletionTime: "",
+};
+
+const emptyCalculatedOverrides = {
   ambientPick: "",
   chillPick: "",
   bagging: "",
-  baggingRunner: "",
+  totalPick: "",
   freezerPick: "",
-  freezerDecant: "",
+  totalFreezer: "",
   decant: "",
-  mhe: "",
-  frameload: "",
-  bt: "",
-  vanLoad: "",
-  dekit: "",
-  totalIC: "",
+  totalInbound: "",
+  totalDispatch: "",
 };
+
+function getNumber(value) {
+  return Number(value) || 0;
+}
+
+function getHoursUntilCompletion(completionTime) {
+  if (!completionTime) return 0;
+
+  const [hoursText, minutesText] = completionTime.split(":");
+  const hours = Number(hoursText);
+  const minutes = Number(minutesText);
+
+  if (
+    !Number.isFinite(hours) ||
+    !Number.isFinite(minutes) ||
+    hours < 0 ||
+    hours > 23 ||
+    minutes < 0 ||
+    minutes > 59
+  ) {
+    return 0;
+  }
+
+  const now = new Date();
+  const completion = new Date();
+
+  completion.setHours(hours, minutes, 0, 0);
+
+  if (completion <= now) {
+    completion.setDate(completion.getDate() + 1);
+  }
+
+  return (completion.getTime() - now.getTime()) / 3600000;
+}
+
+function calculateRequiredStaff(outstanding, uph, completionTime) {
+  const totalOutstanding = getNumber(outstanding);
+  const rate = getNumber(uph);
+  const hoursLeft = getHoursUntilCompletion(completionTime);
+
+  if (!totalOutstanding || !rate || !hoursLeft) {
+    return 0;
+  }
+
+  return Math.ceil(totalOutstanding / (rate * hoursLeft));
+}
 
 export default function StaffAllocation() {
   const [allocation, setAllocation] = useState(emptyAllocation);
   const [totalHours, setTotalHours] = useState(0);
+  const [inboundNeeded, setInboundNeeded] = useState(0);
+  const [workInputs, setWorkInputs] = useState(emptyWorkInputs);
+  const [calculatedOverrides, setCalculatedOverrides] = useState(
+    emptyCalculatedOverrides
+  );
   const [toast, setToast] = useState({ show: false, message: "" });
 
   const showToast = (message) => {
@@ -84,45 +162,126 @@ export default function StaffAllocation() {
     }, 2000);
   };
 
-  // Get Total Hours from Shift EOS Firestore document.
   useEffect(() => {
     const unsubscribe = onSnapshot(SHIFT_EOS_DOC, (snapshot) => {
       if (!snapshot.exists()) {
         setTotalHours(0);
+        setInboundNeeded(0);
         return;
       }
 
       const data = snapshot.data() || {};
-      setTotalHours(Number(data.totalHours) || 0);
+
+      const shiftTotalHours = Number(data.totalHours) || 0;
+      const targetProductivity = Number(data.targetProd) || 0;
+      const ambientInbound = Number(data.ambInbound) || 0;
+      const chillInbound = Number(data.chillInbound) || 0;
+      const freezerInbound = Number(data.freezerInbound) || 0;
+      const outstandingPick = Number(data.outstandingPick) || 0;
+      const ambientPick = Number(data.ambientPick) || 0;
+      const chillPick = Number(data.chillPick) || 0;
+      const freezerPick = Number(data.freezerPick) || 0;
+
+      const totalInbound =
+        ambientInbound + chillInbound + freezerInbound - outstandingPick;
+
+      const totalOutbound = ambientPick + chillPick + freezerPick;
+      const totalInboundOutbound = totalInbound + totalOutbound;
+
+      const calculatedInboundNeeded =
+        targetProductivity > 0
+          ? (targetProductivity / 1.13) * shiftTotalHours -
+            totalInboundOutbound
+          : 0;
+
+      setTotalHours(shiftTotalHours);
+      setInboundNeeded(Math.max(0, Math.round(calculatedInboundNeeded)));
     });
 
     return unsubscribe;
   }, []);
 
-  // Load Staff Allocation fields from Firestore on page open / refresh.
+  useEffect(() => {
+    const unsubscribe = onSnapshot(PICK_DOC, (snapshot) => {
+      if (!snapshot.exists()) return;
+
+      const data = snapshot.data() || {};
+
+      setWorkInputs((previous) => ({
+        ...previous,
+        ambientOutstanding:
+          previous.ambientOutstanding !== ""
+            ? previous.ambientOutstanding
+            : data.ambientOutstanding ?? "",
+        chillOutstanding:
+          previous.chillOutstanding !== ""
+            ? previous.chillOutstanding
+            : data.chillOutstanding ?? "",
+        ambientUPH:
+          previous.ambientUPH !== ""
+            ? previous.ambientUPH
+            : data.ambientUPH ?? "",
+        chillUPH:
+          previous.chillUPH !== ""
+            ? previous.chillUPH
+            : data.chillUPH ?? "",
+      }));
+    });
+
+    return unsubscribe;
+  }, []);
+
   useEffect(() => {
     const unsubscribe = onSnapshot(STAFF_ALLOCATION_DOC, (snapshot) => {
       if (!snapshot.exists()) {
         setAllocation(emptyAllocation);
+        setWorkInputs(emptyWorkInputs);
+        setCalculatedOverrides(emptyCalculatedOverrides);
         return;
       }
 
-      const savedData = snapshot.data() || {};
+      const data = snapshot.data() || {};
 
       setAllocation({
-        ambientPick: savedData.ambientPick ?? "",
-        chillPick: savedData.chillPick ?? "",
-        bagging: savedData.bagging ?? "",
-        baggingRunner: savedData.baggingRunner ?? "",
-        freezerPick: savedData.freezerPick ?? "",
-        freezerDecant: savedData.freezerDecant ?? "",
-        decant: savedData.decant ?? "",
-        mhe: savedData.mhe ?? "",
-        frameload: savedData.frameload ?? "",
-        bt: savedData.bt ?? "",
-        vanLoad: savedData.vanLoad ?? "",
-        dekit: savedData.dekit ?? "",
-        totalIC: savedData.totalIC ?? "",
+        baggingRunner: data.baggingRunner ?? 1,
+        freezerDecant: data.freezerDecant ?? 0,
+        mhe: data.mhe ?? 1,
+        frameload: data.frameload ?? 3,
+        bt: data.bt ?? 2,
+        vanLoad: data.vanLoad ?? 1,
+        dekit: data.dekit ?? 1,
+        totalIC: data.totalIC ?? 2,
+      });
+
+      setWorkInputs({
+        ambientOutstanding: data.ambientOutstanding ?? "",
+        chillOutstanding: data.chillOutstanding ?? "",
+        ambientUPH: data.ambientUPH ?? "",
+        chillUPH: data.chillUPH ?? "",
+        pickCompletionTime: data.pickCompletionTime ?? "",
+
+        baggingOutstanding: data.baggingOutstanding ?? "",
+        baggingUPH: data.baggingUPH ?? "",
+        baggingCompletionTime: data.baggingCompletionTime ?? "",
+
+        freezerOutstanding: data.freezerOutstanding ?? "",
+        freezerUPH: data.freezerUPH ?? "",
+        freezerCompletionTime: data.freezerCompletionTime ?? "",
+
+        inboundUPH: data.inboundUPH ?? "",
+        inboundCompletionTime: data.inboundCompletionTime ?? "",
+      });
+
+      setCalculatedOverrides({
+        ambientPick: data.ambientPickOverride ?? "",
+        chillPick: data.chillPickOverride ?? "",
+        bagging: data.baggingOverride ?? "",
+        totalPick: data.totalPickOverride ?? "",
+        freezerPick: data.freezerPickOverride ?? "",
+        totalFreezer: data.totalFreezerOverride ?? "",
+        decant: data.decantOverride ?? "",
+        totalInbound: data.totalInboundOverride ?? "",
+        totalDispatch: data.totalDispatchOverride ?? "",
       });
     });
 
@@ -130,89 +289,208 @@ export default function StaffAllocation() {
   }, []);
 
   const updateAllocation = (key, value) => {
-    if (value === "") {
-      setAllocation((previous) => ({
-        ...previous,
-        [key]: "",
-      }));
-      return;
-    }
-
-    const numericValue = Math.max(0, Number(value) || 0);
-
     setAllocation((previous) => ({
       ...previous,
-      [key]: numericValue,
+      [key]: value === "" ? "" : Math.max(0, Number(value) || 0),
     }));
   };
 
-  const totalPick = useMemo(() => {
-    return (
-      (Number(allocation.ambientPick) || 0) +
-      (Number(allocation.chillPick) || 0) +
-      (Number(allocation.bagging) || 0) +
-      (Number(allocation.baggingRunner) || 0)
-    );
-  }, [
-    allocation.ambientPick,
-    allocation.chillPick,
-    allocation.bagging,
-    allocation.baggingRunner,
-  ]);
+  const updateWorkInput = (key, value) => {
+    setWorkInputs((previous) => ({
+      ...previous,
+      [key]: value,
+    }));
+  };
 
-  const totalFreezer = useMemo(() => {
-    return (
-      (Number(allocation.freezerPick) || 0) +
-      (Number(allocation.freezerDecant) || 0)
-    );
-  }, [allocation.freezerPick, allocation.freezerDecant]);
+  const updateCalculatedOverride = (key, value) => {
+    setCalculatedOverrides((previous) => ({
+      ...previous,
+      [key]: value,
+    }));
+  };
 
-  const totalInbound = useMemo(() => {
-    return (Number(allocation.decant) || 0) + (Number(allocation.mhe) || 0);
-  }, [allocation.decant, allocation.mhe]);
+  const calculatedAmbientPick = useMemo(
+    () =>
+      calculateRequiredStaff(
+        workInputs.ambientOutstanding,
+        workInputs.ambientUPH,
+        workInputs.pickCompletionTime
+      ),
+    [
+      workInputs.ambientOutstanding,
+      workInputs.ambientUPH,
+      workInputs.pickCompletionTime,
+    ]
+  );
 
-  const totalDispatch = useMemo(() => {
-    return (
-      (Number(allocation.frameload) || 0) +
-      (Number(allocation.bt) || 0) +
-      (Number(allocation.vanLoad) || 0) +
-      (Number(allocation.dekit) || 0)
-    );
-  }, [
-    allocation.frameload,
-    allocation.bt,
-    allocation.vanLoad,
-    allocation.dekit,
-  ]);
+  const calculatedChillPick = useMemo(
+    () =>
+      calculateRequiredStaff(
+        workInputs.chillOutstanding,
+        workInputs.chillUPH,
+        workInputs.pickCompletionTime
+      ),
+    [
+      workInputs.chillOutstanding,
+      workInputs.chillUPH,
+      workInputs.pickCompletionTime,
+    ]
+  );
 
-  const totalAllocated = useMemo(() => {
-    return (
-      totalPick +
-      totalFreezer +
-      totalInbound +
-      totalDispatch +
-      (Number(allocation.totalIC) || 0)
-    );
-  }, [
-    totalPick,
-    totalFreezer,
-    totalInbound,
-    totalDispatch,
-    allocation.totalIC,
-  ]);
+  const calculatedBagging = useMemo(
+    () =>
+      calculateRequiredStaff(
+        workInputs.baggingOutstanding,
+        workInputs.baggingUPH,
+        workInputs.baggingCompletionTime
+      ),
+    [
+      workInputs.baggingOutstanding,
+      workInputs.baggingUPH,
+      workInputs.baggingCompletionTime,
+    ]
+  );
 
-  // Math.ceil rounds up, including decimal staffing calculations.
-  const maxAllocation = useMemo(() => {
-    return Math.ceil(totalHours / 10);
-  }, [totalHours]);
+  const calculatedFreezerPick = useMemo(
+    () =>
+      calculateRequiredStaff(
+        workInputs.freezerOutstanding,
+        workInputs.freezerUPH,
+        workInputs.freezerCompletionTime
+      ),
+    [
+      workInputs.freezerOutstanding,
+      workInputs.freezerUPH,
+      workInputs.freezerCompletionTime,
+    ]
+  );
 
-  const exceedsAllocation = maxAllocation > 0 && totalAllocated > maxAllocation;
+  const calculatedDecant = useMemo(
+    () =>
+      calculateRequiredStaff(
+        inboundNeeded,
+        workInputs.inboundUPH,
+        workInputs.inboundCompletionTime
+      ),
+    [inboundNeeded, workInputs.inboundUPH, workInputs.inboundCompletionTime]
+  );
+
+  const ambientPick = getNumber(
+    calculatedOverrides.ambientPick !== ""
+      ? calculatedOverrides.ambientPick
+      : calculatedAmbientPick
+  );
+
+  const chillPick = getNumber(
+    calculatedOverrides.chillPick !== ""
+      ? calculatedOverrides.chillPick
+      : calculatedChillPick
+  );
+
+  const bagging = getNumber(
+    calculatedOverrides.bagging !== ""
+      ? calculatedOverrides.bagging
+      : calculatedBagging
+  );
+
+  const freezerPick = getNumber(
+    calculatedOverrides.freezerPick !== ""
+      ? calculatedOverrides.freezerPick
+      : calculatedFreezerPick
+  );
+
+  const decant = getNumber(
+    calculatedOverrides.decant !== ""
+      ? calculatedOverrides.decant
+      : calculatedDecant
+  );
+
+  const calculatedTotalPick =
+    ambientPick +
+    chillPick +
+    bagging +
+    getNumber(allocation.baggingRunner);
+
+  const totalPick = getNumber(
+    calculatedOverrides.totalPick !== ""
+      ? calculatedOverrides.totalPick
+      : calculatedTotalPick
+  );
+
+  const calculatedTotalFreezer =
+    freezerPick + getNumber(allocation.freezerDecant);
+
+  const totalFreezer = getNumber(
+    calculatedOverrides.totalFreezer !== ""
+      ? calculatedOverrides.totalFreezer
+      : calculatedTotalFreezer
+  );
+
+  const calculatedTotalInbound = decant + getNumber(allocation.mhe);
+
+  const totalInbound = getNumber(
+    calculatedOverrides.totalInbound !== ""
+      ? calculatedOverrides.totalInbound
+      : calculatedTotalInbound
+  );
+
+  const calculatedTotalDispatch =
+    getNumber(allocation.frameload) +
+    getNumber(allocation.bt) +
+    getNumber(allocation.vanLoad) +
+    getNumber(allocation.dekit);
+
+  const totalDispatch = getNumber(
+    calculatedOverrides.totalDispatch !== ""
+      ? calculatedOverrides.totalDispatch
+      : calculatedTotalDispatch
+  );
+
+  const totalAllocated =
+    totalPick +
+    totalFreezer +
+    totalInbound +
+    totalDispatch +
+    getNumber(allocation.totalIC);
+
+  const maxAllocation = Math.ceil(totalHours / 10);
+
+  const exceedsAllocation =
+    maxAllocation > 0 && totalAllocated > maxAllocation;
 
   const calculatedValues = {
+    ambientPick,
+    chillPick,
+    bagging,
     totalPick,
+    freezerPick,
     totalFreezer,
+    decant,
     totalInbound,
     totalDispatch,
+  };
+
+  const editableValues = {
+    baggingRunner: allocation.baggingRunner,
+    freezerDecant: allocation.freezerDecant,
+    mhe: allocation.mhe,
+    frameload: allocation.frameload,
+    bt: allocation.bt,
+    vanLoad: allocation.vanLoad,
+    dekit: allocation.dekit,
+    totalIC: allocation.totalIC,
+  };
+
+  const overrideKeyMap = {
+    ambientPick: "ambientPick",
+    chillPick: "chillPick",
+    bagging: "bagging",
+    totalPick: "totalPick",
+    freezerPick: "freezerPick",
+    totalFreezer: "totalFreezer",
+    decant: "decant",
+    totalInbound: "totalInbound",
+    totalDispatch: "totalDispatch",
   };
 
   const saveAllocation = async () => {
@@ -220,19 +498,18 @@ export default function StaffAllocation() {
       await setDoc(
         STAFF_ALLOCATION_DOC,
         {
-          ambientPick: allocation.ambientPick,
-          chillPick: allocation.chillPick,
-          bagging: allocation.bagging,
-          baggingRunner: allocation.baggingRunner,
-          freezerPick: allocation.freezerPick,
-          freezerDecant: allocation.freezerDecant,
-          decant: allocation.decant,
-          mhe: allocation.mhe,
-          frameload: allocation.frameload,
-          bt: allocation.bt,
-          vanLoad: allocation.vanLoad,
-          dekit: allocation.dekit,
-          totalIC: allocation.totalIC,
+          ...editableValues,
+          ...workInputs,
+
+          ambientPickOverride: calculatedOverrides.ambientPick,
+          chillPickOverride: calculatedOverrides.chillPick,
+          baggingOverride: calculatedOverrides.bagging,
+          totalPickOverride: calculatedOverrides.totalPick,
+          freezerPickOverride: calculatedOverrides.freezerPick,
+          totalFreezerOverride: calculatedOverrides.totalFreezer,
+          decantOverride: calculatedOverrides.decant,
+          totalInboundOverride: calculatedOverrides.totalInbound,
+          totalDispatchOverride: calculatedOverrides.totalDispatch,
         },
         { merge: true }
       );
@@ -247,23 +524,24 @@ export default function StaffAllocation() {
   const clearAllocation = async () => {
     try {
       setAllocation(emptyAllocation);
+      setWorkInputs(emptyWorkInputs);
+      setCalculatedOverrides(emptyCalculatedOverrides);
 
       await setDoc(
         STAFF_ALLOCATION_DOC,
         {
-          ambientPick: "",
-          chillPick: "",
-          bagging: "",
-          baggingRunner: "",
-          freezerPick: "",
-          freezerDecant: "",
-          decant: "",
-          mhe: "",
-          frameload: "",
-          bt: "",
-          vanLoad: "",
-          dekit: "",
-          totalIC: "",
+          ...emptyAllocation,
+          ...emptyWorkInputs,
+
+          ambientPickOverride: "",
+          chillPickOverride: "",
+          baggingOverride: "",
+          totalPickOverride: "",
+          freezerPickOverride: "",
+          totalFreezerOverride: "",
+          decantOverride: "",
+          totalInboundOverride: "",
+          totalDispatchOverride: "",
         },
         { merge: true }
       );
@@ -273,6 +551,51 @@ export default function StaffAllocation() {
       console.error("Staff allocation clear error:", error);
       showToast("Could not clear Staff Allocation");
     }
+  };
+
+  const renderStaffCell = (subGroup) => {
+    if (subGroup.calculated) {
+      const overrideKey = overrideKeyMap[subGroup.key];
+      const currentOverride = calculatedOverrides[overrideKey];
+
+      return (
+        <td key={subGroup.key} className="staff-total-cell">
+          <input
+            type="number"
+            min="0"
+            inputMode="numeric"
+            aria-label={`${subGroup.label} allocation`}
+            value={
+              currentOverride !== ""
+                ? currentOverride
+                : calculatedValues[subGroup.key]
+            }
+            onChange={(event) =>
+              updateCalculatedOverride(overrideKey, event.target.value)
+            }
+            className="staff-allocation-input staff-calculated-input"
+          />
+        </td>
+      );
+    }
+
+    return (
+      <td key={subGroup.key}>
+        <input
+          id={`staff-${subGroup.key}`}
+          type="number"
+          min="0"
+          inputMode="numeric"
+          aria-label={subGroup.label}
+          value={editableValues[subGroup.key]}
+          onChange={(event) =>
+            updateAllocation(subGroup.key, event.target.value)
+          }
+          className="staff-allocation-input"
+          placeholder="0"
+        />
+      </td>
+    );
   };
 
   return (
@@ -340,37 +663,9 @@ export default function StaffAllocation() {
           </thead>
 
           <tbody>
-            <tr>
+            <tr className="staff-main-row">
               {staffGroups.flatMap((group) =>
-                group.subGroups.map((subGroup) => {
-                  if (subGroup.calculated) {
-                    return (
-                      <td key={subGroup.key} className="staff-total-cell">
-                        <span className="staff-calculated-value">
-                          {calculatedValues[subGroup.key]}
-                        </span>
-                      </td>
-                    );
-                  }
-
-                  return (
-                    <td key={subGroup.key}>
-                        <input
-                            id={`staff-${subGroup.key}`}
-                            type="number"
-                            min="0"
-                            inputMode="numeric"
-                            aria-label={subGroup.label}
-                            value={allocation[subGroup.key]}
-                            onChange={(event) =>
-                            updateAllocation(subGroup.key, event.target.value)
-                            }
-                            className="staff-allocation-input"
-                            placeholder="0"
-                        />
-                        </td>
-                  );
-                })
+                group.subGroups.map(renderStaffCell)
               )}
 
               <td
@@ -383,6 +678,227 @@ export default function StaffAllocation() {
                   <span>/ {maxAllocation}</span>
                 </div>
               </td>
+            </tr>
+
+            <tr className="staff-work-detail-row">
+              <th>Pick Outstanding</th>
+
+              <td>
+                <input
+                  type="number"
+                  min="0"
+                  aria-label="Ambient Outstanding"
+                  value={workInputs.ambientOutstanding}
+                  onChange={(event) =>
+                    updateWorkInput("ambientOutstanding", event.target.value)
+                  }
+                  className="staff-detail-input"
+                  placeholder="0"
+                />
+              </td>
+
+              <td>
+                <input
+                  type="number"
+                  min="0"
+                  aria-label="Chill Outstanding"
+                  value={workInputs.chillOutstanding}
+                  onChange={(event) =>
+                    updateWorkInput("chillOutstanding", event.target.value)
+                  }
+                  className="staff-detail-input"
+                  placeholder="0"
+                />
+              </td>
+
+              <th>Bagging Outstanding</th>
+
+              <td>
+                <input
+                  type="number"
+                  min="0"
+                  aria-label="Bagging Outstanding"
+                  value={workInputs.baggingOutstanding}
+                  onChange={(event) =>
+                    updateWorkInput("baggingOutstanding", event.target.value)
+                  }
+                  className="staff-detail-input"
+                  placeholder="0"
+                />
+              </td>
+
+              <th>Freezer Outstanding</th>
+
+              <td>
+                <input
+                  type="number"
+                  min="0"
+                  aria-label="Freezer Outstanding"
+                  value={workInputs.freezerOutstanding}
+                  onChange={(event) =>
+                    updateWorkInput("freezerOutstanding", event.target.value)
+                  }
+                  className="staff-detail-input"
+                  placeholder="0"
+                />
+              </td>
+
+              <th>Inbound Needed</th>
+
+              <td className="staff-detail-value">{inboundNeeded}</td>
+
+              <td colSpan="9"></td>
+            </tr>
+
+            <tr className="staff-work-detail-row">
+              <th>Pick UPH</th>
+
+              <td>
+                <input
+                  type="number"
+                  min="0"
+                  aria-label="Ambient UPH"
+                  value={workInputs.ambientUPH}
+                  onChange={(event) =>
+                    updateWorkInput("ambientUPH", event.target.value)
+                  }
+                  className="staff-detail-input"
+                  placeholder="0"
+                />
+              </td>
+
+              <td>
+                <input
+                  type="number"
+                  min="0"
+                  aria-label="Chill UPH"
+                  value={workInputs.chillUPH}
+                  onChange={(event) =>
+                    updateWorkInput("chillUPH", event.target.value)
+                  }
+                  className="staff-detail-input"
+                  placeholder="0"
+                />
+              </td>
+
+              <th>Bagging UPH</th>
+
+              <td>
+                <input
+                  type="number"
+                  min="0"
+                  aria-label="Bagging UPH"
+                  value={workInputs.baggingUPH}
+                  onChange={(event) =>
+                    updateWorkInput("baggingUPH", event.target.value)
+                  }
+                  className="staff-detail-input"
+                  placeholder="0"
+                />
+              </td>
+
+              <th>Freezer UPH</th>
+
+              <td>
+                <input
+                  type="number"
+                  min="0"
+                  aria-label="Freezer UPH"
+                  value={workInputs.freezerUPH}
+                  onChange={(event) =>
+                    updateWorkInput("freezerUPH", event.target.value)
+                  }
+                  className="staff-detail-input"
+                  placeholder="0"
+                />
+              </td>
+
+              <th>Inbound UPH</th>
+
+              <td>
+                <input
+                  type="number"
+                  min="0"
+                  aria-label="Inbound UPH"
+                  value={workInputs.inboundUPH}
+                  onChange={(event) =>
+                    updateWorkInput("inboundUPH", event.target.value)
+                  }
+                  className="staff-detail-input"
+                  placeholder="0"
+                />
+              </td>
+
+              <td colSpan="9"></td>
+            </tr>
+
+            <tr className="staff-work-detail-row">
+              <th>Pick Completion</th>
+
+              <td colSpan="2">
+                <input
+                  type="time"
+                  aria-label="Pick Completion Time"
+                  value={workInputs.pickCompletionTime}
+                  onChange={(event) =>
+                    updateWorkInput("pickCompletionTime", event.target.value)
+                  }
+                  className="staff-time-input"
+                />
+              </td>
+
+              <th>Bagging Completion</th>
+
+              <td colSpan="2">
+                <input
+                  type="time"
+                  aria-label="Bagging Completion Time"
+                  value={workInputs.baggingCompletionTime}
+                  onChange={(event) =>
+                    updateWorkInput(
+                      "baggingCompletionTime",
+                      event.target.value
+                    )
+                  }
+                  className="staff-time-input"
+                />
+              </td>
+
+              <th>Freezer Completion</th>
+
+              <td colSpan="2">
+                <input
+                  type="time"
+                  aria-label="Freezer Completion Time"
+                  value={workInputs.freezerCompletionTime}
+                  onChange={(event) =>
+                    updateWorkInput(
+                      "freezerCompletionTime",
+                      event.target.value
+                    )
+                  }
+                  className="staff-time-input"
+                />
+              </td>
+
+              <th>Inbound Completion</th>
+
+              <td colSpan="2">
+                <input
+                  type="time"
+                  aria-label="Inbound Completion Time"
+                  value={workInputs.inboundCompletionTime}
+                  onChange={(event) =>
+                    updateWorkInput(
+                      "inboundCompletionTime",
+                      event.target.value
+                    )
+                  }
+                  className="staff-time-input"
+                />
+              </td>
+
+              <td colSpan="6"></td>
             </tr>
           </tbody>
         </table>
