@@ -98,18 +98,43 @@ export default function ShiftEOSCard() {
 
   const targetClass = "prod-green";
 
-  const saveShiftStaffing = async () => {
-    const numericRows = shiftData.map((row) => ({
-      department: row.department,
-      present: parseInt(row.present) || 0,
-      absent: parseInt(row.absent) || 0,
-      vto: parseFloat(row.vto) || 0,
-      ot: parseFloat(row.ot) || 0,
-    }));
+const saveShiftStaffing = async () => {
+  const numericRows = shiftData.map((row) => ({
+    department: row.department,
+    present: parseInt(row.present) || 0,
+    absent: parseInt(row.absent) || 0,
+    vto: parseFloat(row.vto) || 0,
+    ot: parseFloat(row.ot) || 0,
+  }));
 
-    await setDoc(SHIFT_EOS_DOC, { shiftData: numericRows }, { merge: true });
-    showToast("Hours Saved");
-  };
+  const savedTotalPresent = numericRows.reduce(
+    (sum, row) => sum + (parseInt(row.present) || 0),
+    0
+  );
+
+  const savedTotalVTO = numericRows.reduce(
+    (sum, row) => sum + (parseFloat(row.vto) || 0),
+    0
+  );
+
+  const savedTotalOT = numericRows.reduce(
+    (sum, row) => sum + (parseFloat(row.ot) || 0),
+    0
+  );
+
+  const savedTotalHours = savedTotalPresent * 10 + savedTotalOT - savedTotalVTO;
+
+  await setDoc(
+    SHIFT_EOS_DOC,
+    {
+      shiftData: numericRows,
+      totalHours: savedTotalHours,
+    },
+    { merge: true }
+  );
+
+  showToast("Hours Saved");
+};
 
   const saveInboundOutbound = async () => {
     await setDoc(

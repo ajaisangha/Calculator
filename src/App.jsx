@@ -9,6 +9,7 @@ import PickAndBaggedCombinedCard from "./PickCard";
 import ShiftEOSCard from "./ShiftEOSCard";
 import FrameloadFreezer from "./FrameloadFreezer";
 import BarcodeCard from "./Barcode";
+import StaffAllocation from "./staffallocation";
 import { Carousel } from "react-responsive-carousel";
 import "react-responsive-carousel/lib/styles/carousel.min.css";
 
@@ -331,6 +332,9 @@ const deleteConsignment = async (consignment) => {
                 <button onClick={() => setSlideIndex(5)} className={slideIndex === 5 ? "active" : ""}>
                   Barcode Generator
                 </button>
+                <button onClick={() => setSlideIndex(6)} className={slideIndex === 6 ? "active" : ""}>
+                  Staff Allocation
+                </button>
               </nav>
             </aside>
 
@@ -398,6 +402,11 @@ const deleteConsignment = async (consignment) => {
                   <div className="carousel-slide">
                     <div className="slide-scroll-area">
                       <BarcodeCard />
+                    </div>
+                  </div>
+                  <div className="carousel-slide">
+                    <div className="slide-scroll-area">
+                      <StaffAllocation />
                     </div>
                   </div>
                 </Carousel>
