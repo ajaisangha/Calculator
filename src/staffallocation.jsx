@@ -8,54 +8,6 @@ const SHIFT_EOS_DOC = doc(db, "totes", "shiftEOS");
 const PICK_DOC = doc(db, "totes", "pickCalculator");
 const STAFF_ALLOCATION_DOC = doc(db, "totes", "staffAllocation");
 
-const staffGroups = [
-  {
-    name: "Pick",
-    className: "pick-group",
-    subGroups: [
-      { key: "ambientPick", label: "Ambient Pick", calculated: true },
-      { key: "chillPick", label: "Chill Pick", calculated: true },
-      { key: "bagging", label: "Bagging", calculated: true },
-      { key: "baggingRunner", label: "Bagging Runner", editable: true },
-      { key: "totalPick", label: "Total Pick", calculated: true },
-    ],
-  },
-  {
-    name: "Freezer",
-    className: "freezer-group",
-    subGroups: [
-      { key: "freezerPick", label: "Freezer Pick", calculated: true },
-      { key: "freezerDecant", label: "Freezer Decant", editable: true },
-      { key: "totalFreezer", label: "Total Freezer", calculated: true },
-    ],
-  },
-  {
-    name: "Inbound",
-    className: "inbound-group",
-    subGroups: [
-      { key: "decant", label: "Decant", calculated: true },
-      { key: "mhe", label: "MHE", editable: true },
-      { key: "totalInbound", label: "Total Inbound", calculated: true },
-    ],
-  },
-  {
-    name: "Dispatch",
-    className: "dispatch-group",
-    subGroups: [
-      { key: "frameload", label: "Frameload", editable: true },
-      { key: "bt", label: "BT", editable: true },
-      { key: "vanLoad", label: "Van Load", editable: true },
-      { key: "dekit", label: "Dekit", editable: true },
-      { key: "totalDispatch", label: "Total Dispatch", calculated: true },
-    ],
-  },
-  {
-    name: "IC",
-    className: "ic-group",
-    subGroups: [{ key: "totalIC", label: "Total IC", editable: true }],
-  },
-];
-
 const emptyAllocation = {
   baggingRunner: 1,
   freezerDecant: 0,
@@ -74,17 +26,14 @@ const emptyWorkInputs = {
   chillUPH: "",
   pickBreakMinutes: "",
   pickCompletionTime: "",
-
   baggingOutstanding: "",
   baggingUPH: "",
   baggingBreakMinutes: "",
   baggingCompletionTime: "",
-
   freezerOutstanding: "",
   freezerUPH: "",
   freezerBreakMinutes: "",
   freezerCompletionTime: "",
-
   inboundUPH: "",
   inboundBreakMinutes: "",
   inboundCompletionTime: "",
@@ -139,6 +88,49 @@ function calculateRequiredStaff(outstanding, uph, completionTime, breakMinutes) 
   return Math.ceil(totalOutstanding / (rate * hoursLeft));
 }
 
+function NumberField({
+  label,
+  value,
+  onChange,
+  readOnly = false,
+  calculated = false,
+  placeholder = "0",
+}) {
+  return (
+    <label className="staff-field">
+      <span className="staff-field-label">{label}</span>
+
+      <input
+        type="number"
+        min="0"
+        inputMode="numeric"
+        value={value}
+        onChange={onChange}
+        readOnly={readOnly}
+        placeholder={placeholder}
+        className={`staff-field-input ${
+          calculated ? "staff-field-calculated" : ""
+        } ${readOnly ? "staff-readonly-input" : ""}`}
+      />
+    </label>
+  );
+}
+
+function TimeField({ label, value, onChange }) {
+  return (
+    <label className="staff-field">
+      <span className="staff-field-label">{label}</span>
+
+      <input
+        type="time"
+        value={value}
+        onChange={onChange}
+        className="staff-field-input staff-time-input"
+      />
+    </label>
+  );
+}
+
 export default function StaffAllocation() {
   const [allocation, setAllocation] = useState(emptyAllocation);
   const [totalHours, setTotalHours] = useState(0);
@@ -149,11 +141,29 @@ export default function StaffAllocation() {
   const initializedFromFirestore = useRef(false);
   const editedWorkInputKeys = useRef(new Set());
   const editedAllocationKeys = useRef(new Set());
+  const toastTimerRef = useRef(null);
+  const shownShortfallRef = useRef("");
 
   const showToast = (message) => {
+    if (toastTimerRef.current) {
+      clearTimeout(toastTimerRef.current);
+    }
+
     setToast({ show: true, message });
-    setTimeout(() => setToast({ show: false, message: "" }), 2000);
+
+    toastTimerRef.current = setTimeout(() => {
+      setToast({ show: false, message: "" });
+      toastTimerRef.current = null;
+    }, 2500);
   };
+
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) {
+        clearTimeout(toastTimerRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const unsubscribe = onSnapshot(SHIFT_EOS_DOC, (snapshot) => {
@@ -217,17 +227,14 @@ export default function StaffAllocation() {
           chillUPH: data.chillUPH ?? "",
           pickBreakMinutes: data.pickBreakMinutes ?? "",
           pickCompletionTime: data.pickCompletionTime ?? "",
-
           baggingOutstanding: data.baggingOutstanding ?? "",
           baggingUPH: data.baggingUPH ?? "",
           baggingBreakMinutes: data.baggingBreakMinutes ?? "",
           baggingCompletionTime: data.baggingCompletionTime ?? "",
-
           freezerOutstanding: data.freezerOutstanding ?? "",
           freezerUPH: data.freezerUPH ?? "",
           freezerBreakMinutes: data.freezerBreakMinutes ?? "",
           freezerCompletionTime: data.freezerCompletionTime ?? "",
-
           inboundUPH: data.inboundUPH ?? "",
           inboundBreakMinutes: data.inboundBreakMinutes ?? "",
           inboundCompletionTime: data.inboundCompletionTime ?? "",
@@ -471,27 +478,30 @@ export default function StaffAllocation() {
     allocation.freezerDecant,
   ]);
 
-  const ambientPick = staffAllocationPlan.ambientPick;
-  const chillPick = staffAllocationPlan.chillPick;
-  const bagging = staffAllocationPlan.bagging;
-  const baggingRunner = staffAllocationPlan.baggingRunner;
-  const freezerPick = staffAllocationPlan.freezerPick;
-  const freezerDecant = staffAllocationPlan.freezerDecant;
-  const decant = staffAllocationPlan.decant;
-  const mhe = staffAllocationPlan.mhe;
-  const frameload = staffAllocationPlan.frameload;
-  const bt = staffAllocationPlan.bt;
-  const vanLoad = staffAllocationPlan.vanLoad;
-  const dekit = staffAllocationPlan.dekit;
-  const totalIC = staffAllocationPlan.totalIC;
+  const totalPick =
+    staffAllocationPlan.ambientPick +
+    staffAllocationPlan.chillPick +
+    staffAllocationPlan.bagging +
+    staffAllocationPlan.baggingRunner;
 
-  const totalPick = ambientPick + chillPick + bagging + baggingRunner;
-  const totalFreezer = freezerPick + freezerDecant;
-  const totalInbound = decant + mhe;
-  const totalDispatch = frameload + bt + vanLoad + dekit;
+  const totalFreezer =
+    staffAllocationPlan.freezerPick + staffAllocationPlan.freezerDecant;
+
+  const totalInbound =
+    staffAllocationPlan.decant + staffAllocationPlan.mhe;
+
+  const totalDispatch =
+    staffAllocationPlan.frameload +
+    staffAllocationPlan.bt +
+    staffAllocationPlan.vanLoad +
+    staffAllocationPlan.dekit;
 
   const totalAllocated =
-    totalPick + totalFreezer + totalInbound + totalDispatch + totalIC;
+    totalPick +
+    totalFreezer +
+    totalInbound +
+    totalDispatch +
+    staffAllocationPlan.totalIC;
 
   const totalRequested =
     calculatedAmbientPick +
@@ -510,43 +520,30 @@ export default function StaffAllocation() {
 
   const shortfall = Math.max(0, totalRequested - totalAllocated);
 
-  const calculatedValues = {
-    ambientPick,
-    chillPick,
-    bagging,
-    baggingRunner,
-    totalPick,
-    freezerPick,
-    freezerDecant,
-    totalFreezer,
-    decant,
-    mhe,
-    totalInbound,
-    frameload,
-    bt,
-    vanLoad,
-    dekit,
-    totalDispatch,
-    totalIC,
-  };
+  useEffect(() => {
+    if (shortfall <= 0) {
+      shownShortfallRef.current = "";
+      return;
+    }
 
-  const editableValues = {
-    baggingRunner: allocation.baggingRunner,
-    freezerDecant: allocation.freezerDecant,
-    mhe: allocation.mhe,
-    frameload: allocation.frameload,
-    bt: allocation.bt,
-    vanLoad: allocation.vanLoad,
-    dekit: allocation.dekit,
-    totalIC: allocation.totalIC,
-  };
+    const warningMessage =
+      `Staffing requirement is higher than available teammates. ` +
+      `Shortfall: ${shortfall}.`;
+
+    if (shownShortfallRef.current === warningMessage) {
+      return;
+    }
+
+    shownShortfallRef.current = warningMessage;
+    showToast(warningMessage);
+  }, [shortfall]);
 
   const saveAllocation = async () => {
     try {
       await setDoc(
         STAFF_ALLOCATION_DOC,
         {
-          ...editableValues,
+          ...allocation,
           ...workInputs,
         },
         { merge: true }
@@ -564,6 +561,7 @@ export default function StaffAllocation() {
       initializedFromFirestore.current = false;
       editedWorkInputKeys.current = new Set();
       editedAllocationKeys.current = new Set();
+      shownShortfallRef.current = "";
 
       setAllocation(emptyAllocation);
       setWorkInputs(emptyWorkInputs);
@@ -584,438 +582,374 @@ export default function StaffAllocation() {
     }
   };
 
-  const renderStaffCell = (subGroup) => {
-    const allocationValue = calculatedValues[subGroup.key] ?? 0;
-
-    if (subGroup.calculated) {
-      return (
-        <td key={subGroup.key} className="staff-total-cell">
-          <input
-            type="number"
-            value={allocationValue}
-            readOnly
-            aria-label={`${subGroup.label} calculated allocation`}
-            className="staff-allocation-input staff-calculated-input staff-readonly-input"
-          />
-        </td>
-      );
-    }
-
-    return (
-      <td key={subGroup.key}>
-        <input
-          id={`staff-${subGroup.key}`}
-          type="number"
-          min="0"
-          inputMode="numeric"
-          aria-label={subGroup.label}
-          value={editableValues[subGroup.key]}
-          onChange={(event) =>
-            updateAllocation(subGroup.key, event.target.value)
-          }
-          className="staff-allocation-input"
-          placeholder="0"
-        />
-      </td>
-    );
-  };
-
   return (
     <section className="data-card staff-allocation-card">
       <h2 className="data-title">Staff Allocation</h2>
 
-      <div className="staff-allocation-limit">
-        <div>
-          <span>Shift EOS Total Hours</span>
-          <strong>{totalHours.toFixed(2)}</strong>
+      <div className="staff-allocation-top-row">
+        <div className="staff-allocation-limit">
+          <div>
+            <span>Shift EOS Total Hours</span>
+            <strong>{totalHours.toFixed(2)}</strong>
+          </div>
+
+          <div>
+            <span>Available Teammates</span>
+            <strong>{maxAllocation}</strong>
+          </div>
+
+          <div className={shortfall > 0 ? "allocation-over-limit" : ""}>
+            <span>Allocated Teammates</span>
+            <strong>{totalAllocated}</strong>
+          </div>
+
+          <div
+            className={
+              staffAllocationPlan.remaining > 0
+                ? ""
+                : "allocation-over-limit"
+            }
+          >
+            <span>Remaining Teammates</span>
+            <strong>{staffAllocationPlan.remaining}</strong>
+          </div>
         </div>
 
-        <div>
-          <span>Available Teammates</span>
-          <strong>{maxAllocation}</strong>
-        </div>
+        <div className="staff-allocation-actions staff-allocation-top-actions">
+          <button className="calculate-btn" onClick={saveAllocation}>
+            Save
+          </button>
 
-        <div className={shortfall > 0 ? "allocation-over-limit" : ""}>
-          <span>Allocated Teammates</span>
-          <strong>{totalAllocated}</strong>
-        </div>
-
-        <div
-          className={
-            staffAllocationPlan.remaining > 0
-              ? ""
-              : "allocation-over-limit"
-          }
-        >
-          <span>Remaining Teammates</span>
-          <strong>{staffAllocationPlan.remaining}</strong>
+          <button className="clear-btn" onClick={clearAllocation}>
+            Clear
+          </button>
         </div>
       </div>
 
-      {shortfall > 0 && (
-        <p className="allocation-warning">
-          Staffing requirement is higher than available teammates. Shortfall:{" "}
-          {shortfall}.
-        </p>
-      )}
+      <div className="staff-allocation-grid">
+        <section className="staff-group-card pick-card">
+          <div className="staff-group-card-header">
+            <h3>Pick</h3>
+            <span>Total: {totalPick}</span>
+          </div>
 
-      <div className="staff-allocation-table-wrap">
-        <table className="staff-allocation-table">
-          <thead>
-            <tr>
-              {staffGroups.map((group) => (
-                <th
-                  key={group.name}
-                  colSpan={group.subGroups.length}
-                  className={`staff-group-header ${group.className}`}
-                >
-                  {group.name}
-                </th>
-              ))}
+          <div className="staff-fields-grid staff-pick-allocation-row">
+            <NumberField
+              label="Ambient Pick"
+              value={staffAllocationPlan.ambientPick}
+              readOnly
+              calculated
+            />
 
-              <th className="staff-group-header total-group">Total</th>
-            </tr>
+            <NumberField
+              label="Chill Pick"
+              value={staffAllocationPlan.chillPick}
+              readOnly
+              calculated
+            />
 
-            <tr>
-              {staffGroups.flatMap((group) =>
-                group.subGroups.map((subGroup) => (
-                  <th
-                    key={subGroup.key}
-                    className={`staff-subgroup-header ${
-                      subGroup.calculated ? "staff-total-header" : ""
-                    }`}
-                  >
-                    {subGroup.label}
-                  </th>
-                ))
-              )}
+            <NumberField
+              label="Bagging"
+              value={staffAllocationPlan.bagging}
+              readOnly
+              calculated
+            />
 
-              <th className="staff-subgroup-header staff-total-header">
-                Total Allocation
-              </th>
-            </tr>
-          </thead>
+            <NumberField
+              label="Bagging Runner"
+              value={allocation.baggingRunner}
+              onChange={(event) =>
+                updateAllocation("baggingRunner", event.target.value)
+              }
+            />
+          </div>
 
-          <tbody>
-            <tr className="staff-main-row">
-              {staffGroups.flatMap((group) =>
-                group.subGroups.map(renderStaffCell)
-              )}
+          <div className="staff-group-divider">
+            Pick workload details
+          </div>
 
-              <td className="staff-total-cell">
-                <div className="staff-final-total">
-                  <strong>{totalAllocated}</strong>
-                  <span>/ {maxAllocation}</span>
-                </div>
-              </td>
-            </tr>
+          <div className="staff-fields-grid">
+            <NumberField
+              label="Ambient Outstanding"
+              value={workInputs.ambientOutstanding}
+              onChange={(event) =>
+                updateWorkInput("ambientOutstanding", event.target.value)
+              }
+            />
 
-            <tr className="staff-work-detail-row">
-              <th>Ambient Outstanding</th>
+            <NumberField
+              label="Chill Outstanding"
+              value={workInputs.chillOutstanding}
+              onChange={(event) =>
+                updateWorkInput("chillOutstanding", event.target.value)
+              }
+            />
 
-              <td colSpan="2">
-                <input
-                  type="number"
-                  min="0"
-                  aria-label="Ambient Outstanding"
-                  value={workInputs.ambientOutstanding}
-                  onChange={(event) =>
-                    updateWorkInput("ambientOutstanding", event.target.value)
-                  }
-                  className="staff-wide-detail-input"
-                  placeholder="0"
-                />
-              </td>
+            <NumberField
+              label="Ambient UPH"
+              value={workInputs.ambientUPH}
+              onChange={(event) =>
+                updateWorkInput("ambientUPH", event.target.value)
+              }
+            />
 
-              <th>Chill Outstanding</th>
+            <NumberField
+              label="Chill UPH"
+              value={workInputs.chillUPH}
+              onChange={(event) =>
+                updateWorkInput("chillUPH", event.target.value)
+              }
+            />
 
-              <td colSpan="2">
-                <input
-                  type="number"
-                  min="0"
-                  aria-label="Chill Outstanding"
-                  value={workInputs.chillOutstanding}
-                  onChange={(event) =>
-                    updateWorkInput("chillOutstanding", event.target.value)
-                  }
-                  className="staff-wide-detail-input"
-                  placeholder="0"
-                />
-              </td>
+            <NumberField
+              label="Pick Break (min)"
+              value={workInputs.pickBreakMinutes}
+              onChange={(event) =>
+                updateWorkInput("pickBreakMinutes", event.target.value)
+              }
+              placeholder="Minutes"
+            />
 
-              <th>Bagging Outstanding</th>
+            <TimeField
+              label="Pick Completion"
+              value={workInputs.pickCompletionTime}
+              onChange={(event) =>
+                updateWorkInput("pickCompletionTime", event.target.value)
+              }
+            />
+          </div>
 
-              <td colSpan="2">
-                <input
-                  type="number"
-                  min="0"
-                  aria-label="Bagging Outstanding"
-                  value={workInputs.baggingOutstanding}
-                  onChange={(event) =>
-                    updateWorkInput("baggingOutstanding", event.target.value)
-                  }
-                  className="staff-wide-detail-input"
-                  placeholder="0"
-                />
-              </td>
+          <div className="staff-group-divider">
+            Bagging workload details
+          </div>
 
-              <th>Freezer Outstanding</th>
+          <div className="staff-fields-grid">
+            <NumberField
+              label="Bagging Outstanding"
+              value={workInputs.baggingOutstanding}
+              onChange={(event) =>
+                updateWorkInput("baggingOutstanding", event.target.value)
+              }
+            />
 
-              <td colSpan="2">
-                <input
-                  type="number"
-                  min="0"
-                  aria-label="Freezer Outstanding"
-                  value={workInputs.freezerOutstanding}
-                  onChange={(event) =>
-                    updateWorkInput("freezerOutstanding", event.target.value)
-                  }
-                  className="staff-wide-detail-input"
-                  placeholder="0"
-                />
-              </td>
+            <NumberField
+              label="Bagging UPH"
+              value={workInputs.baggingUPH}
+              onChange={(event) =>
+                updateWorkInput("baggingUPH", event.target.value)
+              }
+            />
 
-              <th>Inbound Needed</th>
+            <NumberField
+              label="Bagging Break (min)"
+              value={workInputs.baggingBreakMinutes}
+              onChange={(event) =>
+                updateWorkInput("baggingBreakMinutes", event.target.value)
+              }
+              placeholder="Minutes"
+            />
 
-              <td colSpan="2" className="staff-detail-value-cell">
-                <span className="staff-detail-value">{inboundNeeded}</span>
-              </td>
+            <TimeField
+              label="Bagging Completion"
+              value={workInputs.baggingCompletionTime}
+              onChange={(event) =>
+                updateWorkInput(
+                  "baggingCompletionTime",
+                  event.target.value
+                )
+              }
+            />
+          </div>
+        </section>
 
-              <td colSpan="2"></td>
-            </tr>
+        <section className="staff-group-card freezer-card">
+          <div className="staff-group-card-header">
+            <h3>Freezer</h3>
+            <span>Total: {totalFreezer}</span>
+          </div>
 
-            <tr className="staff-work-detail-row">
-              <th>Ambient UPH</th>
+          <div className="staff-fields-grid">
+            <NumberField
+              label="Freezer Pick"
+              value={staffAllocationPlan.freezerPick}
+              readOnly
+              calculated
+            />
 
-              <td colSpan="2">
-                <input
-                  type="number"
-                  min="0"
-                  aria-label="Ambient UPH"
-                  value={workInputs.ambientUPH}
-                  onChange={(event) =>
-                    updateWorkInput("ambientUPH", event.target.value)
-                  }
-                  className="staff-wide-detail-input"
-                  placeholder="0"
-                />
-              </td>
+            <NumberField
+              label="Freezer Decant"
+              value={allocation.freezerDecant}
+              onChange={(event) =>
+                updateAllocation("freezerDecant", event.target.value)
+              }
+            />
+          </div>
 
-              <th>Chill UPH</th>
+          <div className="staff-group-divider">
+            Freezer workload details
+          </div>
 
-              <td colSpan="2">
-                <input
-                  type="number"
-                  min="0"
-                  aria-label="Chill UPH"
-                  value={workInputs.chillUPH}
-                  onChange={(event) =>
-                    updateWorkInput("chillUPH", event.target.value)
-                  }
-                  className="staff-wide-detail-input"
-                  placeholder="0"
-                />
-              </td>
+          <div className="staff-fields-grid">
+            <NumberField
+              label="Outstanding Picks"
+              value={workInputs.freezerOutstanding}
+              onChange={(event) =>
+                updateWorkInput("freezerOutstanding", event.target.value)
+              }
+            />
 
-              <th>Bagging UPH</th>
+            <NumberField
+              label="Freezer UPH"
+              value={workInputs.freezerUPH}
+              onChange={(event) =>
+                updateWorkInput("freezerUPH", event.target.value)
+              }
+            />
 
-              <td colSpan="2">
-                <input
-                  type="number"
-                  min="0"
-                  aria-label="Bagging UPH"
-                  value={workInputs.baggingUPH}
-                  onChange={(event) =>
-                    updateWorkInput("baggingUPH", event.target.value)
-                  }
-                  className="staff-wide-detail-input"
-                  placeholder="0"
-                />
-              </td>
+            <NumberField
+              label="Break (min)"
+              value={workInputs.freezerBreakMinutes}
+              onChange={(event) =>
+                updateWorkInput("freezerBreakMinutes", event.target.value)
+              }
+              placeholder="Minutes"
+            />
 
-              <th>Freezer UPH</th>
+            <TimeField
+              label="Completion"
+              value={workInputs.freezerCompletionTime}
+              onChange={(event) =>
+                updateWorkInput(
+                  "freezerCompletionTime",
+                  event.target.value
+                )
+              }
+            />
+          </div>
+        </section>
 
-              <td colSpan="2">
-                <input
-                  type="number"
-                  min="0"
-                  aria-label="Freezer UPH"
-                  value={workInputs.freezerUPH}
-                  onChange={(event) =>
-                    updateWorkInput("freezerUPH", event.target.value)
-                  }
-                  className="staff-wide-detail-input"
-                  placeholder="0"
-                />
-              </td>
+        <section className="staff-group-card inbound-card">
+          <div className="staff-group-card-header">
+            <h3>Inbound</h3>
+            <span>Total: {totalInbound}</span>
+          </div>
 
-              <th>Inbound UPH</th>
+          <div className="staff-fields-grid">
+            <NumberField
+              label="Decant"
+              value={staffAllocationPlan.decant}
+              readOnly
+              calculated
+            />
 
-              <td colSpan="2">
-                <input
-                  type="number"
-                  min="0"
-                  aria-label="Inbound UPH"
-                  value={workInputs.inboundUPH}
-                  onChange={(event) =>
-                    updateWorkInput("inboundUPH", event.target.value)
-                  }
-                  className="staff-wide-detail-input"
-                  placeholder="0"
-                />
-              </td>
+            <NumberField
+              label="MHE"
+              value={allocation.mhe}
+              onChange={(event) =>
+                updateAllocation("mhe", event.target.value)
+              }
+            />
+          </div>
 
-              <td colSpan="2"></td>
-            </tr>
+          <div className="staff-group-divider">
+            Inbound workload details
+          </div>
 
-            <tr className="staff-work-detail-row">
-              <th>Pick Break</th>
+          <div className="staff-fields-grid">
+            <NumberField
+              label="Inbound Needed"
+              value={inboundNeeded}
+              readOnly
+              calculated
+            />
 
-              <td colSpan="5">
-                <input
-                  type="number"
-                  min="0"
-                  aria-label="Pick Break Minutes"
-                  value={workInputs.pickBreakMinutes}
-                  onChange={(event) =>
-                    updateWorkInput("pickBreakMinutes", event.target.value)
-                  }
-                  className="staff-break-input"
-                  placeholder="Minutes"
-                />
-              </td>
+            <NumberField
+              label="Inbound UPH"
+              value={workInputs.inboundUPH}
+              onChange={(event) =>
+                updateWorkInput("inboundUPH", event.target.value)
+              }
+            />
 
-              <th>Bagging Break</th>
+            <NumberField
+              label="Break (min)"
+              value={workInputs.inboundBreakMinutes}
+              onChange={(event) =>
+                updateWorkInput("inboundBreakMinutes", event.target.value)
+              }
+              placeholder="Minutes"
+            />
 
-              <td colSpan="2">
-                <input
-                  type="number"
-                  min="0"
-                  aria-label="Bagging Break Minutes"
-                  value={workInputs.baggingBreakMinutes}
-                  onChange={(event) =>
-                    updateWorkInput("baggingBreakMinutes", event.target.value)
-                  }
-                  className="staff-break-input"
-                  placeholder="Minutes"
-                />
-              </td>
+            <TimeField
+              label="Completion"
+              value={workInputs.inboundCompletionTime}
+              onChange={(event) =>
+                updateWorkInput(
+                  "inboundCompletionTime",
+                  event.target.value
+                )
+              }
+            />
+          </div>
+        </section>
 
-              <th>Freezer Break</th>
+        <section className="staff-group-card dispatch-card">
+          <div className="staff-group-card-header">
+            <h3>Dispatch</h3>
+            <span>Total: {totalDispatch}</span>
+          </div>
 
-              <td colSpan="2">
-                <input
-                  type="number"
-                  min="0"
-                  aria-label="Freezer Break Minutes"
-                  value={workInputs.freezerBreakMinutes}
-                  onChange={(event) =>
-                    updateWorkInput("freezerBreakMinutes", event.target.value)
-                  }
-                  className="staff-break-input"
-                  placeholder="Minutes"
-                />
-              </td>
+          <div className="staff-fields-grid">
+            <NumberField
+              label="Frameload"
+              value={allocation.frameload}
+              onChange={(event) =>
+                updateAllocation("frameload", event.target.value)
+              }
+            />
 
-              <th>Inbound Break</th>
+            <NumberField
+              label="BT"
+              value={allocation.bt}
+              onChange={(event) =>
+                updateAllocation("bt", event.target.value)
+              }
+            />
 
-              <td colSpan="2">
-                <input
-                  type="number"
-                  min="0"
-                  aria-label="Inbound Break Minutes"
-                  value={workInputs.inboundBreakMinutes}
-                  onChange={(event) =>
-                    updateWorkInput("inboundBreakMinutes", event.target.value)
-                  }
-                  className="staff-break-input"
-                  placeholder="Minutes"
-                />
-              </td>
+            <NumberField
+              label="Van Load"
+              value={allocation.vanLoad}
+              onChange={(event) =>
+                updateAllocation("vanLoad", event.target.value)
+              }
+            />
 
-              <td colSpan="2"></td>
-            </tr>
+            <NumberField
+              label="Dekit"
+              value={allocation.dekit}
+              onChange={(event) =>
+                updateAllocation("dekit", event.target.value)
+              }
+            />
+          </div>
+        </section>
 
-            <tr className="staff-work-detail-row">
-              <th>Pick Completion</th>
+        <section className="staff-group-card ic-card">
+          <div className="staff-group-card-header">
+            <h3>IC</h3>
+            <span>Total: {staffAllocationPlan.totalIC}</span>
+          </div>
 
-              <td colSpan="5">
-                <input
-                  type="time"
-                  aria-label="Pick Completion Time"
-                  value={workInputs.pickCompletionTime}
-                  onChange={(event) =>
-                    updateWorkInput("pickCompletionTime", event.target.value)
-                  }
-                  className="staff-time-input"
-                />
-              </td>
-
-              <th>Bagging Completion</th>
-
-              <td colSpan="2">
-                <input
-                  type="time"
-                  aria-label="Bagging Completion Time"
-                  value={workInputs.baggingCompletionTime}
-                  onChange={(event) =>
-                    updateWorkInput(
-                      "baggingCompletionTime",
-                      event.target.value
-                    )
-                  }
-                  className="staff-time-input"
-                />
-              </td>
-
-              <th>Freezer Completion</th>
-
-              <td colSpan="2">
-                <input
-                  type="time"
-                  aria-label="Freezer Completion Time"
-                  value={workInputs.freezerCompletionTime}
-                  onChange={(event) =>
-                    updateWorkInput(
-                      "freezerCompletionTime",
-                      event.target.value
-                    )
-                  }
-                  className="staff-time-input"
-                />
-              </td>
-
-              <th>Inbound Completion</th>
-
-              <td colSpan="2">
-                <input
-                  type="time"
-                  aria-label="Inbound Completion Time"
-                  value={workInputs.inboundCompletionTime}
-                  onChange={(event) =>
-                    updateWorkInput(
-                      "inboundCompletionTime",
-                      event.target.value
-                    )
-                  }
-                  className="staff-time-input"
-                />
-              </td>
-
-              <td colSpan="2"></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <div className="staff-allocation-actions">
-        <button className="calculate-btn" onClick={saveAllocation}>
-          Save
-        </button>
-
-        <button className="clear-btn" onClick={clearAllocation}>
-          Clear
-        </button>
+          <div className="staff-fields-grid staff-fields-grid-single">
+            <NumberField
+              label="Total IC"
+              value={allocation.totalIC}
+              onChange={(event) =>
+                updateAllocation("totalIC", event.target.value)
+              }
+            />
+          </div>
+        </section>
       </div>
 
       {toast.show && (
