@@ -362,3 +362,28 @@
     width: 100%;
   }
 }
+
+.staff-readonly-input {
+  cursor: default;
+  opacity: 0.95;
+}
+
+.staff-break-input {
+  width: min(100%, 118px);
+  min-width: 90px;
+  height: 38px;
+  padding: 7px 8px;
+  border: 1px solid var(--input-border);
+  border-radius: 7px;
+  background: var(--input-bg);
+  color: var(--text-main);
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.staff-break-input:focus {
+  outline: none;
+  border-color: var(--theme-main);
+  box-shadow: 0 0 0 3px var(--theme-focus);
+}

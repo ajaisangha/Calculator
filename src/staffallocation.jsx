@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { doc, onSnapshot, setDoc } from "firebase/firestore";
 import { db } from "./firebase";
 import "./App.css";
@@ -72,14 +72,21 @@ const emptyWorkInputs = {
   chillOutstanding: "",
   ambientUPH: "",
   chillUPH: "",
+  pickBreakMinutes: "",
   pickCompletionTime: "",
+
   baggingOutstanding: "",
   baggingUPH: "",
+  baggingBreakMinutes: "",
   baggingCompletionTime: "",
+
   freezerOutstanding: "",
   freezerUPH: "",
+  freezerBreakMinutes: "",
   freezerCompletionTime: "",
+
   inboundUPH: "",
+  inboundBreakMinutes: "",
   inboundCompletionTime: "",
 };
 
@@ -87,19 +94,15 @@ const emptyCalculatedOverrides = {
   ambientPick: "",
   chillPick: "",
   bagging: "",
-  totalPick: "",
   freezerPick: "",
-  totalFreezer: "",
   decant: "",
-  totalInbound: "",
-  totalDispatch: "",
 };
 
 function getNumber(value) {
   return Number(value) || 0;
 }
 
-function getHoursUntilCompletion(completionTime) {
+function getHoursUntilCompletion(completionTime, breakMinutes = 0) {
   if (!completionTime) return 0;
 
   const [hoursText, minutesText] = completionTime.split(":");
@@ -126,13 +129,16 @@ function getHoursUntilCompletion(completionTime) {
     completion.setDate(completion.getDate() + 1);
   }
 
-  return (completion.getTime() - now.getTime()) / 3600000;
+  const rawHours = (completion.getTime() - now.getTime()) / 3600000;
+  const breakHours = getNumber(breakMinutes) / 60;
+
+  return Math.max(0, rawHours - breakHours);
 }
 
-function calculateRequiredStaff(outstanding, uph, completionTime) {
+function calculateRequiredStaff(outstanding, uph, completionTime, breakMinutes) {
   const totalOutstanding = getNumber(outstanding);
   const rate = getNumber(uph);
-  const hoursLeft = getHoursUntilCompletion(completionTime);
+  const hoursLeft = getHoursUntilCompletion(completionTime, breakMinutes);
 
   if (!totalOutstanding || !rate || !hoursLeft) {
     return 0;
@@ -149,7 +155,10 @@ export default function StaffAllocation() {
   const [calculatedOverrides, setCalculatedOverrides] = useState(
     emptyCalculatedOverrides
   );
+  const [staffDataLoaded, setStaffDataLoaded] = useState(false);
   const [toast, setToast] = useState({ show: false, message: "" });
+
+  const savedWorkInputKeys = useRef(new Set());
 
   const showToast = (message) => {
     setToast({ show: true, message });
@@ -165,6 +174,7 @@ export default function StaffAllocation() {
       }
 
       const data = snapshot.data() || {};
+
       const shiftTotalHours = Number(data.totalHours) || 0;
       const targetProductivity = Number(data.targetProd) || 0;
       const ambientInbound = Number(data.ambInbound) || 0;
@@ -195,45 +205,18 @@ export default function StaffAllocation() {
   }, []);
 
   useEffect(() => {
-    const unsubscribe = onSnapshot(PICK_DOC, (snapshot) => {
-      if (!snapshot.exists()) return;
-
-      const data = snapshot.data() || {};
-
-      setWorkInputs((previous) => ({
-        ...previous,
-        ambientOutstanding:
-          previous.ambientOutstanding !== ""
-            ? previous.ambientOutstanding
-            : data.ambientOutstanding ?? "",
-        chillOutstanding:
-          previous.chillOutstanding !== ""
-            ? previous.chillOutstanding
-            : data.chillOutstanding ?? "",
-        ambientUPH:
-          previous.ambientUPH !== ""
-            ? previous.ambientUPH
-            : data.ambientUPH ?? "",
-        chillUPH:
-          previous.chillUPH !== ""
-            ? previous.chillUPH
-            : data.chillUPH ?? "",
-      }));
-    });
-
-    return unsubscribe;
-  }, []);
-
-  useEffect(() => {
     const unsubscribe = onSnapshot(STAFF_ALLOCATION_DOC, (snapshot) => {
-      if (!snapshot.exists()) {
-        setAllocation(emptyAllocation);
-        setWorkInputs(emptyWorkInputs);
-        setCalculatedOverrides(emptyCalculatedOverrides);
-        return;
-      }
+      const data = snapshot.exists() ? snapshot.data() || {} : {};
 
-      const data = snapshot.data() || {};
+      const savedKeys = new Set(
+        Object.keys(emptyWorkInputs).filter(
+          (key) =>
+            Object.prototype.hasOwnProperty.call(data, key) &&
+            data[key] !== ""
+        )
+      );
+
+      savedWorkInputKeys.current = savedKeys;
 
       setAllocation({
         baggingRunner: data.baggingRunner ?? 1,
@@ -251,14 +234,21 @@ export default function StaffAllocation() {
         chillOutstanding: data.chillOutstanding ?? "",
         ambientUPH: data.ambientUPH ?? "",
         chillUPH: data.chillUPH ?? "",
+        pickBreakMinutes: data.pickBreakMinutes ?? "",
         pickCompletionTime: data.pickCompletionTime ?? "",
+
         baggingOutstanding: data.baggingOutstanding ?? "",
         baggingUPH: data.baggingUPH ?? "",
+        baggingBreakMinutes: data.baggingBreakMinutes ?? "",
         baggingCompletionTime: data.baggingCompletionTime ?? "",
+
         freezerOutstanding: data.freezerOutstanding ?? "",
         freezerUPH: data.freezerUPH ?? "",
+        freezerBreakMinutes: data.freezerBreakMinutes ?? "",
         freezerCompletionTime: data.freezerCompletionTime ?? "",
+
         inboundUPH: data.inboundUPH ?? "",
+        inboundBreakMinutes: data.inboundBreakMinutes ?? "",
         inboundCompletionTime: data.inboundCompletionTime ?? "",
       });
 
@@ -266,17 +256,46 @@ export default function StaffAllocation() {
         ambientPick: data.ambientPickOverride ?? "",
         chillPick: data.chillPickOverride ?? "",
         bagging: data.baggingOverride ?? "",
-        totalPick: data.totalPickOverride ?? "",
         freezerPick: data.freezerPickOverride ?? "",
-        totalFreezer: data.totalFreezerOverride ?? "",
         decant: data.decantOverride ?? "",
-        totalInbound: data.totalInboundOverride ?? "",
-        totalDispatch: data.totalDispatchOverride ?? "",
       });
+
+      setStaffDataLoaded(true);
     });
 
     return unsubscribe;
   }, []);
+
+  useEffect(() => {
+    const unsubscribe = onSnapshot(PICK_DOC, (snapshot) => {
+      if (!snapshot.exists()) return;
+
+      const data = snapshot.data() || {};
+
+      if (!staffDataLoaded) return;
+
+      setWorkInputs((previous) => ({
+        ...previous,
+        ambientOutstanding: savedWorkInputKeys.current.has("ambientOutstanding")
+          ? previous.ambientOutstanding
+          : data.ambientOutstanding ?? "",
+        chillOutstanding: savedWorkInputKeys.current.has("chillOutstanding")
+          ? previous.chillOutstanding
+          : data.chillOutstanding ?? "",
+        ambientUPH: savedWorkInputKeys.current.has("ambientUPH")
+          ? previous.ambientUPH
+          : data.ambientUPH ?? "",
+        chillUPH: savedWorkInputKeys.current.has("chillUPH")
+          ? previous.chillUPH
+          : data.chillUPH ?? "",
+        pickBreakMinutes: savedWorkInputKeys.current.has("pickBreakMinutes")
+          ? previous.pickBreakMinutes
+          : data.ambientBreak1 ?? "",
+      }));
+    });
+
+    return unsubscribe;
+  }, [staffDataLoaded]);
 
   const updateAllocation = (key, value) => {
     setAllocation((previous) => ({
@@ -286,6 +305,8 @@ export default function StaffAllocation() {
   };
 
   const updateWorkInput = (key, value) => {
+    savedWorkInputKeys.current.add(key);
+
     setWorkInputs((previous) => ({
       ...previous,
       [key]: value,
@@ -304,12 +325,14 @@ export default function StaffAllocation() {
       calculateRequiredStaff(
         workInputs.ambientOutstanding,
         workInputs.ambientUPH,
-        workInputs.pickCompletionTime
+        workInputs.pickCompletionTime,
+        workInputs.pickBreakMinutes
       ),
     [
       workInputs.ambientOutstanding,
       workInputs.ambientUPH,
       workInputs.pickCompletionTime,
+      workInputs.pickBreakMinutes,
     ]
   );
 
@@ -318,12 +341,14 @@ export default function StaffAllocation() {
       calculateRequiredStaff(
         workInputs.chillOutstanding,
         workInputs.chillUPH,
-        workInputs.pickCompletionTime
+        workInputs.pickCompletionTime,
+        workInputs.pickBreakMinutes
       ),
     [
       workInputs.chillOutstanding,
       workInputs.chillUPH,
       workInputs.pickCompletionTime,
+      workInputs.pickBreakMinutes,
     ]
   );
 
@@ -332,12 +357,14 @@ export default function StaffAllocation() {
       calculateRequiredStaff(
         workInputs.baggingOutstanding,
         workInputs.baggingUPH,
-        workInputs.baggingCompletionTime
+        workInputs.baggingCompletionTime,
+        workInputs.baggingBreakMinutes
       ),
     [
       workInputs.baggingOutstanding,
       workInputs.baggingUPH,
       workInputs.baggingCompletionTime,
+      workInputs.baggingBreakMinutes,
     ]
   );
 
@@ -346,12 +373,14 @@ export default function StaffAllocation() {
       calculateRequiredStaff(
         workInputs.freezerOutstanding,
         workInputs.freezerUPH,
-        workInputs.freezerCompletionTime
+        workInputs.freezerCompletionTime,
+        workInputs.freezerBreakMinutes
       ),
     [
       workInputs.freezerOutstanding,
       workInputs.freezerUPH,
       workInputs.freezerCompletionTime,
+      workInputs.freezerBreakMinutes,
     ]
   );
 
@@ -360,104 +389,166 @@ export default function StaffAllocation() {
       calculateRequiredStaff(
         inboundNeeded,
         workInputs.inboundUPH,
-        workInputs.inboundCompletionTime
+        workInputs.inboundCompletionTime,
+        workInputs.inboundBreakMinutes
       ),
-    [inboundNeeded, workInputs.inboundUPH, workInputs.inboundCompletionTime]
+    [
+      inboundNeeded,
+      workInputs.inboundUPH,
+      workInputs.inboundCompletionTime,
+      workInputs.inboundBreakMinutes,
+    ]
   );
 
-  const ambientPick = getNumber(
+  const requestedAmbientPick = getNumber(
     calculatedOverrides.ambientPick !== ""
       ? calculatedOverrides.ambientPick
       : calculatedAmbientPick
   );
 
-  const chillPick = getNumber(
+  const requestedChillPick = getNumber(
     calculatedOverrides.chillPick !== ""
       ? calculatedOverrides.chillPick
       : calculatedChillPick
   );
 
-  const bagging = getNumber(
+  const requestedBagging = getNumber(
     calculatedOverrides.bagging !== ""
       ? calculatedOverrides.bagging
       : calculatedBagging
   );
 
-  const freezerPick = getNumber(
+  const requestedFreezerPick = getNumber(
     calculatedOverrides.freezerPick !== ""
       ? calculatedOverrides.freezerPick
       : calculatedFreezerPick
   );
 
-  const decant = getNumber(
+  const requestedDecant = getNumber(
     calculatedOverrides.decant !== ""
       ? calculatedOverrides.decant
       : calculatedDecant
   );
 
-  const calculatedTotalPick =
-    ambientPick +
-    chillPick +
-    bagging +
-    getNumber(allocation.baggingRunner);
+  const maxAllocation = Math.ceil(totalHours / 10);
 
-  const totalPick = getNumber(
-    calculatedOverrides.totalPick !== ""
-      ? calculatedOverrides.totalPick
-      : calculatedTotalPick
-  );
+  const staffAllocationPlan = useMemo(() => {
+    let remaining = maxAllocation;
 
-  const calculatedTotalFreezer =
-    freezerPick + getNumber(allocation.freezerDecant);
+    const assignPriority = (requested) => {
+      const allocated = Math.min(
+        Math.max(requested, 0),
+        Math.max(remaining, 0)
+      );
 
-  const totalFreezer = getNumber(
-    calculatedOverrides.totalFreezer !== ""
-      ? calculatedOverrides.totalFreezer
-      : calculatedTotalFreezer
-  );
+      remaining -= allocated;
+      return allocated;
+    };
 
-  const calculatedTotalInbound = decant + getNumber(allocation.mhe);
+    const ambientPick = assignPriority(requestedAmbientPick);
+    const chillPick = assignPriority(requestedChillPick);
+    const freezerPick = assignPriority(requestedFreezerPick);
+    const mhe = assignPriority(getNumber(allocation.mhe));
+    const frameload = assignPriority(getNumber(allocation.frameload));
+    const bt = assignPriority(getNumber(allocation.bt));
+    const vanLoad = assignPriority(getNumber(allocation.vanLoad));
+    const totalIC = assignPriority(getNumber(allocation.totalIC));
+    const decant = assignPriority(requestedDecant);
+    const bagging = assignPriority(requestedBagging);
+    const dekit = assignPriority(getNumber(allocation.dekit));
+    const baggingRunner = assignPriority(getNumber(allocation.baggingRunner));
+    const freezerDecant = assignPriority(getNumber(allocation.freezerDecant));
 
-  const totalInbound = getNumber(
-    calculatedOverrides.totalInbound !== ""
-      ? calculatedOverrides.totalInbound
-      : calculatedTotalInbound
-  );
+    return {
+      ambientPick,
+      chillPick,
+      freezerPick,
+      mhe,
+      frameload,
+      bt,
+      vanLoad,
+      totalIC,
+      decant,
+      bagging,
+      dekit,
+      baggingRunner,
+      freezerDecant,
+      remaining,
+    };
+  }, [
+    maxAllocation,
+    requestedAmbientPick,
+    requestedChillPick,
+    requestedFreezerPick,
+    requestedDecant,
+    requestedBagging,
+    allocation.mhe,
+    allocation.frameload,
+    allocation.bt,
+    allocation.vanLoad,
+    allocation.totalIC,
+    allocation.dekit,
+    allocation.baggingRunner,
+    allocation.freezerDecant,
+  ]);
 
-  const calculatedTotalDispatch =
+  const ambientPick = staffAllocationPlan.ambientPick;
+  const chillPick = staffAllocationPlan.chillPick;
+  const bagging = staffAllocationPlan.bagging;
+  const baggingRunner = staffAllocationPlan.baggingRunner;
+  const freezerPick = staffAllocationPlan.freezerPick;
+  const freezerDecant = staffAllocationPlan.freezerDecant;
+  const decant = staffAllocationPlan.decant;
+  const mhe = staffAllocationPlan.mhe;
+  const frameload = staffAllocationPlan.frameload;
+  const bt = staffAllocationPlan.bt;
+  const vanLoad = staffAllocationPlan.vanLoad;
+  const dekit = staffAllocationPlan.dekit;
+  const totalIC = staffAllocationPlan.totalIC;
+
+  const totalPick = ambientPick + chillPick + bagging + baggingRunner;
+  const totalFreezer = freezerPick + freezerDecant;
+  const totalInbound = decant + mhe;
+  const totalDispatch = frameload + bt + vanLoad + dekit;
+
+  const totalAllocated =
+    totalPick + totalFreezer + totalInbound + totalDispatch + totalIC;
+
+  const totalRequested =
+    requestedAmbientPick +
+    requestedChillPick +
+    requestedBagging +
+    requestedFreezerPick +
+    requestedDecant +
+    getNumber(allocation.mhe) +
     getNumber(allocation.frameload) +
     getNumber(allocation.bt) +
     getNumber(allocation.vanLoad) +
-    getNumber(allocation.dekit);
+    getNumber(allocation.dekit) +
+    getNumber(allocation.totalIC) +
+    getNumber(allocation.baggingRunner) +
+    getNumber(allocation.freezerDecant);
 
-  const totalDispatch = getNumber(
-    calculatedOverrides.totalDispatch !== ""
-      ? calculatedOverrides.totalDispatch
-      : calculatedTotalDispatch
-  );
-
-  const totalAllocated =
-    totalPick +
-    totalFreezer +
-    totalInbound +
-    totalDispatch +
-    getNumber(allocation.totalIC);
-
-  const maxAllocation = Math.ceil(totalHours / 10);
-
-  const exceedsAllocation =
-    maxAllocation > 0 && totalAllocated > maxAllocation;
+  const shortfall = Math.max(0, totalRequested - totalAllocated);
 
   const calculatedValues = {
     ambientPick,
     chillPick,
     bagging,
+    baggingRunner,
     totalPick,
     freezerPick,
+    freezerDecant,
     totalFreezer,
     decant,
+    mhe,
     totalInbound,
+    frameload,
+    bt,
+    vanLoad,
+    dekit,
     totalDispatch,
+    totalIC,
   };
 
   const editableValues = {
@@ -475,12 +566,8 @@ export default function StaffAllocation() {
     ambientPick: "ambientPick",
     chillPick: "chillPick",
     bagging: "bagging",
-    totalPick: "totalPick",
     freezerPick: "freezerPick",
-    totalFreezer: "totalFreezer",
     decant: "decant",
-    totalInbound: "totalInbound",
-    totalDispatch: "totalDispatch",
   };
 
   const saveAllocation = async () => {
@@ -493,15 +580,17 @@ export default function StaffAllocation() {
           ambientPickOverride: calculatedOverrides.ambientPick,
           chillPickOverride: calculatedOverrides.chillPick,
           baggingOverride: calculatedOverrides.bagging,
-          totalPickOverride: calculatedOverrides.totalPick,
           freezerPickOverride: calculatedOverrides.freezerPick,
-          totalFreezerOverride: calculatedOverrides.totalFreezer,
           decantOverride: calculatedOverrides.decant,
-          totalInboundOverride: calculatedOverrides.totalInbound,
-          totalDispatchOverride: calculatedOverrides.totalDispatch,
         },
         { merge: true }
       );
+
+      Object.keys(workInputs).forEach((key) => {
+        if (workInputs[key] !== "") {
+          savedWorkInputKeys.current.add(key);
+        }
+      });
 
       showToast("Staff Allocation Saved");
     } catch (error) {
@@ -512,6 +601,8 @@ export default function StaffAllocation() {
 
   const clearAllocation = async () => {
     try {
+      savedWorkInputKeys.current = new Set();
+
       setAllocation(emptyAllocation);
       setWorkInputs(emptyWorkInputs);
       setCalculatedOverrides(emptyCalculatedOverrides);
@@ -524,12 +615,8 @@ export default function StaffAllocation() {
           ambientPickOverride: "",
           chillPickOverride: "",
           baggingOverride: "",
-          totalPickOverride: "",
           freezerPickOverride: "",
-          totalFreezerOverride: "",
           decantOverride: "",
-          totalInboundOverride: "",
-          totalDispatchOverride: "",
         },
         { merge: true }
       );
@@ -542,9 +629,12 @@ export default function StaffAllocation() {
   };
 
   const renderStaffCell = (subGroup) => {
+    const allocationValue = calculatedValues[subGroup.key] ?? 0;
+
     if (subGroup.calculated) {
       const overrideKey = overrideKeyMap[subGroup.key];
       const currentOverride = calculatedOverrides[overrideKey];
+      const canOverride = Boolean(overrideKey);
 
       return (
         <td key={subGroup.key} className="staff-total-cell">
@@ -554,14 +644,19 @@ export default function StaffAllocation() {
             inputMode="numeric"
             aria-label={`${subGroup.label} allocation`}
             value={
-              currentOverride !== ""
+              canOverride && currentOverride !== ""
                 ? currentOverride
-                : calculatedValues[subGroup.key]
+                : allocationValue
             }
-            onChange={(event) =>
-              updateCalculatedOverride(overrideKey, event.target.value)
-            }
-            className="staff-allocation-input staff-calculated-input"
+            onChange={(event) => {
+              if (canOverride) {
+                updateCalculatedOverride(overrideKey, event.target.value);
+              }
+            }}
+            readOnly={!canOverride}
+            className={`staff-allocation-input staff-calculated-input ${
+              !canOverride ? "staff-readonly-input" : ""
+            }`}
           />
         </td>
       );
@@ -597,19 +692,31 @@ export default function StaffAllocation() {
         </div>
 
         <div>
-          <span>Maximum Staff Allocation</span>
+          <span>Available Teammates</span>
           <strong>{maxAllocation}</strong>
         </div>
 
-        <div className={exceedsAllocation ? "allocation-over-limit" : ""}>
-          <span>Total Allocated</span>
+        <div className={shortfall > 0 ? "allocation-over-limit" : ""}>
+          <span>Allocated Teammates</span>
           <strong>{totalAllocated}</strong>
+        </div>
+
+        <div
+          className={
+            staffAllocationPlan.remaining > 0
+              ? ""
+              : "allocation-over-limit"
+          }
+        >
+          <span>Remaining Teammates</span>
+          <strong>{staffAllocationPlan.remaining}</strong>
         </div>
       </div>
 
-      {exceedsAllocation && (
+      {shortfall > 0 && (
         <p className="allocation-warning">
-          Total allocation exceeds the allowed maximum of {maxAllocation}.
+          Staffing requirement is higher than available teammates. Shortfall:{" "}
+          {shortfall}.
         </p>
       )}
 
@@ -656,11 +763,7 @@ export default function StaffAllocation() {
                 group.subGroups.map(renderStaffCell)
               )}
 
-              <td
-                className={`staff-total-cell ${
-                  exceedsAllocation ? "staff-total-over-limit" : ""
-                }`}
-              >
+              <td className="staff-total-cell">
                 <div className="staff-final-total">
                   <strong>{totalAllocated}</strong>
                   <span>/ {maxAllocation}</span>
@@ -669,231 +772,299 @@ export default function StaffAllocation() {
             </tr>
 
             <tr className="staff-work-detail-row">
-  <th>Ambient Outstanding</th>
+              <th>Ambient Outstanding</th>
 
-  <td colSpan="2">
-    <input
-      type="number"
-      min="0"
-      aria-label="Ambient Outstanding"
-      value={workInputs.ambientOutstanding}
-      onChange={(event) =>
-        updateWorkInput("ambientOutstanding", event.target.value)
-      }
-      className="staff-wide-detail-input"
-      placeholder="0"
-    />
-  </td>
+              <td colSpan="2">
+                <input
+                  type="number"
+                  min="0"
+                  aria-label="Ambient Outstanding"
+                  value={workInputs.ambientOutstanding}
+                  onChange={(event) =>
+                    updateWorkInput("ambientOutstanding", event.target.value)
+                  }
+                  className="staff-wide-detail-input"
+                  placeholder="0"
+                />
+              </td>
 
-  <th>Chill Outstanding</th>
+              <th>Chill Outstanding</th>
 
-  <td colSpan="2">
-    <input
-      type="number"
-      min="0"
-      aria-label="Chill Outstanding"
-      value={workInputs.chillOutstanding}
-      onChange={(event) =>
-        updateWorkInput("chillOutstanding", event.target.value)
-      }
-      className="staff-wide-detail-input"
-      placeholder="0"
-    />
-  </td>
+              <td colSpan="2">
+                <input
+                  type="number"
+                  min="0"
+                  aria-label="Chill Outstanding"
+                  value={workInputs.chillOutstanding}
+                  onChange={(event) =>
+                    updateWorkInput("chillOutstanding", event.target.value)
+                  }
+                  className="staff-wide-detail-input"
+                  placeholder="0"
+                />
+              </td>
 
-  <th>Bagging Outstanding</th>
+              <th>Bagging Outstanding</th>
 
-  <td colSpan="2">
-    <input
-      type="number"
-      min="0"
-      aria-label="Bagging Outstanding"
-      value={workInputs.baggingOutstanding}
-      onChange={(event) =>
-        updateWorkInput("baggingOutstanding", event.target.value)
-      }
-      className="staff-wide-detail-input"
-      placeholder="0"
-    />
-  </td>
+              <td colSpan="2">
+                <input
+                  type="number"
+                  min="0"
+                  aria-label="Bagging Outstanding"
+                  value={workInputs.baggingOutstanding}
+                  onChange={(event) =>
+                    updateWorkInput("baggingOutstanding", event.target.value)
+                  }
+                  className="staff-wide-detail-input"
+                  placeholder="0"
+                />
+              </td>
 
-  <th>Freezer Outstanding</th>
+              <th>Freezer Outstanding</th>
 
-  <td colSpan="2">
-    <input
-      type="number"
-      min="0"
-      aria-label="Freezer Outstanding"
-      value={workInputs.freezerOutstanding}
-      onChange={(event) =>
-        updateWorkInput("freezerOutstanding", event.target.value)
-      }
-      className="staff-wide-detail-input"
-      placeholder="0"
-    />
-  </td>
+              <td colSpan="2">
+                <input
+                  type="number"
+                  min="0"
+                  aria-label="Freezer Outstanding"
+                  value={workInputs.freezerOutstanding}
+                  onChange={(event) =>
+                    updateWorkInput("freezerOutstanding", event.target.value)
+                  }
+                  className="staff-wide-detail-input"
+                  placeholder="0"
+                />
+              </td>
 
-  <th>Inbound Needed</th>
+              <th>Inbound Needed</th>
 
-  <td colSpan="2" className="staff-detail-value-cell">
-    <span className="staff-detail-value">{inboundNeeded}</span>
-  </td>
+              <td colSpan="2" className="staff-detail-value-cell">
+                <span className="staff-detail-value">{inboundNeeded}</span>
+              </td>
 
-  <td colSpan="2"></td>
-</tr>
+              <td colSpan="2"></td>
+            </tr>
 
-<tr className="staff-work-detail-row">
-  <th>Ambient UPH</th>
+            <tr className="staff-work-detail-row">
+              <th>Ambient UPH</th>
 
-  <td colSpan="2">
-    <input
-      type="number"
-      min="0"
-      aria-label="Ambient UPH"
-      value={workInputs.ambientUPH}
-      onChange={(event) =>
-        updateWorkInput("ambientUPH", event.target.value)
-      }
-      className="staff-wide-detail-input"
-      placeholder="0"
-    />
-  </td>
+              <td colSpan="2">
+                <input
+                  type="number"
+                  min="0"
+                  aria-label="Ambient UPH"
+                  value={workInputs.ambientUPH}
+                  onChange={(event) =>
+                    updateWorkInput("ambientUPH", event.target.value)
+                  }
+                  className="staff-wide-detail-input"
+                  placeholder="0"
+                />
+              </td>
 
-  <th>Chill UPH</th>
+              <th>Chill UPH</th>
 
-  <td colSpan="2">
-    <input
-      type="number"
-      min="0"
-      aria-label="Chill UPH"
-      value={workInputs.chillUPH}
-      onChange={(event) =>
-        updateWorkInput("chillUPH", event.target.value)
-      }
-      className="staff-wide-detail-input"
-      placeholder="0"
-    />
-  </td>
+              <td colSpan="2">
+                <input
+                  type="number"
+                  min="0"
+                  aria-label="Chill UPH"
+                  value={workInputs.chillUPH}
+                  onChange={(event) =>
+                    updateWorkInput("chillUPH", event.target.value)
+                  }
+                  className="staff-wide-detail-input"
+                  placeholder="0"
+                />
+              </td>
 
-  <th>Bagging UPH</th>
+              <th>Bagging UPH</th>
 
-  <td colSpan="2">
-    <input
-      type="number"
-      min="0"
-      aria-label="Bagging UPH"
-      value={workInputs.baggingUPH}
-      onChange={(event) =>
-        updateWorkInput("baggingUPH", event.target.value)
-      }
-      className="staff-wide-detail-input"
-      placeholder="0"
-    />
-  </td>
+              <td colSpan="2">
+                <input
+                  type="number"
+                  min="0"
+                  aria-label="Bagging UPH"
+                  value={workInputs.baggingUPH}
+                  onChange={(event) =>
+                    updateWorkInput("baggingUPH", event.target.value)
+                  }
+                  className="staff-wide-detail-input"
+                  placeholder="0"
+                />
+              </td>
 
-  <th>Freezer UPH</th>
+              <th>Freezer UPH</th>
 
-  <td colSpan="2">
-    <input
-      type="number"
-      min="0"
-      aria-label="Freezer UPH"
-      value={workInputs.freezerUPH}
-      onChange={(event) =>
-        updateWorkInput("freezerUPH", event.target.value)
-      }
-      className="staff-wide-detail-input"
-      placeholder="0"
-    />
-  </td>
+              <td colSpan="2">
+                <input
+                  type="number"
+                  min="0"
+                  aria-label="Freezer UPH"
+                  value={workInputs.freezerUPH}
+                  onChange={(event) =>
+                    updateWorkInput("freezerUPH", event.target.value)
+                  }
+                  className="staff-wide-detail-input"
+                  placeholder="0"
+                />
+              </td>
 
-  <th>Inbound UPH</th>
+              <th>Inbound UPH</th>
 
-  <td colSpan="2">
-    <input
-      type="number"
-      min="0"
-      aria-label="Inbound UPH"
-      value={workInputs.inboundUPH}
-      onChange={(event) =>
-        updateWorkInput("inboundUPH", event.target.value)
-      }
-      className="staff-wide-detail-input"
-      placeholder="0"
-    />
-  </td>
+              <td colSpan="2">
+                <input
+                  type="number"
+                  min="0"
+                  aria-label="Inbound UPH"
+                  value={workInputs.inboundUPH}
+                  onChange={(event) =>
+                    updateWorkInput("inboundUPH", event.target.value)
+                  }
+                  className="staff-wide-detail-input"
+                  placeholder="0"
+                />
+              </td>
 
-  <td colSpan="2"></td>
-</tr>
+              <td colSpan="2"></td>
+            </tr>
 
-<tr className="staff-work-detail-row">
-  <th>Pick Completion</th>
+            <tr className="staff-work-detail-row">
+              <th>Pick Break</th>
 
-  <td colSpan="5">
-    <input
-      type="time"
-      aria-label="Pick Completion Time for Ambient and Chill Pick"
-      value={workInputs.pickCompletionTime}
-      onChange={(event) =>
-        updateWorkInput("pickCompletionTime", event.target.value)
-      }
-      className="staff-time-input"
-    />
-  </td>
+              <td colSpan="5">
+                <input
+                  type="number"
+                  min="0"
+                  aria-label="Pick Break Minutes"
+                  value={workInputs.pickBreakMinutes}
+                  onChange={(event) =>
+                    updateWorkInput("pickBreakMinutes", event.target.value)
+                  }
+                  className="staff-break-input"
+                  placeholder="Minutes"
+                />
+              </td>
 
-  <th>Bagging Completion</th>
+              <th>Bagging Break</th>
 
-  <td colSpan="2">
-    <input
-      type="time"
-      aria-label="Bagging Completion Time"
-      value={workInputs.baggingCompletionTime}
-      onChange={(event) =>
-        updateWorkInput(
-          "baggingCompletionTime",
-          event.target.value
-        )
-      }
-      className="staff-time-input"
-    />
-  </td>
+              <td colSpan="2">
+                <input
+                  type="number"
+                  min="0"
+                  aria-label="Bagging Break Minutes"
+                  value={workInputs.baggingBreakMinutes}
+                  onChange={(event) =>
+                    updateWorkInput("baggingBreakMinutes", event.target.value)
+                  }
+                  className="staff-break-input"
+                  placeholder="Minutes"
+                />
+              </td>
 
-  <th>Freezer Completion</th>
+              <th>Freezer Break</th>
 
-  <td colSpan="2">
-    <input
-      type="time"
-      aria-label="Freezer Completion Time"
-      value={workInputs.freezerCompletionTime}
-      onChange={(event) =>
-        updateWorkInput(
-          "freezerCompletionTime",
-          event.target.value
-        )
-      }
-      className="staff-time-input"
-    />
-  </td>
+              <td colSpan="2">
+                <input
+                  type="number"
+                  min="0"
+                  aria-label="Freezer Break Minutes"
+                  value={workInputs.freezerBreakMinutes}
+                  onChange={(event) =>
+                    updateWorkInput("freezerBreakMinutes", event.target.value)
+                  }
+                  className="staff-break-input"
+                  placeholder="Minutes"
+                />
+              </td>
 
-  <th>Inbound Completion</th>
+              <th>Inbound Break</th>
 
-  <td colSpan="2">
-    <input
-      type="time"
-      aria-label="Inbound Completion Time"
-      value={workInputs.inboundCompletionTime}
-      onChange={(event) =>
-        updateWorkInput(
-          "inboundCompletionTime",
-          event.target.value
-        )
-      }
-      className="staff-time-input"
-    />
-  </td>
+              <td colSpan="2">
+                <input
+                  type="number"
+                  min="0"
+                  aria-label="Inbound Break Minutes"
+                  value={workInputs.inboundBreakMinutes}
+                  onChange={(event) =>
+                    updateWorkInput("inboundBreakMinutes", event.target.value)
+                  }
+                  className="staff-break-input"
+                  placeholder="Minutes"
+                />
+              </td>
 
-  <td colSpan="2"></td>
-</tr>
+              <td colSpan="2"></td>
+            </tr>
+
+            <tr className="staff-work-detail-row">
+              <th>Pick Completion</th>
+
+              <td colSpan="5">
+                <input
+                  type="time"
+                  aria-label="Pick Completion Time"
+                  value={workInputs.pickCompletionTime}
+                  onChange={(event) =>
+                    updateWorkInput("pickCompletionTime", event.target.value)
+                  }
+                  className="staff-time-input"
+                />
+              </td>
+
+              <th>Bagging Completion</th>
+
+              <td colSpan="2">
+                <input
+                  type="time"
+                  aria-label="Bagging Completion Time"
+                  value={workInputs.baggingCompletionTime}
+                  onChange={(event) =>
+                    updateWorkInput(
+                      "baggingCompletionTime",
+                      event.target.value
+                    )
+                  }
+                  className="staff-time-input"
+                />
+              </td>
+
+              <th>Freezer Completion</th>
+
+              <td colSpan="2">
+                <input
+                  type="time"
+                  aria-label="Freezer Completion Time"
+                  value={workInputs.freezerCompletionTime}
+                  onChange={(event) =>
+                    updateWorkInput(
+                      "freezerCompletionTime",
+                      event.target.value
+                    )
+                  }
+                  className="staff-time-input"
+                />
+              </td>
+
+              <th>Inbound Completion</th>
+
+              <td colSpan="2">
+                <input
+                  type="time"
+                  aria-label="Inbound Completion Time"
+                  value={workInputs.inboundCompletionTime}
+                  onChange={(event) =>
+                    updateWorkInput(
+                      "inboundCompletionTime",
+                      event.target.value
+                    )
+                  }
+                  className="staff-time-input"
+                />
+              </td>
+
+              <td colSpan="2"></td>
+            </tr>
           </tbody>
         </table>
       </div>
