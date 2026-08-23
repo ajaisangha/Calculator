@@ -44,6 +44,14 @@ const emptyWorkInputs = {
   inboundCompletionTime: "",
 };
 
+const calculatedFieldKeys = [
+  "ambientPick",
+  "chillPick",
+  "bagging",
+  "freezerPick",
+  "decant",
+];
+
 function getNumber(value) {
   return Number(value) || 0;
 }
@@ -91,6 +99,24 @@ function calculateRequiredStaff(outstanding, uph, completionTime, breakMinutes) 
   }
 
   return Math.ceil(totalOutstanding / (rate * hoursLeft));
+}
+
+function getTotalAllocated(allocation) {
+  return (
+    getNumber(allocation.ambientPick) +
+    getNumber(allocation.chillPick) +
+    getNumber(allocation.bagging) +
+    getNumber(allocation.baggingRunner) +
+    getNumber(allocation.freezerPick) +
+    getNumber(allocation.freezerDecant) +
+    getNumber(allocation.decant) +
+    getNumber(allocation.mhe) +
+    getNumber(allocation.frameload) +
+    getNumber(allocation.bt) +
+    getNumber(allocation.vanLoad) +
+    getNumber(allocation.dekit) +
+    getNumber(allocation.totalIC)
+  );
 }
 
 function NumberField({
@@ -144,6 +170,7 @@ export default function StaffAllocation() {
   const [totalHours, setTotalHours] = useState(0);
   const [inboundNeeded, setInboundNeeded] = useState(0);
   const [workInputs, setWorkInputs] = useState(emptyWorkInputs);
+  const [manualOverrides, setManualOverrides] = useState(new Set());
   const [overAllocatedFields, setOverAllocatedFields] = useState(new Set());
   const [toast, setToast] = useState({ show: false, message: "" });
 
@@ -197,12 +224,11 @@ export default function StaffAllocation() {
         ambientInbound + chillInbound + freezerInbound - outstandingPick;
 
       const totalOutbound = ambientPick + chillPick + freezerPick;
-      const totalInboundOutbound = totalInbound + totalOutbound;
 
       const calculatedInboundNeeded =
         targetProductivity > 0
           ? (targetProductivity / 1.13) * shiftTotalHours -
-            totalInboundOutbound
+            (totalInbound + totalOutbound)
           : 0;
 
       setTotalHours(shiftTotalHours);
@@ -316,24 +342,6 @@ export default function StaffAllocation() {
     return unsubscribe;
   }, []);
 
-  const updateAllocation = (key, value) => {
-    editedAllocationKeys.current.add(key);
-
-    setAllocation((previous) => ({
-      ...previous,
-      [key]: value === "" ? "" : Math.max(0, Number(value) || 0),
-    }));
-  };
-
-  const updateWorkInput = (key, value) => {
-    editedWorkInputKeys.current.add(key);
-
-    setWorkInputs((previous) => ({
-      ...previous,
-      [key]: value,
-    }));
-  };
-
   const calculatedAmbientPick = useMemo(
     () =>
       calculateRequiredStaff(
@@ -414,32 +422,163 @@ export default function StaffAllocation() {
     ]
   );
 
-  useEffect(() => {
-    setAllocation((previous) => ({
-      ...previous,
-      ambientPick:
-        previous.ambientPick === ""
-          ? calculatedAmbientPick
-          : previous.ambientPick,
-      chillPick:
-        previous.chillPick === "" ? calculatedChillPick : previous.chillPick,
-      bagging:
-        previous.bagging === "" ? calculatedBagging : previous.bagging,
-      freezerPick:
-        previous.freezerPick === ""
-          ? calculatedFreezerPick
-          : previous.freezerPick,
-      decant: previous.decant === "" ? calculatedDecant : previous.decant,
-    }));
-  }, [
-    calculatedAmbientPick,
-    calculatedChillPick,
-    calculatedBagging,
-    calculatedFreezerPick,
-    calculatedDecant,
-  ]);
+  const calculatedValues = useMemo(
+    () => ({
+      ambientPick: calculatedAmbientPick,
+      chillPick: calculatedChillPick,
+      bagging: calculatedBagging,
+      freezerPick: calculatedFreezerPick,
+      decant: calculatedDecant,
+    }),
+    [
+      calculatedAmbientPick,
+      calculatedChillPick,
+      calculatedBagging,
+      calculatedFreezerPick,
+      calculatedDecant,
+    ]
+  );
 
   const maxAllocation = Math.ceil(totalHours / 10);
+
+  /*
+    Applies automatic results and marks every calculated field that
+    causes or maintains an over-allocation as red.
+  */
+  useEffect(() => {
+    setAllocation((previous) => {
+      const updated = { ...previous };
+      const recalculatedFields = [];
+
+      calculatedFieldKeys.forEach((key) => {
+        if (!manualOverrides.has(key) && updated[key] !== calculatedValues[key]) {
+          updated[key] = calculatedValues[key];
+          recalculatedFields.push(key);
+        }
+      });
+
+      const updatedDifference = maxAllocation - getTotalAllocated(updated);
+
+      if (updatedDifference < 0 && recalculatedFields.length > 0) {
+        setOverAllocatedFields((previousFields) => {
+          const nextFields = new Set(previousFields);
+
+          recalculatedFields.forEach((key) => {
+            if (getNumber(updated[key]) > 0) {
+              nextFields.add(key);
+            }
+          });
+
+          return nextFields;
+        });
+      }
+
+      if (updatedDifference >= 0) {
+        setOverAllocatedFields(new Set());
+      }
+
+      return updated;
+    });
+  }, [calculatedValues, manualOverrides, maxAllocation]);
+
+  const totalAllocated = getTotalAllocated(allocation);
+  const difference = maxAllocation - totalAllocated;
+
+  useEffect(() => {
+    if (difference >= 0) {
+      setOverAllocatedFields(new Set());
+    }
+  }, [difference]);
+
+  const updateAllocation = (key, value) => {
+    const numericValue = value === "" ? "" : Math.max(0, Number(value) || 0);
+
+    editedAllocationKeys.current.add(key);
+
+    if (calculatedFieldKeys.includes(key)) {
+      setManualOverrides((previous) => {
+        const next = new Set(previous);
+        next.add(key);
+        return next;
+      });
+    }
+
+    setAllocation((previous) => {
+      const updated = {
+        ...previous,
+        [key]: numericValue,
+      };
+
+      const updatedDifference = maxAllocation - getTotalAllocated(updated);
+
+      if (updatedDifference < 0 && getNumber(numericValue) > 0) {
+        setOverAllocatedFields((previousFields) => {
+          const nextFields = new Set(previousFields);
+          nextFields.add(key);
+          return nextFields;
+        });
+      }
+
+      if (updatedDifference >= 0) {
+        setOverAllocatedFields(new Set());
+      }
+
+      return updated;
+    });
+  };
+
+  const updateWorkInput = (key, value) => {
+    editedWorkInputKeys.current.add(key);
+
+    setWorkInputs((previous) => ({
+      ...previous,
+      [key]: value,
+    }));
+
+    const dependentCalculatedFields = {
+      ambientOutstanding: ["ambientPick"],
+      ambientUPH: ["ambientPick"],
+      chillOutstanding: ["chillPick"],
+      chillUPH: ["chillPick"],
+      pickBreakMinutes: ["ambientPick", "chillPick"],
+      pickCompletionTime: ["ambientPick", "chillPick"],
+      baggingOutstanding: ["bagging"],
+      baggingUPH: ["bagging"],
+      baggingBreakMinutes: ["bagging"],
+      baggingCompletionTime: ["bagging"],
+      freezerOutstanding: ["freezerPick"],
+      freezerUPH: ["freezerPick"],
+      freezerBreakMinutes: ["freezerPick"],
+      freezerCompletionTime: ["freezerPick"],
+      inboundUPH: ["decant"],
+      inboundBreakMinutes: ["decant"],
+      inboundCompletionTime: ["decant"],
+    };
+
+    const fieldsToRecalculate = dependentCalculatedFields[key] || [];
+
+    if (fieldsToRecalculate.length > 0) {
+      setManualOverrides((previous) => {
+        const next = new Set(previous);
+
+        fieldsToRecalculate.forEach((fieldKey) => {
+          next.delete(fieldKey);
+        });
+
+        return next;
+      });
+    }
+  };
+
+  useEffect(() => {
+    setManualOverrides((previous) => {
+      if (!previous.has("decant")) return previous;
+
+      const next = new Set(previous);
+      next.delete("decant");
+      return next;
+    });
+  }, [inboundNeeded]);
 
   const totalPick =
     getNumber(allocation.ambientPick) +
@@ -459,82 +598,6 @@ export default function StaffAllocation() {
     getNumber(allocation.bt) +
     getNumber(allocation.vanLoad) +
     getNumber(allocation.dekit);
-
-  const totalAllocated =
-    totalPick +
-    totalFreezer +
-    totalInbound +
-    totalDispatch +
-    getNumber(allocation.totalIC);
-
-  const difference = maxAllocation - totalAllocated;
-
-  /*
-    When Difference becomes negative:
-    - The field currently changed is added to the red set.
-    - Earlier red fields stay red.
-    - All red fields clear only when Difference is 0 or positive.
-  */
-  useEffect(() => {
-    if (difference >= 0) {
-      setOverAllocatedFields(new Set());
-    }
-  }, [difference]);
-
-  const updateAllocationWithHighlight = (key, value) => {
-    const numericValue = value === "" ? "" : Math.max(0, Number(value) || 0);
-
-    editedAllocationKeys.current.add(key);
-
-    setAllocation((previous) => {
-      const updated = {
-        ...previous,
-        [key]: numericValue,
-      };
-
-      const updatedTotalPick =
-        getNumber(updated.ambientPick) +
-        getNumber(updated.chillPick) +
-        getNumber(updated.bagging) +
-        getNumber(updated.baggingRunner);
-
-      const updatedTotalFreezer =
-        getNumber(updated.freezerPick) +
-        getNumber(updated.freezerDecant);
-
-      const updatedTotalInbound =
-        getNumber(updated.decant) + getNumber(updated.mhe);
-
-      const updatedTotalDispatch =
-        getNumber(updated.frameload) +
-        getNumber(updated.bt) +
-        getNumber(updated.vanLoad) +
-        getNumber(updated.dekit);
-
-      const updatedTotal =
-        updatedTotalPick +
-        updatedTotalFreezer +
-        updatedTotalInbound +
-        updatedTotalDispatch +
-        getNumber(updated.totalIC);
-
-      const updatedDifference = maxAllocation - updatedTotal;
-
-      if (updatedDifference < 0 && getNumber(numericValue) > 0) {
-        setOverAllocatedFields((previousFields) => {
-          const nextFields = new Set(previousFields);
-          nextFields.add(key);
-          return nextFields;
-        });
-      }
-
-      if (updatedDifference >= 0) {
-        setOverAllocatedFields(new Set());
-      }
-
-      return updated;
-    });
-  };
 
   const saveAllocation = async () => {
     try {
@@ -560,6 +623,7 @@ export default function StaffAllocation() {
       editedWorkInputKeys.current = new Set();
       editedAllocationKeys.current = new Set();
 
+      setManualOverrides(new Set());
       setOverAllocatedFields(new Set());
       setAllocation(emptyAllocation);
       setWorkInputs(emptyWorkInputs);
@@ -630,10 +694,7 @@ export default function StaffAllocation() {
               label="Ambient Pick"
               value={allocation.ambientPick}
               onChange={(event) =>
-                updateAllocationWithHighlight(
-                  "ambientPick",
-                  event.target.value
-                )
+                updateAllocation("ambientPick", event.target.value)
               }
               calculated
               overAllocated={overAllocatedFields.has("ambientPick")}
@@ -643,7 +704,7 @@ export default function StaffAllocation() {
               label="Chill Pick"
               value={allocation.chillPick}
               onChange={(event) =>
-                updateAllocationWithHighlight("chillPick", event.target.value)
+                updateAllocation("chillPick", event.target.value)
               }
               calculated
               overAllocated={overAllocatedFields.has("chillPick")}
@@ -653,7 +714,7 @@ export default function StaffAllocation() {
               label="Bagging"
               value={allocation.bagging}
               onChange={(event) =>
-                updateAllocationWithHighlight("bagging", event.target.value)
+                updateAllocation("bagging", event.target.value)
               }
               calculated
               overAllocated={overAllocatedFields.has("bagging")}
@@ -663,10 +724,7 @@ export default function StaffAllocation() {
               label="Bagging Runner"
               value={allocation.baggingRunner}
               onChange={(event) =>
-                updateAllocationWithHighlight(
-                  "baggingRunner",
-                  event.target.value
-                )
+                updateAllocation("baggingRunner", event.target.value)
               }
               overAllocated={overAllocatedFields.has("baggingRunner")}
             />
@@ -682,7 +740,6 @@ export default function StaffAllocation() {
                 updateWorkInput("ambientOutstanding", event.target.value)
               }
             />
-
             <NumberField
               label="Chill Outstanding"
               value={workInputs.chillOutstanding}
@@ -690,7 +747,6 @@ export default function StaffAllocation() {
                 updateWorkInput("chillOutstanding", event.target.value)
               }
             />
-
             <NumberField
               label="Ambient UPH"
               value={workInputs.ambientUPH}
@@ -698,7 +754,6 @@ export default function StaffAllocation() {
                 updateWorkInput("ambientUPH", event.target.value)
               }
             />
-
             <NumberField
               label="Chill UPH"
               value={workInputs.chillUPH}
@@ -706,7 +761,6 @@ export default function StaffAllocation() {
                 updateWorkInput("chillUPH", event.target.value)
               }
             />
-
             <NumberField
               label="Pick Break (min)"
               value={workInputs.pickBreakMinutes}
@@ -715,7 +769,6 @@ export default function StaffAllocation() {
               }
               placeholder="Minutes"
             />
-
             <TimeField
               label="Pick Completion"
               value={workInputs.pickCompletionTime}
@@ -735,7 +788,6 @@ export default function StaffAllocation() {
                 updateWorkInput("baggingOutstanding", event.target.value)
               }
             />
-
             <NumberField
               label="Bagging UPH"
               value={workInputs.baggingUPH}
@@ -743,7 +795,6 @@ export default function StaffAllocation() {
                 updateWorkInput("baggingUPH", event.target.value)
               }
             />
-
             <NumberField
               label="Bagging Break (min)"
               value={workInputs.baggingBreakMinutes}
@@ -752,15 +803,11 @@ export default function StaffAllocation() {
               }
               placeholder="Minutes"
             />
-
             <TimeField
               label="Bagging Completion"
               value={workInputs.baggingCompletionTime}
               onChange={(event) =>
-                updateWorkInput(
-                  "baggingCompletionTime",
-                  event.target.value
-                )
+                updateWorkInput("baggingCompletionTime", event.target.value)
               }
             />
           </div>
@@ -777,23 +824,16 @@ export default function StaffAllocation() {
               label="Freezer Pick"
               value={allocation.freezerPick}
               onChange={(event) =>
-                updateAllocationWithHighlight(
-                  "freezerPick",
-                  event.target.value
-                )
+                updateAllocation("freezerPick", event.target.value)
               }
               calculated
               overAllocated={overAllocatedFields.has("freezerPick")}
             />
-
             <NumberField
               label="Freezer Decant"
               value={allocation.freezerDecant}
               onChange={(event) =>
-                updateAllocationWithHighlight(
-                  "freezerDecant",
-                  event.target.value
-                )
+                updateAllocation("freezerDecant", event.target.value)
               }
               overAllocated={overAllocatedFields.has("freezerDecant")}
             />
@@ -809,7 +849,6 @@ export default function StaffAllocation() {
                 updateWorkInput("freezerOutstanding", event.target.value)
               }
             />
-
             <NumberField
               label="Freezer UPH"
               value={workInputs.freezerUPH}
@@ -817,7 +856,6 @@ export default function StaffAllocation() {
                 updateWorkInput("freezerUPH", event.target.value)
               }
             />
-
             <NumberField
               label="Break (min)"
               value={workInputs.freezerBreakMinutes}
@@ -826,15 +864,11 @@ export default function StaffAllocation() {
               }
               placeholder="Minutes"
             />
-
             <TimeField
               label="Completion"
               value={workInputs.freezerCompletionTime}
               onChange={(event) =>
-                updateWorkInput(
-                  "freezerCompletionTime",
-                  event.target.value
-                )
+                updateWorkInput("freezerCompletionTime", event.target.value)
               }
             />
           </div>
@@ -851,17 +885,16 @@ export default function StaffAllocation() {
               label="Decant"
               value={allocation.decant}
               onChange={(event) =>
-                updateAllocationWithHighlight("decant", event.target.value)
+                updateAllocation("decant", event.target.value)
               }
               calculated
               overAllocated={overAllocatedFields.has("decant")}
             />
-
             <NumberField
               label="MHE"
               value={allocation.mhe}
               onChange={(event) =>
-                updateAllocationWithHighlight("mhe", event.target.value)
+                updateAllocation("mhe", event.target.value)
               }
               overAllocated={overAllocatedFields.has("mhe")}
             />
@@ -876,7 +909,6 @@ export default function StaffAllocation() {
               readOnly
               calculated
             />
-
             <NumberField
               label="Inbound UPH"
               value={workInputs.inboundUPH}
@@ -884,7 +916,6 @@ export default function StaffAllocation() {
                 updateWorkInput("inboundUPH", event.target.value)
               }
             />
-
             <NumberField
               label="Break (min)"
               value={workInputs.inboundBreakMinutes}
@@ -893,15 +924,11 @@ export default function StaffAllocation() {
               }
               placeholder="Minutes"
             />
-
             <TimeField
               label="Completion"
               value={workInputs.inboundCompletionTime}
               onChange={(event) =>
-                updateWorkInput(
-                  "inboundCompletionTime",
-                  event.target.value
-                )
+                updateWorkInput("inboundCompletionTime", event.target.value)
               }
             />
           </div>
@@ -918,37 +945,31 @@ export default function StaffAllocation() {
               label="Frameload"
               value={allocation.frameload}
               onChange={(event) =>
-                updateAllocationWithHighlight(
-                  "frameload",
-                  event.target.value
-                )
+                updateAllocation("frameload", event.target.value)
               }
               overAllocated={overAllocatedFields.has("frameload")}
             />
-
             <NumberField
               label="BT"
               value={allocation.bt}
               onChange={(event) =>
-                updateAllocationWithHighlight("bt", event.target.value)
+                updateAllocation("bt", event.target.value)
               }
               overAllocated={overAllocatedFields.has("bt")}
             />
-
             <NumberField
               label="Van Load"
               value={allocation.vanLoad}
               onChange={(event) =>
-                updateAllocationWithHighlight("vanLoad", event.target.value)
+                updateAllocation("vanLoad", event.target.value)
               }
               overAllocated={overAllocatedFields.has("vanLoad")}
             />
-
             <NumberField
               label="Dekit"
               value={allocation.dekit}
               onChange={(event) =>
-                updateAllocationWithHighlight("dekit", event.target.value)
+                updateAllocation("dekit", event.target.value)
               }
               overAllocated={overAllocatedFields.has("dekit")}
             />
@@ -966,7 +987,7 @@ export default function StaffAllocation() {
               label="Total IC"
               value={allocation.totalIC}
               onChange={(event) =>
-                updateAllocationWithHighlight("totalIC", event.target.value)
+                updateAllocation("totalIC", event.target.value)
               }
               overAllocated={overAllocatedFields.has("totalIC")}
             />
