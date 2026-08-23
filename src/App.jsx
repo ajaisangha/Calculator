@@ -313,105 +313,142 @@ const deleteConsignment = async (consignment) => {
         <div className="app-shell">
           <div className="app-layout">
             <aside className="sidebar-nav" aria-label="Calculator sections">
-              <nav className="carousel-links">
-                <button onClick={() => setSlideIndex(0)} className={slideIndex === 0 ? "active" : ""}>
-                  Totes Used
-                </button>
-                <button onClick={() => setSlideIndex(1)} className={slideIndex === 1 ? "active" : ""}>
-                  Bagged Totes
-                </button>
-                <button onClick={() => setSlideIndex(2)} className={slideIndex === 2 ? "active" : ""}>
-                  Pick Calculator
-                </button>
-                <button onClick={() => setSlideIndex(3)} className={slideIndex === 3 ? "active" : ""}>
-                  Shift EOS
-                </button>
-                <button onClick={() => setSlideIndex(4)} className={slideIndex === 4 ? "active" : ""}>
-                  Frameload/Freezer
-                </button>
-                <button onClick={() => setSlideIndex(5)} className={slideIndex === 5 ? "active" : ""}>
-                  Barcode Generator
-                </button>
-                <button onClick={() => setSlideIndex(6)} className={slideIndex === 6 ? "active" : ""}>
-                  Staff Allocation
-                </button>
-              </nav>
-            </aside>
+  <nav className="carousel-links">
+    <button
+      onClick={() => setSlideIndex(0)}
+      className={slideIndex === 0 ? "active" : ""}
+    >
+      Shift EOS
+    </button>
 
-            <section className="carousel-panel">
-              <div className="carousel-container">
-                <Carousel
-                  selectedItem={slideIndex}
-                  onChange={setSlideIndex}
-                  showThumbs={false}
-                  showStatus={false}
-                  showIndicators={false}
-                  infiniteLoop={false}
-                  swipeable
-                  emulateTouch={false}
-                >
-                  <div className="carousel-slide">
-                    <div className="slide-scroll-area">
-                      <TotesUsedCard
-                        rows={rows}
-                        routesInfo={routesInfo}
-                        grandTotals={grandTotals}
-                        duplicateMessage={duplicateMessage}
-                        onFileChange={onFileChange}
-                        clearAll={clearAll}
-                        deleteRoutesFromRoute={deleteRoutesFromRoute}
-                        deleteConsignment={deleteConsignment}
-                      />
-                    </div>
-                  </div>
+    <button
+      onClick={() => setSlideIndex(1)}
+      className={slideIndex === 1 ? "active" : ""}
+    >
+      Staff Allocation
+    </button>
 
-                  <div className="carousel-slide">
-                    <div className="slide-scroll-area">
-                      <BaggedTotesCard
-                        grandTotals={grandTotals}
-                        /*receivedAmbient={receivedAmbient}
-                        receivedChill={receivedChill}
-                        currentAmbient={currentAmbient}
-                        currentChill={currentChill}
-                        setReceivedAmbient={setReceivedAmbient}
-                        setReceivedChill={setReceivedChill}
-                        setCurrentAmbient={setCurrentAmbient}
-                        setCurrentChill={setCurrentChill}*/
-                      />
-                    </div>
-                  </div>
+    <button
+      onClick={() => setSlideIndex(2)}
+      className={slideIndex === 2 ? "active" : ""}
+    >
+      Totes Used
+    </button>
 
-                  <div className="carousel-slide">
-                    <div className="slide-scroll-area">
-                      <PickAndBaggedCombinedCard />
-                    </div>
-                  </div>
+    <button
+      onClick={() => setSlideIndex(3)}
+      className={slideIndex === 3 ? "active" : ""}
+    >
+      Bagged Totes
+    </button>
 
-                  <div className="carousel-slide">
-                    <div className="slide-scroll-area">
-                      <ShiftEOSCard />
-                    </div>
-                  </div>
+    <button
+      onClick={() => setSlideIndex(4)}
+      className={slideIndex === 4 ? "active" : ""}
+    >
+      Pick Calculator
+    </button>
 
-                  <div className="carousel-slide">
-                    <div className="slide-scroll-area">
-                      <FrameloadFreezer grandTotals={grandTotals}/>
-                    </div>
-                  </div>
+    <button
+      onClick={() => setSlideIndex(5)}
+      className={slideIndex === 5 ? "active" : ""}
+    >
+      Frameload/Freezer
+    </button>
 
-                  <div className="carousel-slide">
-                    <div className="slide-scroll-area">
-                      <BarcodeCard />
-                    </div>
-                  </div>
-                  <div className="carousel-slide">
-                    <div className="slide-scroll-area">
-                      <StaffAllocation />
-                    </div>
-                  </div>
-                </Carousel>
-              </div>
-            </section>
+    <button
+      onClick={() => setSlideIndex(6)}
+      className={slideIndex === 6 ? "active" : ""}
+    >
+      Barcode Generator
+    </button>
+  </nav>
+</aside>
+
+<section className="carousel-panel">
+  <div className="carousel-container">
+    <Carousel
+      selectedItem={slideIndex}
+      onChange={setSlideIndex}
+      showThumbs={false}
+      showStatus={false}
+      showIndicators={false}
+      infiniteLoop={false}
+      swipeable
+      emulateTouch={false}
+    >
+      {/* Slide 1 — Shift EOS */}
+      <div className="carousel-slide">
+        <div className="slide-scroll-area">
+          <ShiftEOSCard />
+        </div>
+      </div>
+
+      {/* Slide 2 — Staff Allocation */}
+      <div className="carousel-slide">
+        <div className="slide-scroll-area">
+          <StaffAllocation />
+        </div>
+      </div>
+
+      {/* Slide 3 — Totes Used */}
+      <div className="carousel-slide">
+        <div className="slide-scroll-area">
+          <TotesUsedCard
+            rows={rows}
+            routesInfo={routesInfo}
+            grandTotals={grandTotals}
+            duplicateMessage={duplicateMessage}
+            onFileChange={onFileChange}
+            clearAll={clearAll}
+            deleteRoutesFromRoute={deleteRoutesFromRoute}
+            deleteConsignment={deleteConsignment}
+          />
+        </div>
+      </div>
+
+      {/* Slide 4 — Bagged Totes */}
+      <div className="carousel-slide">
+        <div className="slide-scroll-area">
+          <BaggedTotesCard
+            grandTotals={grandTotals}
+            /*
+            receivedAmbient={receivedAmbient}
+            receivedChill={receivedChill}
+            currentAmbient={currentAmbient}
+            currentChill={currentChill}
+            setReceivedAmbient={setReceivedAmbient}
+            setReceivedChill={setReceivedChill}
+            setCurrentAmbient={setCurrentAmbient}
+            setCurrentChill={setCurrentChill}
+            */
+          />
+        </div>
+      </div>
+
+      {/* Slide 5 — Pick Calculator */}
+      <div className="carousel-slide">
+        <div className="slide-scroll-area">
+          <PickAndBaggedCombinedCard />
+        </div>
+      </div>
+
+      {/* Slide 6 — Frameload / Freezer */}
+      <div className="carousel-slide">
+        <div className="slide-scroll-area">
+          <FrameloadFreezer grandTotals={grandTotals} />
+        </div>
+      </div>
+
+      {/* Slide 7 — Barcode Generator */}
+      <div className="carousel-slide">
+        <div className="slide-scroll-area">
+          <BarcodeCard />
+        </div>
+      </div>
+    </Carousel>
+  </div>
+</section>
           </div>
         </div>
       </main>
