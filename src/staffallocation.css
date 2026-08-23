@@ -59,11 +59,15 @@
 
 .staff-allocation-table-wrap {
   width: 100%;
-  overflow-x: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 6px;
+  -webkit-overflow-scrolling: touch;
 }
 
 .staff-allocation-table {
   width: 100%;
+  min-width: 1400px;
   table-layout: fixed;
   border-collapse: separate;
   border-spacing: 0;
@@ -152,9 +156,10 @@
 }
 
 .staff-allocation-input {
-  width: min(100%, 56px);
+  width: min(100%, 58px);
   min-width: 0;
-  padding: 8px 3px;
+  height: 38px;
+  padding: 7px 3px;
   border: 1px solid var(--input-border);
   border-radius: 7px;
   background: var(--input-bg);
@@ -164,23 +169,19 @@
   text-align: center;
 }
 
-.staff-allocation-input:focus {
+.staff-allocation-input:focus,
+.staff-detail-input:focus,
+.staff-wide-detail-input:focus,
+.staff-time-input:focus {
   outline: none;
   border-color: var(--theme-main);
   box-shadow: 0 0 0 3px var(--theme-focus);
 }
 
-.staff-calculated-value {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 42px;
-  min-height: 37px;
-  padding: 7px 6px;
-  border-radius: 7px;
-  color: var(--theme-dark);
+.staff-calculated-input {
+  border-color: var(--theme-border);
   background: var(--theme-light);
-  font-size: 16px;
+  color: var(--theme-dark);
   font-weight: 800;
 }
 
@@ -210,20 +211,125 @@
   color: var(--secondary-main);
 }
 
+.staff-work-detail-row th,
+.staff-work-detail-row td {
+  height: 58px;
+  padding: 7px 5px;
+  border-right: 1px solid var(--table-border);
+  border-bottom: 1px solid var(--table-border);
+  vertical-align: middle;
+}
+
+.staff-work-detail-row th {
+  min-width: 84px;
+  background: var(--theme-soft-2);
+  color: var(--theme-dark);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.15;
+  text-align: center;
+  white-space: normal;
+}
+
+.staff-work-detail-row td {
+  min-width: 62px;
+  background: var(--table-row-alt);
+  text-align: center;
+}
+
+.staff-detail-input {
+  width: 58px;
+  min-width: 58px;
+  height: 38px;
+  padding: 7px 3px;
+  border: 1px solid var(--input-border);
+  border-radius: 7px;
+  background: var(--input-bg);
+  color: var(--text-main);
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.staff-wide-detail-input {
+  width: min(100%, 118px);
+  min-width: 90px;
+  height: 38px;
+  padding: 7px 8px;
+  border: 1px solid var(--input-border);
+  border-radius: 7px;
+  background: var(--input-bg);
+  color: var(--text-main);
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.staff-detail-value-cell {
+  text-align: center;
+}
+
+.staff-detail-value {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 78px;
+  height: 38px;
+  padding: 7px 8px;
+  border-radius: 7px;
+  background: var(--theme-light);
+  color: var(--theme-dark);
+  font-size: 14px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.staff-time-input {
+  width: 150px !important;
+  min-width: 150px !important;
+  height: 40px;
+  padding: 7px 9px;
+  border: 1px solid var(--input-border);
+  border-radius: 7px;
+  background: var(--input-bg);
+  color: var(--text-main);
+  font-size: 15px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.staff-time-input::-webkit-datetime-edit {
+  padding: 0;
+}
+
+.staff-time-input::-webkit-datetime-edit-hour-field,
+.staff-time-input::-webkit-datetime-edit-minute-field,
+.staff-time-input::-webkit-datetime-edit-ampm-field {
+  padding: 1px 2px;
+}
+
+.staff-time-input::-webkit-calendar-picker-indicator {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  opacity: 0.85;
+}
+
+.staff-allocation-actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.staff-allocation-actions button {
+  min-width: 130px;
+}
+
 @media (max-width: 1000px) {
-  .staff-allocation-table-wrap {
-    overflow-x: auto;
-    padding-bottom: 6px;
-    -webkit-overflow-scrolling: touch;
-  }
-
   .staff-allocation-table {
-    min-width: 1180px;
-  }
-
-  .staff-allocation-table th,
-  .staff-allocation-table td {
-    min-width: 64px;
+    min-width: 1400px;
   }
 }
 
@@ -247,24 +353,6 @@
     font-size: 19px;
   }
 
-  .staff-allocation-table {
-    min-width: 1080px;
-  }
-}
-
-.staff-allocation-actions {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 14px;
-  margin-top: 18px;
-}
-
-.staff-allocation-actions button {
-  min-width: 130px;
-}
-
-@media (max-width: 700px) {
   .staff-allocation-actions {
     flex-direction: column;
     align-items: stretch;
@@ -273,84 +361,4 @@
   .staff-allocation-actions button {
     width: 100%;
   }
-}
-
-.staff-pick-detail-row th {
-  background: var(--theme-soft-2);
-  color: var(--theme-dark);
-  font-size: 12px;
-  font-weight: 800;
-  text-align: center;
-}
-
-.staff-pick-detail-row td {
-  background: var(--table-row-alt);
-  padding: 7px 4px;
-}
-
-.staff-detail-input {
-  width: min(100%, 58px);
-  min-width: 0;
-  padding: 7px 3px;
-  border: 1px solid var(--input-border);
-  border-radius: 7px;
-  background: var(--input-bg);
-  color: var(--text-main);
-  font-size: 14px;
-  font-weight: 700;
-  text-align: center;
-}
-
-.staff-detail-input:focus {
-  outline: none;
-  border-color: var(--theme-main);
-  box-shadow: 0 0 0 3px var(--theme-focus);
-}
-
-.staff-detail-value {
-  color: var(--theme-dark);
-  font-size: 14px;
-  font-weight: 800;
-  text-align: center;
-  white-space: nowrap;
-}
-
-.staff-work-detail-row th {
-  background: var(--theme-soft-2);
-  color: var(--theme-dark);
-  font-size: 12px;
-  font-weight: 800;
-  text-align: center;
-  white-space: normal;
-}
-
-.staff-work-detail-row td {
-  background: var(--table-row-alt);
-  padding: 7px 4px;
-}
-
-.staff-time-input {
-  width: min(100%, 108px);
-  min-width: 0;
-  padding: 7px 4px;
-  border: 1px solid var(--input-border);
-  border-radius: 7px;
-  background: var(--input-bg);
-  color: var(--text-main);
-  font-size: 13px;
-  font-weight: 700;
-  text-align: center;
-}
-
-.staff-time-input:focus {
-  outline: none;
-  border-color: var(--theme-main);
-  box-shadow: 0 0 0 3px var(--theme-focus);
-}
-
-.staff-calculated-input {
-  border-color: var(--theme-border);
-  background: var(--theme-light);
-  color: var(--theme-dark);
-  font-weight: 800;
 }

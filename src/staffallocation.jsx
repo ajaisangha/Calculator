@@ -73,15 +73,12 @@ const emptyWorkInputs = {
   ambientUPH: "",
   chillUPH: "",
   pickCompletionTime: "",
-
   baggingOutstanding: "",
   baggingUPH: "",
   baggingCompletionTime: "",
-
   freezerOutstanding: "",
   freezerUPH: "",
   freezerCompletionTime: "",
-
   inboundUPH: "",
   inboundCompletionTime: "",
 };
@@ -156,10 +153,7 @@ export default function StaffAllocation() {
 
   const showToast = (message) => {
     setToast({ show: true, message });
-
-    setTimeout(() => {
-      setToast({ show: false, message: "" });
-    }, 2000);
+    setTimeout(() => setToast({ show: false, message: "" }), 2000);
   };
 
   useEffect(() => {
@@ -171,7 +165,6 @@ export default function StaffAllocation() {
       }
 
       const data = snapshot.data() || {};
-
       const shiftTotalHours = Number(data.totalHours) || 0;
       const targetProductivity = Number(data.targetProd) || 0;
       const ambientInbound = Number(data.ambInbound) || 0;
@@ -259,15 +252,12 @@ export default function StaffAllocation() {
         ambientUPH: data.ambientUPH ?? "",
         chillUPH: data.chillUPH ?? "",
         pickCompletionTime: data.pickCompletionTime ?? "",
-
         baggingOutstanding: data.baggingOutstanding ?? "",
         baggingUPH: data.baggingUPH ?? "",
         baggingCompletionTime: data.baggingCompletionTime ?? "",
-
         freezerOutstanding: data.freezerOutstanding ?? "",
         freezerUPH: data.freezerUPH ?? "",
         freezerCompletionTime: data.freezerCompletionTime ?? "",
-
         inboundUPH: data.inboundUPH ?? "",
         inboundCompletionTime: data.inboundCompletionTime ?? "",
       });
@@ -500,7 +490,6 @@ export default function StaffAllocation() {
         {
           ...editableValues,
           ...workInputs,
-
           ambientPickOverride: calculatedOverrides.ambientPick,
           chillPickOverride: calculatedOverrides.chillPick,
           baggingOverride: calculatedOverrides.bagging,
@@ -532,7 +521,6 @@ export default function StaffAllocation() {
         {
           ...emptyAllocation,
           ...emptyWorkInputs,
-
           ambientPickOverride: "",
           chillPickOverride: "",
           baggingOverride: "",
@@ -681,225 +669,231 @@ export default function StaffAllocation() {
             </tr>
 
             <tr className="staff-work-detail-row">
-              <th>Pick Outstanding</th>
+  <th>Ambient Outstanding</th>
 
-              <td>
-                <input
-                  type="number"
-                  min="0"
-                  aria-label="Ambient Outstanding"
-                  value={workInputs.ambientOutstanding}
-                  onChange={(event) =>
-                    updateWorkInput("ambientOutstanding", event.target.value)
-                  }
-                  className="staff-detail-input"
-                  placeholder="0"
-                />
-              </td>
+  <td colSpan="2">
+    <input
+      type="number"
+      min="0"
+      aria-label="Ambient Outstanding"
+      value={workInputs.ambientOutstanding}
+      onChange={(event) =>
+        updateWorkInput("ambientOutstanding", event.target.value)
+      }
+      className="staff-wide-detail-input"
+      placeholder="0"
+    />
+  </td>
 
-              <td>
-                <input
-                  type="number"
-                  min="0"
-                  aria-label="Chill Outstanding"
-                  value={workInputs.chillOutstanding}
-                  onChange={(event) =>
-                    updateWorkInput("chillOutstanding", event.target.value)
-                  }
-                  className="staff-detail-input"
-                  placeholder="0"
-                />
-              </td>
+  <th>Chill Outstanding</th>
 
-              <th>Bagging Outstanding</th>
+  <td colSpan="2">
+    <input
+      type="number"
+      min="0"
+      aria-label="Chill Outstanding"
+      value={workInputs.chillOutstanding}
+      onChange={(event) =>
+        updateWorkInput("chillOutstanding", event.target.value)
+      }
+      className="staff-wide-detail-input"
+      placeholder="0"
+    />
+  </td>
 
-              <td>
-                <input
-                  type="number"
-                  min="0"
-                  aria-label="Bagging Outstanding"
-                  value={workInputs.baggingOutstanding}
-                  onChange={(event) =>
-                    updateWorkInput("baggingOutstanding", event.target.value)
-                  }
-                  className="staff-detail-input"
-                  placeholder="0"
-                />
-              </td>
+  <th>Bagging Outstanding</th>
 
-              <th>Freezer Outstanding</th>
+  <td colSpan="2">
+    <input
+      type="number"
+      min="0"
+      aria-label="Bagging Outstanding"
+      value={workInputs.baggingOutstanding}
+      onChange={(event) =>
+        updateWorkInput("baggingOutstanding", event.target.value)
+      }
+      className="staff-wide-detail-input"
+      placeholder="0"
+    />
+  </td>
 
-              <td>
-                <input
-                  type="number"
-                  min="0"
-                  aria-label="Freezer Outstanding"
-                  value={workInputs.freezerOutstanding}
-                  onChange={(event) =>
-                    updateWorkInput("freezerOutstanding", event.target.value)
-                  }
-                  className="staff-detail-input"
-                  placeholder="0"
-                />
-              </td>
+  <th>Freezer Outstanding</th>
 
-              <th>Inbound Needed</th>
+  <td colSpan="2">
+    <input
+      type="number"
+      min="0"
+      aria-label="Freezer Outstanding"
+      value={workInputs.freezerOutstanding}
+      onChange={(event) =>
+        updateWorkInput("freezerOutstanding", event.target.value)
+      }
+      className="staff-wide-detail-input"
+      placeholder="0"
+    />
+  </td>
 
-              <td className="staff-detail-value">{inboundNeeded}</td>
+  <th>Inbound Needed</th>
 
-              <td colSpan="9"></td>
-            </tr>
+  <td colSpan="2" className="staff-detail-value-cell">
+    <span className="staff-detail-value">{inboundNeeded}</span>
+  </td>
 
-            <tr className="staff-work-detail-row">
-              <th>Pick UPH</th>
+  <td colSpan="2"></td>
+</tr>
 
-              <td>
-                <input
-                  type="number"
-                  min="0"
-                  aria-label="Ambient UPH"
-                  value={workInputs.ambientUPH}
-                  onChange={(event) =>
-                    updateWorkInput("ambientUPH", event.target.value)
-                  }
-                  className="staff-detail-input"
-                  placeholder="0"
-                />
-              </td>
+<tr className="staff-work-detail-row">
+  <th>Ambient UPH</th>
 
-              <td>
-                <input
-                  type="number"
-                  min="0"
-                  aria-label="Chill UPH"
-                  value={workInputs.chillUPH}
-                  onChange={(event) =>
-                    updateWorkInput("chillUPH", event.target.value)
-                  }
-                  className="staff-detail-input"
-                  placeholder="0"
-                />
-              </td>
+  <td colSpan="2">
+    <input
+      type="number"
+      min="0"
+      aria-label="Ambient UPH"
+      value={workInputs.ambientUPH}
+      onChange={(event) =>
+        updateWorkInput("ambientUPH", event.target.value)
+      }
+      className="staff-wide-detail-input"
+      placeholder="0"
+    />
+  </td>
 
-              <th>Bagging UPH</th>
+  <th>Chill UPH</th>
 
-              <td>
-                <input
-                  type="number"
-                  min="0"
-                  aria-label="Bagging UPH"
-                  value={workInputs.baggingUPH}
-                  onChange={(event) =>
-                    updateWorkInput("baggingUPH", event.target.value)
-                  }
-                  className="staff-detail-input"
-                  placeholder="0"
-                />
-              </td>
+  <td colSpan="2">
+    <input
+      type="number"
+      min="0"
+      aria-label="Chill UPH"
+      value={workInputs.chillUPH}
+      onChange={(event) =>
+        updateWorkInput("chillUPH", event.target.value)
+      }
+      className="staff-wide-detail-input"
+      placeholder="0"
+    />
+  </td>
 
-              <th>Freezer UPH</th>
+  <th>Bagging UPH</th>
 
-              <td>
-                <input
-                  type="number"
-                  min="0"
-                  aria-label="Freezer UPH"
-                  value={workInputs.freezerUPH}
-                  onChange={(event) =>
-                    updateWorkInput("freezerUPH", event.target.value)
-                  }
-                  className="staff-detail-input"
-                  placeholder="0"
-                />
-              </td>
+  <td colSpan="2">
+    <input
+      type="number"
+      min="0"
+      aria-label="Bagging UPH"
+      value={workInputs.baggingUPH}
+      onChange={(event) =>
+        updateWorkInput("baggingUPH", event.target.value)
+      }
+      className="staff-wide-detail-input"
+      placeholder="0"
+    />
+  </td>
 
-              <th>Inbound UPH</th>
+  <th>Freezer UPH</th>
 
-              <td>
-                <input
-                  type="number"
-                  min="0"
-                  aria-label="Inbound UPH"
-                  value={workInputs.inboundUPH}
-                  onChange={(event) =>
-                    updateWorkInput("inboundUPH", event.target.value)
-                  }
-                  className="staff-detail-input"
-                  placeholder="0"
-                />
-              </td>
+  <td colSpan="2">
+    <input
+      type="number"
+      min="0"
+      aria-label="Freezer UPH"
+      value={workInputs.freezerUPH}
+      onChange={(event) =>
+        updateWorkInput("freezerUPH", event.target.value)
+      }
+      className="staff-wide-detail-input"
+      placeholder="0"
+    />
+  </td>
 
-              <td colSpan="9"></td>
-            </tr>
+  <th>Inbound UPH</th>
 
-            <tr className="staff-work-detail-row">
-              <th>Pick Completion</th>
+  <td colSpan="2">
+    <input
+      type="number"
+      min="0"
+      aria-label="Inbound UPH"
+      value={workInputs.inboundUPH}
+      onChange={(event) =>
+        updateWorkInput("inboundUPH", event.target.value)
+      }
+      className="staff-wide-detail-input"
+      placeholder="0"
+    />
+  </td>
 
-              <td colSpan="2">
-                <input
-                  type="time"
-                  aria-label="Pick Completion Time"
-                  value={workInputs.pickCompletionTime}
-                  onChange={(event) =>
-                    updateWorkInput("pickCompletionTime", event.target.value)
-                  }
-                  className="staff-time-input"
-                />
-              </td>
+  <td colSpan="2"></td>
+</tr>
 
-              <th>Bagging Completion</th>
+<tr className="staff-work-detail-row">
+  <th>Pick Completion</th>
 
-              <td colSpan="2">
-                <input
-                  type="time"
-                  aria-label="Bagging Completion Time"
-                  value={workInputs.baggingCompletionTime}
-                  onChange={(event) =>
-                    updateWorkInput(
-                      "baggingCompletionTime",
-                      event.target.value
-                    )
-                  }
-                  className="staff-time-input"
-                />
-              </td>
+  <td colSpan="5">
+    <input
+      type="time"
+      aria-label="Pick Completion Time for Ambient and Chill Pick"
+      value={workInputs.pickCompletionTime}
+      onChange={(event) =>
+        updateWorkInput("pickCompletionTime", event.target.value)
+      }
+      className="staff-time-input"
+    />
+  </td>
 
-              <th>Freezer Completion</th>
+  <th>Bagging Completion</th>
 
-              <td colSpan="2">
-                <input
-                  type="time"
-                  aria-label="Freezer Completion Time"
-                  value={workInputs.freezerCompletionTime}
-                  onChange={(event) =>
-                    updateWorkInput(
-                      "freezerCompletionTime",
-                      event.target.value
-                    )
-                  }
-                  className="staff-time-input"
-                />
-              </td>
+  <td colSpan="2">
+    <input
+      type="time"
+      aria-label="Bagging Completion Time"
+      value={workInputs.baggingCompletionTime}
+      onChange={(event) =>
+        updateWorkInput(
+          "baggingCompletionTime",
+          event.target.value
+        )
+      }
+      className="staff-time-input"
+    />
+  </td>
 
-              <th>Inbound Completion</th>
+  <th>Freezer Completion</th>
 
-              <td colSpan="2">
-                <input
-                  type="time"
-                  aria-label="Inbound Completion Time"
-                  value={workInputs.inboundCompletionTime}
-                  onChange={(event) =>
-                    updateWorkInput(
-                      "inboundCompletionTime",
-                      event.target.value
-                    )
-                  }
-                  className="staff-time-input"
-                />
-              </td>
+  <td colSpan="2">
+    <input
+      type="time"
+      aria-label="Freezer Completion Time"
+      value={workInputs.freezerCompletionTime}
+      onChange={(event) =>
+        updateWorkInput(
+          "freezerCompletionTime",
+          event.target.value
+        )
+      }
+      className="staff-time-input"
+    />
+  </td>
 
-              <td colSpan="6"></td>
-            </tr>
+  <th>Inbound Completion</th>
+
+  <td colSpan="2">
+    <input
+      type="time"
+      aria-label="Inbound Completion Time"
+      value={workInputs.inboundCompletionTime}
+      onChange={(event) =>
+        updateWorkInput(
+          "inboundCompletionTime",
+          event.target.value
+        )
+      }
+      className="staff-time-input"
+    />
+  </td>
+
+  <td colSpan="2"></td>
+</tr>
           </tbody>
         </table>
       </div>
