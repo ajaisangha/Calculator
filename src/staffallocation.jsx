@@ -90,14 +90,6 @@ const emptyWorkInputs = {
   inboundCompletionTime: "",
 };
 
-const emptyCalculatedOverrides = {
-  ambientPick: "",
-  chillPick: "",
-  bagging: "",
-  freezerPick: "",
-  decant: "",
-};
-
 function getNumber(value) {
   return Number(value) || 0;
 }
@@ -152,13 +144,11 @@ export default function StaffAllocation() {
   const [totalHours, setTotalHours] = useState(0);
   const [inboundNeeded, setInboundNeeded] = useState(0);
   const [workInputs, setWorkInputs] = useState(emptyWorkInputs);
-  const [calculatedOverrides, setCalculatedOverrides] = useState(
-    emptyCalculatedOverrides
-  );
-  const [staffDataLoaded, setStaffDataLoaded] = useState(false);
   const [toast, setToast] = useState({ show: false, message: "" });
 
-  const savedWorkInputKeys = useRef(new Set());
+  const initializedFromFirestore = useRef(false);
+  const editedWorkInputKeys = useRef(new Set());
+  const editedAllocationKeys = useRef(new Set());
 
   const showToast = (message) => {
     setToast({ show: true, message });
@@ -208,59 +198,83 @@ export default function StaffAllocation() {
     const unsubscribe = onSnapshot(STAFF_ALLOCATION_DOC, (snapshot) => {
       const data = snapshot.exists() ? snapshot.data() || {} : {};
 
-      const savedKeys = new Set(
-        Object.keys(emptyWorkInputs).filter(
-          (key) =>
-            Object.prototype.hasOwnProperty.call(data, key) &&
-            data[key] !== ""
-        )
-      );
+      if (!initializedFromFirestore.current) {
+        setAllocation({
+          baggingRunner: data.baggingRunner ?? 1,
+          freezerDecant: data.freezerDecant ?? 0,
+          mhe: data.mhe ?? 1,
+          frameload: data.frameload ?? 3,
+          bt: data.bt ?? 2,
+          vanLoad: data.vanLoad ?? 1,
+          dekit: data.dekit ?? 1,
+          totalIC: data.totalIC ?? 2,
+        });
 
-      savedWorkInputKeys.current = savedKeys;
+        setWorkInputs({
+          ambientOutstanding: data.ambientOutstanding ?? "",
+          chillOutstanding: data.chillOutstanding ?? "",
+          ambientUPH: data.ambientUPH ?? "",
+          chillUPH: data.chillUPH ?? "",
+          pickBreakMinutes: data.pickBreakMinutes ?? "",
+          pickCompletionTime: data.pickCompletionTime ?? "",
 
-      setAllocation({
-        baggingRunner: data.baggingRunner ?? 1,
-        freezerDecant: data.freezerDecant ?? 0,
-        mhe: data.mhe ?? 1,
-        frameload: data.frameload ?? 3,
-        bt: data.bt ?? 2,
-        vanLoad: data.vanLoad ?? 1,
-        dekit: data.dekit ?? 1,
-        totalIC: data.totalIC ?? 2,
+          baggingOutstanding: data.baggingOutstanding ?? "",
+          baggingUPH: data.baggingUPH ?? "",
+          baggingBreakMinutes: data.baggingBreakMinutes ?? "",
+          baggingCompletionTime: data.baggingCompletionTime ?? "",
+
+          freezerOutstanding: data.freezerOutstanding ?? "",
+          freezerUPH: data.freezerUPH ?? "",
+          freezerBreakMinutes: data.freezerBreakMinutes ?? "",
+          freezerCompletionTime: data.freezerCompletionTime ?? "",
+
+          inboundUPH: data.inboundUPH ?? "",
+          inboundBreakMinutes: data.inboundBreakMinutes ?? "",
+          inboundCompletionTime: data.inboundCompletionTime ?? "",
+        });
+
+        initializedFromFirestore.current = true;
+        return;
+      }
+
+      setAllocation((previous) => ({
+        baggingRunner: editedAllocationKeys.current.has("baggingRunner")
+          ? previous.baggingRunner
+          : data.baggingRunner ?? 1,
+        freezerDecant: editedAllocationKeys.current.has("freezerDecant")
+          ? previous.freezerDecant
+          : data.freezerDecant ?? 0,
+        mhe: editedAllocationKeys.current.has("mhe")
+          ? previous.mhe
+          : data.mhe ?? 1,
+        frameload: editedAllocationKeys.current.has("frameload")
+          ? previous.frameload
+          : data.frameload ?? 3,
+        bt: editedAllocationKeys.current.has("bt")
+          ? previous.bt
+          : data.bt ?? 2,
+        vanLoad: editedAllocationKeys.current.has("vanLoad")
+          ? previous.vanLoad
+          : data.vanLoad ?? 1,
+        dekit: editedAllocationKeys.current.has("dekit")
+          ? previous.dekit
+          : data.dekit ?? 1,
+        totalIC: editedAllocationKeys.current.has("totalIC")
+          ? previous.totalIC
+          : data.totalIC ?? 2,
+      }));
+
+      setWorkInputs((previous) => {
+        const next = { ...previous };
+
+        Object.keys(emptyWorkInputs).forEach((key) => {
+          if (!editedWorkInputKeys.current.has(key)) {
+            next[key] = data[key] ?? "";
+          }
+        });
+
+        return next;
       });
-
-      setWorkInputs({
-        ambientOutstanding: data.ambientOutstanding ?? "",
-        chillOutstanding: data.chillOutstanding ?? "",
-        ambientUPH: data.ambientUPH ?? "",
-        chillUPH: data.chillUPH ?? "",
-        pickBreakMinutes: data.pickBreakMinutes ?? "",
-        pickCompletionTime: data.pickCompletionTime ?? "",
-
-        baggingOutstanding: data.baggingOutstanding ?? "",
-        baggingUPH: data.baggingUPH ?? "",
-        baggingBreakMinutes: data.baggingBreakMinutes ?? "",
-        baggingCompletionTime: data.baggingCompletionTime ?? "",
-
-        freezerOutstanding: data.freezerOutstanding ?? "",
-        freezerUPH: data.freezerUPH ?? "",
-        freezerBreakMinutes: data.freezerBreakMinutes ?? "",
-        freezerCompletionTime: data.freezerCompletionTime ?? "",
-
-        inboundUPH: data.inboundUPH ?? "",
-        inboundBreakMinutes: data.inboundBreakMinutes ?? "",
-        inboundCompletionTime: data.inboundCompletionTime ?? "",
-      });
-
-      setCalculatedOverrides({
-        ambientPick: data.ambientPickOverride ?? "",
-        chillPick: data.chillPickOverride ?? "",
-        bagging: data.baggingOverride ?? "",
-        freezerPick: data.freezerPickOverride ?? "",
-        decant: data.decantOverride ?? "",
-      });
-
-      setStaffDataLoaded(true);
     });
 
     return unsubscribe;
@@ -272,32 +286,34 @@ export default function StaffAllocation() {
 
       const data = snapshot.data() || {};
 
-      if (!staffDataLoaded) return;
-
       setWorkInputs((previous) => ({
         ...previous,
-        ambientOutstanding: savedWorkInputKeys.current.has("ambientOutstanding")
+        ambientOutstanding: editedWorkInputKeys.current.has(
+          "ambientOutstanding"
+        )
           ? previous.ambientOutstanding
           : data.ambientOutstanding ?? "",
-        chillOutstanding: savedWorkInputKeys.current.has("chillOutstanding")
+        chillOutstanding: editedWorkInputKeys.current.has("chillOutstanding")
           ? previous.chillOutstanding
           : data.chillOutstanding ?? "",
-        ambientUPH: savedWorkInputKeys.current.has("ambientUPH")
+        ambientUPH: editedWorkInputKeys.current.has("ambientUPH")
           ? previous.ambientUPH
           : data.ambientUPH ?? "",
-        chillUPH: savedWorkInputKeys.current.has("chillUPH")
+        chillUPH: editedWorkInputKeys.current.has("chillUPH")
           ? previous.chillUPH
           : data.chillUPH ?? "",
-        pickBreakMinutes: savedWorkInputKeys.current.has("pickBreakMinutes")
+        pickBreakMinutes: editedWorkInputKeys.current.has("pickBreakMinutes")
           ? previous.pickBreakMinutes
           : data.ambientBreak1 ?? "",
       }));
     });
 
     return unsubscribe;
-  }, [staffDataLoaded]);
+  }, []);
 
   const updateAllocation = (key, value) => {
+    editedAllocationKeys.current.add(key);
+
     setAllocation((previous) => ({
       ...previous,
       [key]: value === "" ? "" : Math.max(0, Number(value) || 0),
@@ -305,16 +321,9 @@ export default function StaffAllocation() {
   };
 
   const updateWorkInput = (key, value) => {
-    savedWorkInputKeys.current.add(key);
+    editedWorkInputKeys.current.add(key);
 
     setWorkInputs((previous) => ({
-      ...previous,
-      [key]: value,
-    }));
-  };
-
-  const updateCalculatedOverride = (key, value) => {
-    setCalculatedOverrides((previous) => ({
       ...previous,
       [key]: value,
     }));
@@ -400,36 +409,6 @@ export default function StaffAllocation() {
     ]
   );
 
-  const requestedAmbientPick = getNumber(
-    calculatedOverrides.ambientPick !== ""
-      ? calculatedOverrides.ambientPick
-      : calculatedAmbientPick
-  );
-
-  const requestedChillPick = getNumber(
-    calculatedOverrides.chillPick !== ""
-      ? calculatedOverrides.chillPick
-      : calculatedChillPick
-  );
-
-  const requestedBagging = getNumber(
-    calculatedOverrides.bagging !== ""
-      ? calculatedOverrides.bagging
-      : calculatedBagging
-  );
-
-  const requestedFreezerPick = getNumber(
-    calculatedOverrides.freezerPick !== ""
-      ? calculatedOverrides.freezerPick
-      : calculatedFreezerPick
-  );
-
-  const requestedDecant = getNumber(
-    calculatedOverrides.decant !== ""
-      ? calculatedOverrides.decant
-      : calculatedDecant
-  );
-
   const maxAllocation = Math.ceil(totalHours / 10);
 
   const staffAllocationPlan = useMemo(() => {
@@ -445,16 +424,16 @@ export default function StaffAllocation() {
       return allocated;
     };
 
-    const ambientPick = assignPriority(requestedAmbientPick);
-    const chillPick = assignPriority(requestedChillPick);
-    const freezerPick = assignPriority(requestedFreezerPick);
+    const ambientPick = assignPriority(calculatedAmbientPick);
+    const chillPick = assignPriority(calculatedChillPick);
+    const freezerPick = assignPriority(calculatedFreezerPick);
     const mhe = assignPriority(getNumber(allocation.mhe));
     const frameload = assignPriority(getNumber(allocation.frameload));
     const bt = assignPriority(getNumber(allocation.bt));
     const vanLoad = assignPriority(getNumber(allocation.vanLoad));
     const totalIC = assignPriority(getNumber(allocation.totalIC));
-    const decant = assignPriority(requestedDecant);
-    const bagging = assignPriority(requestedBagging);
+    const decant = assignPriority(calculatedDecant);
+    const bagging = assignPriority(calculatedBagging);
     const dekit = assignPriority(getNumber(allocation.dekit));
     const baggingRunner = assignPriority(getNumber(allocation.baggingRunner));
     const freezerDecant = assignPriority(getNumber(allocation.freezerDecant));
@@ -477,11 +456,11 @@ export default function StaffAllocation() {
     };
   }, [
     maxAllocation,
-    requestedAmbientPick,
-    requestedChillPick,
-    requestedFreezerPick,
-    requestedDecant,
-    requestedBagging,
+    calculatedAmbientPick,
+    calculatedChillPick,
+    calculatedFreezerPick,
+    calculatedDecant,
+    calculatedBagging,
     allocation.mhe,
     allocation.frameload,
     allocation.bt,
@@ -515,11 +494,11 @@ export default function StaffAllocation() {
     totalPick + totalFreezer + totalInbound + totalDispatch + totalIC;
 
   const totalRequested =
-    requestedAmbientPick +
-    requestedChillPick +
-    requestedBagging +
-    requestedFreezerPick +
-    requestedDecant +
+    calculatedAmbientPick +
+    calculatedChillPick +
+    calculatedBagging +
+    calculatedFreezerPick +
+    calculatedDecant +
     getNumber(allocation.mhe) +
     getNumber(allocation.frameload) +
     getNumber(allocation.bt) +
@@ -562,14 +541,6 @@ export default function StaffAllocation() {
     totalIC: allocation.totalIC,
   };
 
-  const overrideKeyMap = {
-    ambientPick: "ambientPick",
-    chillPick: "chillPick",
-    bagging: "bagging",
-    freezerPick: "freezerPick",
-    decant: "decant",
-  };
-
   const saveAllocation = async () => {
     try {
       await setDoc(
@@ -577,20 +548,9 @@ export default function StaffAllocation() {
         {
           ...editableValues,
           ...workInputs,
-          ambientPickOverride: calculatedOverrides.ambientPick,
-          chillPickOverride: calculatedOverrides.chillPick,
-          baggingOverride: calculatedOverrides.bagging,
-          freezerPickOverride: calculatedOverrides.freezerPick,
-          decantOverride: calculatedOverrides.decant,
         },
         { merge: true }
       );
-
-      Object.keys(workInputs).forEach((key) => {
-        if (workInputs[key] !== "") {
-          savedWorkInputKeys.current.add(key);
-        }
-      });
 
       showToast("Staff Allocation Saved");
     } catch (error) {
@@ -601,22 +561,18 @@ export default function StaffAllocation() {
 
   const clearAllocation = async () => {
     try {
-      savedWorkInputKeys.current = new Set();
+      initializedFromFirestore.current = false;
+      editedWorkInputKeys.current = new Set();
+      editedAllocationKeys.current = new Set();
 
       setAllocation(emptyAllocation);
       setWorkInputs(emptyWorkInputs);
-      setCalculatedOverrides(emptyCalculatedOverrides);
 
       await setDoc(
         STAFF_ALLOCATION_DOC,
         {
           ...emptyAllocation,
           ...emptyWorkInputs,
-          ambientPickOverride: "",
-          chillPickOverride: "",
-          baggingOverride: "",
-          freezerPickOverride: "",
-          decantOverride: "",
         },
         { merge: true }
       );
@@ -632,31 +588,14 @@ export default function StaffAllocation() {
     const allocationValue = calculatedValues[subGroup.key] ?? 0;
 
     if (subGroup.calculated) {
-      const overrideKey = overrideKeyMap[subGroup.key];
-      const currentOverride = calculatedOverrides[overrideKey];
-      const canOverride = Boolean(overrideKey);
-
       return (
         <td key={subGroup.key} className="staff-total-cell">
           <input
             type="number"
-            min="0"
-            inputMode="numeric"
-            aria-label={`${subGroup.label} allocation`}
-            value={
-              canOverride && currentOverride !== ""
-                ? currentOverride
-                : allocationValue
-            }
-            onChange={(event) => {
-              if (canOverride) {
-                updateCalculatedOverride(overrideKey, event.target.value);
-              }
-            }}
-            readOnly={!canOverride}
-            className={`staff-allocation-input staff-calculated-input ${
-              !canOverride ? "staff-readonly-input" : ""
-            }`}
+            value={allocationValue}
+            readOnly
+            aria-label={`${subGroup.label} calculated allocation`}
+            className="staff-allocation-input staff-calculated-input staff-readonly-input"
           />
         </td>
       );
