@@ -9,8 +9,13 @@ const PICK_DOC = doc(db, "totes", "pickCalculator");
 const STAFF_ALLOCATION_DOC = doc(db, "totes", "staffAllocation");
 
 const emptyAllocation = {
+  ambientPick: "",
+  chillPick: "",
+  bagging: "",
   baggingRunner: 1,
+  freezerPick: "",
   freezerDecant: 0,
+  decant: "",
   mhe: 1,
   frameload: 3,
   bt: 2,
@@ -94,6 +99,7 @@ function NumberField({
   onChange,
   readOnly = false,
   calculated = false,
+  overAllocated = false,
   placeholder = "0",
 }) {
   return (
@@ -110,7 +116,9 @@ function NumberField({
         placeholder={placeholder}
         className={`staff-field-input ${
           calculated ? "staff-field-calculated" : ""
-        } ${readOnly ? "staff-readonly-input" : ""}`}
+        } ${readOnly ? "staff-readonly-input" : ""} ${
+          overAllocated ? "staff-over-allocation-input" : ""
+        }`}
       />
     </label>
   );
@@ -136,13 +144,13 @@ export default function StaffAllocation() {
   const [totalHours, setTotalHours] = useState(0);
   const [inboundNeeded, setInboundNeeded] = useState(0);
   const [workInputs, setWorkInputs] = useState(emptyWorkInputs);
+  const [overAllocatedFields, setOverAllocatedFields] = useState(new Set());
   const [toast, setToast] = useState({ show: false, message: "" });
 
   const initializedFromFirestore = useRef(false);
   const editedWorkInputKeys = useRef(new Set());
   const editedAllocationKeys = useRef(new Set());
   const toastTimerRef = useRef(null);
-  const shownShortfallRef = useRef("");
 
   const showToast = (message) => {
     if (toastTimerRef.current) {
@@ -210,8 +218,13 @@ export default function StaffAllocation() {
 
       if (!initializedFromFirestore.current) {
         setAllocation({
+          ambientPick: data.ambientPick ?? "",
+          chillPick: data.chillPick ?? "",
+          bagging: data.bagging ?? "",
           baggingRunner: data.baggingRunner ?? 1,
+          freezerPick: data.freezerPick ?? "",
           freezerDecant: data.freezerDecant ?? 0,
+          decant: data.decant ?? "",
           mhe: data.mhe ?? 1,
           frameload: data.frameload ?? 3,
           bt: data.bt ?? 2,
@@ -244,32 +257,17 @@ export default function StaffAllocation() {
         return;
       }
 
-      setAllocation((previous) => ({
-        baggingRunner: editedAllocationKeys.current.has("baggingRunner")
-          ? previous.baggingRunner
-          : data.baggingRunner ?? 1,
-        freezerDecant: editedAllocationKeys.current.has("freezerDecant")
-          ? previous.freezerDecant
-          : data.freezerDecant ?? 0,
-        mhe: editedAllocationKeys.current.has("mhe")
-          ? previous.mhe
-          : data.mhe ?? 1,
-        frameload: editedAllocationKeys.current.has("frameload")
-          ? previous.frameload
-          : data.frameload ?? 3,
-        bt: editedAllocationKeys.current.has("bt")
-          ? previous.bt
-          : data.bt ?? 2,
-        vanLoad: editedAllocationKeys.current.has("vanLoad")
-          ? previous.vanLoad
-          : data.vanLoad ?? 1,
-        dekit: editedAllocationKeys.current.has("dekit")
-          ? previous.dekit
-          : data.dekit ?? 1,
-        totalIC: editedAllocationKeys.current.has("totalIC")
-          ? previous.totalIC
-          : data.totalIC ?? 2,
-      }));
+      setAllocation((previous) => {
+        const next = { ...previous };
+
+        Object.keys(emptyAllocation).forEach((key) => {
+          if (!editedAllocationKeys.current.has(key)) {
+            next[key] = data[key] ?? emptyAllocation[key];
+          }
+        });
+
+        return next;
+      });
 
       setWorkInputs((previous) => {
         const next = { ...previous };
@@ -416,127 +414,127 @@ export default function StaffAllocation() {
     ]
   );
 
-  const maxAllocation = Math.ceil(totalHours / 10);
-
-  const staffAllocationPlan = useMemo(() => {
-    let remaining = maxAllocation;
-
-    const assignPriority = (requested) => {
-      const allocated = Math.min(
-        Math.max(requested, 0),
-        Math.max(remaining, 0)
-      );
-
-      remaining -= allocated;
-      return allocated;
-    };
-
-    const ambientPick = assignPriority(calculatedAmbientPick);
-    const chillPick = assignPriority(calculatedChillPick);
-    const freezerPick = assignPriority(calculatedFreezerPick);
-    const mhe = assignPriority(getNumber(allocation.mhe));
-    const frameload = assignPriority(getNumber(allocation.frameload));
-    const bt = assignPriority(getNumber(allocation.bt));
-    const vanLoad = assignPriority(getNumber(allocation.vanLoad));
-    const totalIC = assignPriority(getNumber(allocation.totalIC));
-    const decant = assignPriority(calculatedDecant);
-    const bagging = assignPriority(calculatedBagging);
-    const dekit = assignPriority(getNumber(allocation.dekit));
-    const baggingRunner = assignPriority(getNumber(allocation.baggingRunner));
-    const freezerDecant = assignPriority(getNumber(allocation.freezerDecant));
-
-    return {
-      ambientPick,
-      chillPick,
-      freezerPick,
-      mhe,
-      frameload,
-      bt,
-      vanLoad,
-      totalIC,
-      decant,
-      bagging,
-      dekit,
-      baggingRunner,
-      freezerDecant,
-      remaining,
-    };
+  useEffect(() => {
+    setAllocation((previous) => ({
+      ...previous,
+      ambientPick:
+        previous.ambientPick === ""
+          ? calculatedAmbientPick
+          : previous.ambientPick,
+      chillPick:
+        previous.chillPick === "" ? calculatedChillPick : previous.chillPick,
+      bagging:
+        previous.bagging === "" ? calculatedBagging : previous.bagging,
+      freezerPick:
+        previous.freezerPick === ""
+          ? calculatedFreezerPick
+          : previous.freezerPick,
+      decant: previous.decant === "" ? calculatedDecant : previous.decant,
+    }));
   }, [
-    maxAllocation,
     calculatedAmbientPick,
     calculatedChillPick,
+    calculatedBagging,
     calculatedFreezerPick,
     calculatedDecant,
-    calculatedBagging,
-    allocation.mhe,
-    allocation.frameload,
-    allocation.bt,
-    allocation.vanLoad,
-    allocation.totalIC,
-    allocation.dekit,
-    allocation.baggingRunner,
-    allocation.freezerDecant,
   ]);
 
+  const maxAllocation = Math.ceil(totalHours / 10);
+
   const totalPick =
-    staffAllocationPlan.ambientPick +
-    staffAllocationPlan.chillPick +
-    staffAllocationPlan.bagging +
-    staffAllocationPlan.baggingRunner;
+    getNumber(allocation.ambientPick) +
+    getNumber(allocation.chillPick) +
+    getNumber(allocation.bagging) +
+    getNumber(allocation.baggingRunner);
 
   const totalFreezer =
-    staffAllocationPlan.freezerPick + staffAllocationPlan.freezerDecant;
+    getNumber(allocation.freezerPick) +
+    getNumber(allocation.freezerDecant);
 
   const totalInbound =
-    staffAllocationPlan.decant + staffAllocationPlan.mhe;
+    getNumber(allocation.decant) + getNumber(allocation.mhe);
 
   const totalDispatch =
-    staffAllocationPlan.frameload +
-    staffAllocationPlan.bt +
-    staffAllocationPlan.vanLoad +
-    staffAllocationPlan.dekit;
+    getNumber(allocation.frameload) +
+    getNumber(allocation.bt) +
+    getNumber(allocation.vanLoad) +
+    getNumber(allocation.dekit);
 
   const totalAllocated =
     totalPick +
     totalFreezer +
     totalInbound +
     totalDispatch +
-    staffAllocationPlan.totalIC;
+    getNumber(allocation.totalIC);
 
-  const totalRequested =
-    calculatedAmbientPick +
-    calculatedChillPick +
-    calculatedBagging +
-    calculatedFreezerPick +
-    calculatedDecant +
-    getNumber(allocation.mhe) +
-    getNumber(allocation.frameload) +
-    getNumber(allocation.bt) +
-    getNumber(allocation.vanLoad) +
-    getNumber(allocation.dekit) +
-    getNumber(allocation.totalIC) +
-    getNumber(allocation.baggingRunner) +
-    getNumber(allocation.freezerDecant);
+  const difference = maxAllocation - totalAllocated;
 
-  const shortfall = Math.max(0, totalRequested - totalAllocated);
-
+  /*
+    When Difference becomes negative:
+    - The field currently changed is added to the red set.
+    - Earlier red fields stay red.
+    - All red fields clear only when Difference is 0 or positive.
+  */
   useEffect(() => {
-    if (shortfall <= 0) {
-      shownShortfallRef.current = "";
-      return;
+    if (difference >= 0) {
+      setOverAllocatedFields(new Set());
     }
+  }, [difference]);
 
-    const warningMessage =
-      `Staffing requirement is higher than available teammates. ` +
-      `Shortfall: ${shortfall}.`;
+  const updateAllocationWithHighlight = (key, value) => {
+    const numericValue = value === "" ? "" : Math.max(0, Number(value) || 0);
 
-    if (shownShortfallRef.current === warningMessage) {
-      return;
-    }
+    editedAllocationKeys.current.add(key);
 
-    shownShortfallRef.current = warningMessage;
-    showToast(warningMessage);
-  }, [shortfall]);
+    setAllocation((previous) => {
+      const updated = {
+        ...previous,
+        [key]: numericValue,
+      };
+
+      const updatedTotalPick =
+        getNumber(updated.ambientPick) +
+        getNumber(updated.chillPick) +
+        getNumber(updated.bagging) +
+        getNumber(updated.baggingRunner);
+
+      const updatedTotalFreezer =
+        getNumber(updated.freezerPick) +
+        getNumber(updated.freezerDecant);
+
+      const updatedTotalInbound =
+        getNumber(updated.decant) + getNumber(updated.mhe);
+
+      const updatedTotalDispatch =
+        getNumber(updated.frameload) +
+        getNumber(updated.bt) +
+        getNumber(updated.vanLoad) +
+        getNumber(updated.dekit);
+
+      const updatedTotal =
+        updatedTotalPick +
+        updatedTotalFreezer +
+        updatedTotalInbound +
+        updatedTotalDispatch +
+        getNumber(updated.totalIC);
+
+      const updatedDifference = maxAllocation - updatedTotal;
+
+      if (updatedDifference < 0 && getNumber(numericValue) > 0) {
+        setOverAllocatedFields((previousFields) => {
+          const nextFields = new Set(previousFields);
+          nextFields.add(key);
+          return nextFields;
+        });
+      }
+
+      if (updatedDifference >= 0) {
+        setOverAllocatedFields(new Set());
+      }
+
+      return updated;
+    });
+  };
 
   const saveAllocation = async () => {
     try {
@@ -561,8 +559,8 @@ export default function StaffAllocation() {
       initializedFromFirestore.current = false;
       editedWorkInputKeys.current = new Set();
       editedAllocationKeys.current = new Set();
-      shownShortfallRef.current = "";
 
+      setOverAllocatedFields(new Set());
       setAllocation(emptyAllocation);
       setWorkInputs(emptyWorkInputs);
 
@@ -598,20 +596,14 @@ export default function StaffAllocation() {
             <strong>{maxAllocation}</strong>
           </div>
 
-          <div className={shortfall > 0 ? "allocation-over-limit" : ""}>
+          <div className={difference < 0 ? "allocation-over-limit" : ""}>
             <span>Allocated Teammates</span>
             <strong>{totalAllocated}</strong>
           </div>
 
-          <div
-            className={
-              staffAllocationPlan.remaining > 0
-                ? ""
-                : "allocation-over-limit"
-            }
-          >
-            <span>Remaining Teammates</span>
-            <strong>{staffAllocationPlan.remaining}</strong>
+          <div className={difference < 0 ? "allocation-over-limit" : ""}>
+            <span>Difference</span>
+            <strong>{difference}</strong>
           </div>
         </div>
 
@@ -636,37 +628,51 @@ export default function StaffAllocation() {
           <div className="staff-fields-grid staff-pick-allocation-row">
             <NumberField
               label="Ambient Pick"
-              value={staffAllocationPlan.ambientPick}
-              readOnly
+              value={allocation.ambientPick}
+              onChange={(event) =>
+                updateAllocationWithHighlight(
+                  "ambientPick",
+                  event.target.value
+                )
+              }
               calculated
+              overAllocated={overAllocatedFields.has("ambientPick")}
             />
 
             <NumberField
               label="Chill Pick"
-              value={staffAllocationPlan.chillPick}
-              readOnly
+              value={allocation.chillPick}
+              onChange={(event) =>
+                updateAllocationWithHighlight("chillPick", event.target.value)
+              }
               calculated
+              overAllocated={overAllocatedFields.has("chillPick")}
             />
 
             <NumberField
               label="Bagging"
-              value={staffAllocationPlan.bagging}
-              readOnly
+              value={allocation.bagging}
+              onChange={(event) =>
+                updateAllocationWithHighlight("bagging", event.target.value)
+              }
               calculated
+              overAllocated={overAllocatedFields.has("bagging")}
             />
 
             <NumberField
               label="Bagging Runner"
               value={allocation.baggingRunner}
               onChange={(event) =>
-                updateAllocation("baggingRunner", event.target.value)
+                updateAllocationWithHighlight(
+                  "baggingRunner",
+                  event.target.value
+                )
               }
+              overAllocated={overAllocatedFields.has("baggingRunner")}
             />
           </div>
 
-          <div className="staff-group-divider">
-            Pick workload details
-          </div>
+          <div className="staff-group-divider">Pick workload details</div>
 
           <div className="staff-fields-grid">
             <NumberField
@@ -719,9 +725,7 @@ export default function StaffAllocation() {
             />
           </div>
 
-          <div className="staff-group-divider">
-            Bagging workload details
-          </div>
+          <div className="staff-group-divider">Bagging workload details</div>
 
           <div className="staff-fields-grid">
             <NumberField
@@ -771,23 +775,31 @@ export default function StaffAllocation() {
           <div className="staff-fields-grid">
             <NumberField
               label="Freezer Pick"
-              value={staffAllocationPlan.freezerPick}
-              readOnly
+              value={allocation.freezerPick}
+              onChange={(event) =>
+                updateAllocationWithHighlight(
+                  "freezerPick",
+                  event.target.value
+                )
+              }
               calculated
+              overAllocated={overAllocatedFields.has("freezerPick")}
             />
 
             <NumberField
               label="Freezer Decant"
               value={allocation.freezerDecant}
               onChange={(event) =>
-                updateAllocation("freezerDecant", event.target.value)
+                updateAllocationWithHighlight(
+                  "freezerDecant",
+                  event.target.value
+                )
               }
+              overAllocated={overAllocatedFields.has("freezerDecant")}
             />
           </div>
 
-          <div className="staff-group-divider">
-            Freezer workload details
-          </div>
+          <div className="staff-group-divider">Freezer workload details</div>
 
           <div className="staff-fields-grid">
             <NumberField
@@ -837,23 +849,25 @@ export default function StaffAllocation() {
           <div className="staff-fields-grid">
             <NumberField
               label="Decant"
-              value={staffAllocationPlan.decant}
-              readOnly
+              value={allocation.decant}
+              onChange={(event) =>
+                updateAllocationWithHighlight("decant", event.target.value)
+              }
               calculated
+              overAllocated={overAllocatedFields.has("decant")}
             />
 
             <NumberField
               label="MHE"
               value={allocation.mhe}
               onChange={(event) =>
-                updateAllocation("mhe", event.target.value)
+                updateAllocationWithHighlight("mhe", event.target.value)
               }
+              overAllocated={overAllocatedFields.has("mhe")}
             />
           </div>
 
-          <div className="staff-group-divider">
-            Inbound workload details
-          </div>
+          <div className="staff-group-divider">Inbound workload details</div>
 
           <div className="staff-fields-grid">
             <NumberField
@@ -904,32 +918,39 @@ export default function StaffAllocation() {
               label="Frameload"
               value={allocation.frameload}
               onChange={(event) =>
-                updateAllocation("frameload", event.target.value)
+                updateAllocationWithHighlight(
+                  "frameload",
+                  event.target.value
+                )
               }
+              overAllocated={overAllocatedFields.has("frameload")}
             />
 
             <NumberField
               label="BT"
               value={allocation.bt}
               onChange={(event) =>
-                updateAllocation("bt", event.target.value)
+                updateAllocationWithHighlight("bt", event.target.value)
               }
+              overAllocated={overAllocatedFields.has("bt")}
             />
 
             <NumberField
               label="Van Load"
               value={allocation.vanLoad}
               onChange={(event) =>
-                updateAllocation("vanLoad", event.target.value)
+                updateAllocationWithHighlight("vanLoad", event.target.value)
               }
+              overAllocated={overAllocatedFields.has("vanLoad")}
             />
 
             <NumberField
               label="Dekit"
               value={allocation.dekit}
               onChange={(event) =>
-                updateAllocation("dekit", event.target.value)
+                updateAllocationWithHighlight("dekit", event.target.value)
               }
+              overAllocated={overAllocatedFields.has("dekit")}
             />
           </div>
         </section>
@@ -937,7 +958,7 @@ export default function StaffAllocation() {
         <section className="staff-group-card ic-card">
           <div className="staff-group-card-header">
             <h3>IC</h3>
-            <span>Total: {staffAllocationPlan.totalIC}</span>
+            <span>Total: {allocation.totalIC}</span>
           </div>
 
           <div className="staff-fields-grid staff-fields-grid-single">
@@ -945,8 +966,9 @@ export default function StaffAllocation() {
               label="Total IC"
               value={allocation.totalIC}
               onChange={(event) =>
-                updateAllocation("totalIC", event.target.value)
+                updateAllocationWithHighlight("totalIC", event.target.value)
               }
+              overAllocated={overAllocatedFields.has("totalIC")}
             />
           </div>
         </section>
