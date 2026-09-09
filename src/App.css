@@ -865,6 +865,30 @@ input:focus {
   }
 }
 
+.sidebar-clear-all-btn {
+  width: 100%;
+  margin-top: 16px;
+  min-height: 48px;
+  background: var(--secondary-main) !important;
+  color: #ffffff !important;
+  border: 1px solid var(--secondary-dark) !important;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 800;
+  font-size: 14px;
+  box-shadow: 0 10px 18px var(--secondary-shadow);
+}
+
+.sidebar-clear-all-btn:hover:not(:disabled) {
+  background: var(--secondary-dark) !important;
+  border-color: var(--secondary-dark) !important;
+  transform: translateY(-1px);
+}
+
+.sidebar-clear-all-btn:disabled {
+  opacity: 0.8;
+}
+
 /* ===============================
    RESPONSIVE
 =============================== */
@@ -945,6 +969,12 @@ input:focus {
   .carousel-container {
     overflow: visible;
   }
+
+    .sidebar-clear-all-btn {
+    width: 150px;
+    min-width: 150px;
+    margin-top: 8px;
+  }
 }
 
 @media (max-width: 700px) {
@@ -984,6 +1014,11 @@ input:focus {
     width: 20px;
     height: 20px;
     min-width: 20px;
+  }
+
+    .sidebar-clear-all-btn {
+    width: 100%;
+    min-width: 0;
   }
 }
 

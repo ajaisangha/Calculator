@@ -15,6 +15,15 @@ import "react-responsive-carousel/lib/styles/carousel.min.css";
 
 const DATADOC = doc(db, "totes", "data");
 
+const CLEAR_DOCUMENTS = [
+  doc(db, "totes", "data"),
+  doc(db, "totes", "shiftEOS"),
+  doc(db, "totes", "pickCalculator"),
+  doc(db, "totes", "staffAllocation"),
+  doc(db, "totes", "frameloadFreezer"),
+  doc(db, "totes", "barcode"),
+];
+
 function Header({ theme, setTheme }) {
   const themeOptions = [
     { name: "blue", color: "#4a90e2" },
@@ -47,33 +56,44 @@ function Header({ theme, setTheme }) {
 
 function parseToteCell(cell) {
   if (!cell && cell !== 0) return 0;
+
   const str = String(cell).trim();
+
   if (!str) return 0;
 
   const slashMatch = str.match(/^\s*-?\d+\s*\/\s*(-?\d+)\s*$/);
+
   if (slashMatch) {
     const denominator = parseInt(slashMatch[1], 10);
     return Number.isNaN(denominator) ? 0 : Math.abs(denominator);
   }
 
   const matches = str.match(/-?\d+/g);
+
   if (!matches) return 0;
 
-  const nums = matches.map((n) => parseInt(n, 10)).filter((n) => !Number.isNaN(n));
+  const nums = matches
+    .map((number) => parseInt(number, 10))
+    .filter((number) => !Number.isNaN(number));
+
   return nums.length ? Math.abs(nums[0]) : 0;
 }
 
 function getColumnKeys(headers) {
-  const pickCol = (pattern) => headers.find((h) => new RegExp(pattern, "i").test(h));
+  const pickCol = (pattern) =>
+    headers.find((header) => new RegExp(pattern, "i").test(header));
 
   return {
     consignmentKey: pickCol("^Consignment$") || pickCol("consignment"),
     ambientKey: pickCol("Completed.*Totes.*Ambient") || pickCol("ambient"),
-    chilledKey: pickCol("Completed.*Totes.*Chill") || pickCol("chill|chilled"),
+    chilledKey:
+      pickCol("Completed.*Totes.*Chill") || pickCol("chill|chilled"),
     freezerKey: pickCol("Completed.*Totes.*Freezer") || pickCol("freezer"),
     shipmentKey: pickCol("^Shipment$") || pickCol("shipment"),
     dispatchKey:
-      pickCol("Dispatch time") || pickCol("dispatch time") || pickCol("Dispatch Time"),
+      pickCol("Dispatch time") ||
+      pickCol("dispatch time") ||
+      pickCol("Dispatch Time"),
   };
 }
 
@@ -81,19 +101,38 @@ function getRouteName(row, shipmentKey, dispatchKey) {
   const shipment = String(row[shipmentKey] || "").trim();
   const dispatch = String(row[dispatchKey] || "").trim();
 
-  if (/route[-\s]?/i.test(shipment) || /\bvans?\b/i.test(shipment)) return "Vans";
+  if (/route[-\s]?/i.test(shipment) || /\bvans?\b/i.test(shipment)) {
+    return "Vans";
+  }
 
   const timeMatch = dispatch.match(/(?:,\s*)?(\d{1,2}:\d{2})\s*$/);
   const dispatchTime = timeMatch ? timeMatch[1] : null;
 
   if (!dispatchTime) return "Spoke";
 
-  if (["23:15", "23:16", "23:17"].includes(dispatchTime)) return "Ottawa Spoke";
-  if (dispatchTime === "02:30" || dispatchTime === "2:30") return "2:30 Etobicoke Spoke";
-  if (dispatchTime === "03:00" || dispatchTime === "3:00") return "3:00 Etobicoke Spoke";
-  if (dispatchTime === "05:30" || dispatchTime === "5:30") return "5:30 Etobicoke Spoke";
-  if (dispatchTime === "09:30" || dispatchTime === "9:30") return "9:30 Etobicoke Spoke";
-  if (dispatchTime === "10:00" || dispatchTime === "10:00") return "10:00 Etobicoke Spoke";
+  if (["23:15", "23:16", "23:17"].includes(dispatchTime)) {
+    return "Ottawa Spoke";
+  }
+
+  if (dispatchTime === "02:30" || dispatchTime === "2:30") {
+    return "2:30 Etobicoke Spoke";
+  }
+
+  if (dispatchTime === "03:00" || dispatchTime === "3:00") {
+    return "3:00 Etobicoke Spoke";
+  }
+
+  if (dispatchTime === "05:30" || dispatchTime === "5:30") {
+    return "5:30 Etobicoke Spoke";
+  }
+
+  if (dispatchTime === "09:30" || dispatchTime === "9:30") {
+    return "9:30 Etobicoke Spoke";
+  }
+
+  if (dispatchTime === "10:00") {
+    return "10:00 Etobicoke Spoke";
+  }
 
   return "Spoke";
 }
@@ -112,6 +151,8 @@ export default function App() {
   const [duplicateMessage, setDuplicateMessage] = useState("");
   const [slideIndex, setSlideIndex] = useState(0);
   const [theme, setTheme] = useState("blue");
+  const [isClearingAll, setIsClearingAll] = useState(false);
+  const [clearAllMessage, setClearAllMessage] = useState("");
 
   const [receivedAmbient, setReceivedAmbient] = useState("");
   const [receivedChill, setReceivedChill] = useState("");
@@ -126,29 +167,41 @@ export default function App() {
     const unsubscribe = onSnapshot(DATADOC, (docSnap) => {
       if (docSnap.exists()) {
         const savedRows = docSnap.data().rows || [];
+
         setRows(savedRows);
-        setConsignmentSet(new Set(savedRows.map((r) => r.consignment)));
+        setConsignmentSet(new Set(savedRows.map((row) => row.consignment)));
 
         const routeMap = {};
-        const grand = { ambient: 0, chilled: 0, freezer: 0, total: 0 };
+        const grand = {
+          ambient: 0,
+          chilled: 0,
+          freezer: 0,
+          total: 0,
+        };
 
-        savedRows.forEach((r) => {
-          if (!routeMap[r.route]) {
-            routeMap[r.route] = {
-              totals: { ambient: 0, chilled: 0, freezer: 0, total: 0 },
+        savedRows.forEach((row) => {
+          if (!routeMap[row.route]) {
+            routeMap[row.route] = {
+              totals: {
+                ambient: 0,
+                chilled: 0,
+                freezer: 0,
+                total: 0,
+              },
               rows: [],
             };
           }
 
-          routeMap[r.route].totals.ambient += r.ambient;
-          routeMap[r.route].totals.chilled += r.chilled;
-          routeMap[r.route].totals.freezer += r.freezer;
-          routeMap[r.route].totals.total += r.ambient + r.chilled + r.freezer;
-          routeMap[r.route].rows.push(r);
+          routeMap[row.route].totals.ambient += row.ambient;
+          routeMap[row.route].totals.chilled += row.chilled;
+          routeMap[row.route].totals.freezer += row.freezer;
+          routeMap[row.route].totals.total +=
+            row.ambient + row.chilled + row.freezer;
+          routeMap[row.route].rows.push(row);
 
-          grand.ambient += r.ambient;
-          grand.chilled += r.chilled;
-          grand.freezer += r.freezer;
+          grand.ambient += row.ambient;
+          grand.chilled += row.chilled;
+          grand.freezer += row.freezer;
           grand.total = grand.ambient + grand.chilled + grand.freezer;
         });
 
@@ -158,7 +211,12 @@ export default function App() {
         setRows([]);
         setConsignmentSet(new Set());
         setRoutesInfo({});
-        setGrandTotals({ ambient: 0, chilled: 0, freezer: 0, total: 0 });
+        setGrandTotals({
+          ambient: 0,
+          chilled: 0,
+          freezer: 0,
+          total: 0,
+        });
       }
 
       setLoading(false);
@@ -167,56 +225,87 @@ export default function App() {
     return unsubscribe;
   }, []);
 
+  useEffect(() => {
+    if (!clearAllMessage) return undefined;
+
+    const timer = setTimeout(() => {
+      setClearAllMessage("");
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, [clearAllMessage]);
+
   const handleFiles = (files) => {
     Array.from(files).forEach((file) => {
       Papa.parse(file, {
         header: true,
         skipEmptyLines: true,
-        transformHeader: (h) => h.trim(),
+        transformHeader: (header) => header.trim(),
         complete: async (results) => {
           const dataRows = results.data;
+
           if (!dataRows.length) return;
 
           const headers = Object.keys(dataRows[0]);
-          const { consignmentKey, ambientKey, chilledKey, freezerKey, shipmentKey, dispatchKey } =
-            getColumnKeys(headers);
+
+          const {
+            consignmentKey,
+            ambientKey,
+            chilledKey,
+            freezerKey,
+            shipmentKey,
+            dispatchKey,
+          } = getColumnKeys(headers);
 
           const latestRows = rows;
           const newRows = [];
-          const newConsignments = new Set(latestRows.map((r) => r.consignment));
+          const newConsignments = new Set(
+            latestRows.map((row) => row.consignment)
+          );
+
           let duplicatesDetected = 0;
 
-          dataRows.forEach((r) => {
-            const consignment = String(r[consignmentKey] || "").trim();
+          dataRows.forEach((row) => {
+            const consignment = String(row[consignmentKey] || "").trim();
 
             if (!consignment || newConsignments.has(consignment)) {
-              if (consignment) duplicatesDetected++;
+              if (consignment) duplicatesDetected += 1;
               return;
             }
 
             newConsignments.add(consignment);
-            const route = getRouteName(r, shipmentKey, dispatchKey);
+
+            const route = getRouteName(row, shipmentKey, dispatchKey);
 
             newRows.push({
               consignment,
               route,
-              shipment: shipmentKey ? String(r[shipmentKey] || "").trim() : "",
-              ambient: ambientKey ? parseToteCell(r[ambientKey]) : 0,
-              chilled: chilledKey ? parseToteCell(r[chilledKey]) : 0,
-              freezer: freezerKey ? parseToteCell(r[freezerKey]) : 0,
+              shipment: shipmentKey
+                ? String(row[shipmentKey] || "").trim()
+                : "",
+              ambient: ambientKey ? parseToteCell(row[ambientKey]) : 0,
+              chilled: chilledKey ? parseToteCell(row[chilledKey]) : 0,
+              freezer: freezerKey ? parseToteCell(row[freezerKey]) : 0,
             });
           });
 
           if (duplicatesDetected > 0) {
             setDuplicateMessage(
-              `${duplicatesDetected} duplicate line${duplicatesDetected > 1 ? "s" : ""} ignored`
+              `${duplicatesDetected} duplicate line${
+                duplicatesDetected > 1 ? "s" : ""
+              } ignored`
             );
+
             setTimeout(() => setDuplicateMessage(""), 5000);
           }
 
           if (newRows.length) {
             try {
-              await setDoc(DATADOC, { rows: [...latestRows, ...newRows] }, { merge: true });
+              await setDoc(
+                DATADOC,
+                { rows: [...latestRows, ...newRows] },
+                { merge: true }
+              );
             } catch (err) {
               console.error("Firestore upload error:", err);
             }
@@ -226,10 +315,11 @@ export default function App() {
     });
   };
 
-  const onFileChange = (e) => {
-    if (!e.target.files.length) return;
-    handleFiles(e.target.files);
-    e.target.value = null;
+  const onFileChange = (event) => {
+    if (!event.target.files.length) return;
+
+    handleFiles(event.target.files);
+    event.target.value = null;
   };
 
   const clearAll = async () => {
@@ -241,69 +331,121 @@ export default function App() {
     }
   };
 
-  const deleteRoutesFromRoute = async (routeName, amount, deleteAll = false) => {
-  const routeRows = rows.filter((row) => row.route === routeName);
+  const clearEverything = async () => {
+    const confirmed = window.confirm(
+      "Clear all slides and all saved Firebase data? This cannot be undone."
+    );
 
-  if (!routeRows.length) return;
+    if (!confirmed) return;
 
-  const numberToDelete = deleteAll
-    ? routeRows.length
-    : Math.min(Math.max(parseInt(amount, 10) || 0, 0), routeRows.length);
+    setIsClearingAll(true);
+    setClearAllMessage("");
 
-  if (!numberToDelete) return;
+    try {
+      await Promise.all(
+        CLEAR_DOCUMENTS.map((documentReference) =>
+          setDoc(documentReference, {}, { merge: false })
+        )
+      );
 
-  // New CSV rows are appended to the end of the array.
-  // Therefore, this removes the most recently uploaded rows for that route.
-  const consignmentsToDelete = new Set(
-    routeRows
-      .slice(-numberToDelete)
-      .map((row) => row.consignment)
-  );
+      setRows([]);
+      setConsignmentSet(new Set());
+      setRoutesInfo({});
+      setGrandTotals({
+        ambient: 0,
+        chilled: 0,
+        freezer: 0,
+        total: 0,
+      });
 
-  const updatedRows = rows.filter(
-    (row) => !consignmentsToDelete.has(row.consignment)
-  );
+      setReceivedAmbient("");
+      setReceivedChill("");
+      setCurrentAmbient("");
+      setCurrentChill("");
+      setDuplicateMessage("");
+      setSlideIndex(0);
 
-  try {
-    await setDoc(DATADOC, { rows: updatedRows }, { merge: true });
-    setDuplicateMessage("");
-  } catch (err) {
-    console.error("Delete route data error:", err);
+      setClearAllMessage("All slides and Firebase data cleared");
+    } catch (err) {
+      console.error("Clear all Firebase data error:", err);
+      setClearAllMessage("Could not clear all saved data");
+    } finally {
+      setIsClearingAll(false);
+    }
+  };
+
+  const deleteRoutesFromRoute = async (
+    routeName,
+    amount,
+    deleteAll = false
+  ) => {
+    const routeRows = rows.filter((row) => row.route === routeName);
+
+    if (!routeRows.length) return;
+
+    const numberToDelete = deleteAll
+      ? routeRows.length
+      : Math.min(
+          Math.max(parseInt(amount, 10) || 0, 0),
+          routeRows.length
+        );
+
+    if (!numberToDelete) return;
+
+    const consignmentsToDelete = new Set(
+      routeRows.slice(-numberToDelete).map((row) => row.consignment)
+    );
+
+    const updatedRows = rows.filter(
+      (row) => !consignmentsToDelete.has(row.consignment)
+    );
+
+    try {
+      await setDoc(DATADOC, { rows: updatedRows }, { merge: true });
+      setDuplicateMessage("");
+    } catch (err) {
+      console.error("Delete route data error:", err);
+    }
+  };
+
+  const deleteConsignment = async (consignment) => {
+    const normalizedConsignment = String(consignment || "")
+      .trim()
+      .toLowerCase();
+
+    if (!normalizedConsignment) {
+      return false;
+    }
+
+    const matchedRow = rows.find(
+      (row) =>
+        String(row.consignment || "").trim().toLowerCase() ===
+        normalizedConsignment
+    );
+
+    if (!matchedRow) {
+      return false;
+    }
+
+    const updatedRows = rows.filter(
+      (row) =>
+        String(row.consignment || "").trim().toLowerCase() !==
+        normalizedConsignment
+    );
+
+    try {
+      await setDoc(DATADOC, { rows: updatedRows }, { merge: true });
+      setDuplicateMessage("");
+      return true;
+    } catch (err) {
+      console.error("Delete consignment error:", err);
+      return false;
+    }
+  };
+
+  if (loading) {
+    return <p className="app-loading">Loading...</p>;
   }
-};
-
-const deleteConsignment = async (consignment) => {
-  const normalizedConsignment = String(consignment || "").trim().toLowerCase();
-
-  if (!normalizedConsignment) {
-    return false;
-  }
-
-  const matchedRow = rows.find(
-    (row) =>
-      String(row.consignment || "").trim().toLowerCase() === normalizedConsignment
-  );
-
-  if (!matchedRow) {
-    return false;
-  }
-
-  const updatedRows = rows.filter(
-    (row) =>
-      String(row.consignment || "").trim().toLowerCase() !== normalizedConsignment
-  );
-
-  try {
-    await setDoc(DATADOC, { rows: updatedRows }, { merge: true });
-    setDuplicateMessage("");
-    return true;
-  } catch (err) {
-    console.error("Delete consignment error:", err);
-    return false;
-  }
-};
-
-  if (loading) return <p className="app-loading">Loading...</p>;
 
   return (
     <div className="app-container">
@@ -313,145 +455,146 @@ const deleteConsignment = async (consignment) => {
         <div className="app-shell">
           <div className="app-layout">
             <aside className="sidebar-nav" aria-label="Calculator sections">
-  <nav className="carousel-links">
-    <button
-      onClick={() => setSlideIndex(0)}
-      className={slideIndex === 0 ? "active" : ""}
-    >
-      Shift EOS
-    </button>
+              <nav className="carousel-links">
+                <button
+                  type="button"
+                  onClick={() => setSlideIndex(0)}
+                  className={slideIndex === 0 ? "active" : ""}
+                >
+                  Shift EOS
+                </button>
 
-    <button
-      onClick={() => setSlideIndex(1)}
-      className={slideIndex === 1 ? "active" : ""}
-    >
-      Staff Allocation
-    </button>
+                <button
+                  type="button"
+                  onClick={() => setSlideIndex(1)}
+                  className={slideIndex === 1 ? "active" : ""}
+                >
+                  Staff Allocation
+                </button>
 
-    <button
-      onClick={() => setSlideIndex(2)}
-      className={slideIndex === 2 ? "active" : ""}
-    >
-      Totes Used
-    </button>
+                <button
+                  type="button"
+                  onClick={() => setSlideIndex(2)}
+                  className={slideIndex === 2 ? "active" : ""}
+                >
+                  Totes Used
+                </button>
 
-    <button
-      onClick={() => setSlideIndex(3)}
-      className={slideIndex === 3 ? "active" : ""}
-    >
-      Bagged Totes
-    </button>
+                <button
+                  type="button"
+                  onClick={() => setSlideIndex(3)}
+                  className={slideIndex === 3 ? "active" : ""}
+                >
+                  Bagged Totes
+                </button>
 
-    <button
-      onClick={() => setSlideIndex(4)}
-      className={slideIndex === 4 ? "active" : ""}
-    >
-      Pick Calculator
-    </button>
+                <button
+                  type="button"
+                  onClick={() => setSlideIndex(4)}
+                  className={slideIndex === 4 ? "active" : ""}
+                >
+                  Pick Calculator
+                </button>
 
-    <button
-      onClick={() => setSlideIndex(5)}
-      className={slideIndex === 5 ? "active" : ""}
-    >
-      Frameload/Freezer
-    </button>
+                <button
+                  type="button"
+                  onClick={() => setSlideIndex(5)}
+                  className={slideIndex === 5 ? "active" : ""}
+                >
+                  Frameload/Freezer
+                </button>
 
-    <button
-      onClick={() => setSlideIndex(6)}
-      className={slideIndex === 6 ? "active" : ""}
-    >
-      Barcode Generator
-    </button>
-  </nav>
-</aside>
+                <button
+                  type="button"
+                  onClick={() => setSlideIndex(6)}
+                  className={slideIndex === 6 ? "active" : ""}
+                >
+                  Barcode Generator
+                </button>
+              </nav>
 
-<section className="carousel-panel">
-  <div className="carousel-container">
-    <Carousel
-      selectedItem={slideIndex}
-      onChange={setSlideIndex}
-      showThumbs={false}
-      showStatus={false}
-      showIndicators={false}
-      infiniteLoop={false}
-      swipeable
-      emulateTouch={false}
-    >
-      {/* Slide 1 — Shift EOS */}
-      <div className="carousel-slide">
-        <div className="slide-scroll-area">
-          <ShiftEOSCard />
-        </div>
-      </div>
+              <button
+                type="button"
+                className="sidebar-clear-all-btn"
+                onClick={clearEverything}
+                disabled={isClearingAll}
+              >
+                {isClearingAll ? "Clearing..." : "Clear All"}
+              </button>
+            </aside>
 
-      {/* Slide 2 — Staff Allocation */}
-      <div className="carousel-slide">
-        <div className="slide-scroll-area">
-          <StaffAllocation />
-        </div>
-      </div>
+            <section className="carousel-panel">
+              <div className="carousel-container">
+                <Carousel
+                  selectedItem={slideIndex}
+                  onChange={setSlideIndex}
+                  showThumbs={false}
+                  showStatus={false}
+                  showIndicators={false}
+                  infiniteLoop={false}
+                  swipeable
+                  emulateTouch={false}
+                >
+                  <div className="carousel-slide">
+                    <div className="slide-scroll-area">
+                      <ShiftEOSCard />
+                    </div>
+                  </div>
 
-      {/* Slide 3 — Totes Used */}
-      <div className="carousel-slide">
-        <div className="slide-scroll-area">
-          <TotesUsedCard
-            rows={rows}
-            routesInfo={routesInfo}
-            grandTotals={grandTotals}
-            duplicateMessage={duplicateMessage}
-            onFileChange={onFileChange}
-            clearAll={clearAll}
-            deleteRoutesFromRoute={deleteRoutesFromRoute}
-            deleteConsignment={deleteConsignment}
-          />
-        </div>
-      </div>
+                  <div className="carousel-slide">
+                    <div className="slide-scroll-area">
+                      <StaffAllocation />
+                    </div>
+                  </div>
 
-      {/* Slide 4 — Bagged Totes */}
-      <div className="carousel-slide">
-        <div className="slide-scroll-area">
-          <BaggedTotesCard
-            grandTotals={grandTotals}
-            /*
-            receivedAmbient={receivedAmbient}
-            receivedChill={receivedChill}
-            currentAmbient={currentAmbient}
-            currentChill={currentChill}
-            setReceivedAmbient={setReceivedAmbient}
-            setReceivedChill={setReceivedChill}
-            setCurrentAmbient={setCurrentAmbient}
-            setCurrentChill={setCurrentChill}
-            */
-          />
-        </div>
-      </div>
+                  <div className="carousel-slide">
+                    <div className="slide-scroll-area">
+                      <TotesUsedCard
+                        rows={rows}
+                        routesInfo={routesInfo}
+                        grandTotals={grandTotals}
+                        duplicateMessage={duplicateMessage}
+                        onFileChange={onFileChange}
+                        clearAll={clearAll}
+                        deleteRoutesFromRoute={deleteRoutesFromRoute}
+                        deleteConsignment={deleteConsignment}
+                      />
+                    </div>
+                  </div>
 
-      {/* Slide 5 — Pick Calculator */}
-      <div className="carousel-slide">
-        <div className="slide-scroll-area">
-          <PickAndBaggedCombinedCard />
-        </div>
-      </div>
+                  <div className="carousel-slide">
+                    <div className="slide-scroll-area">
+                      <BaggedTotesCard grandTotals={grandTotals} />
+                    </div>
+                  </div>
 
-      {/* Slide 6 — Frameload / Freezer */}
-      <div className="carousel-slide">
-        <div className="slide-scroll-area">
-          <FrameloadFreezer grandTotals={grandTotals} />
-        </div>
-      </div>
+                  <div className="carousel-slide">
+                    <div className="slide-scroll-area">
+                      <PickAndBaggedCombinedCard />
+                    </div>
+                  </div>
 
-      {/* Slide 7 — Barcode Generator */}
-      <div className="carousel-slide">
-        <div className="slide-scroll-area">
-          <BarcodeCard />
-        </div>
-      </div>
-    </Carousel>
-  </div>
-</section>
+                  <div className="carousel-slide">
+                    <div className="slide-scroll-area">
+                      <FrameloadFreezer grandTotals={grandTotals} />
+                    </div>
+                  </div>
+
+                  <div className="carousel-slide">
+                    <div className="slide-scroll-area">
+                      <BarcodeCard />
+                    </div>
+                  </div>
+                </Carousel>
+              </div>
+            </section>
           </div>
         </div>
       </main>
+
+      {clearAllMessage && (
+        <div className="toast-notification-center">{clearAllMessage}</div>
+      )}
     </div>
   );
 }

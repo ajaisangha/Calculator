@@ -16,7 +16,8 @@
   margin: 0 0 14px;
 }
 
-.staff-allocation-limit > div {
+.staff-allocation-limit > div,
+.available-teammates-card {
   min-width: 0;
   padding: 9px 10px;
   border: 1px solid var(--theme-border);
@@ -25,7 +26,8 @@
   text-align: center;
 }
 
-.staff-allocation-limit span {
+.staff-allocation-limit span,
+.available-teammates-card > span {
   display: block;
   color: var(--text-muted);
   font-size: 12px;
@@ -42,13 +44,50 @@
   line-height: 1.15;
 }
 
-.staff-allocation-limit .allocation-over-limit {
+/* Only the Difference card is red when the allocation is negative. */
+.staff-allocation-limit .difference-card.allocation-over-limit {
   border-color: var(--secondary-main);
   background: var(--secondary-light);
 }
 
-.staff-allocation-limit .allocation-over-limit strong {
+.staff-allocation-limit .difference-card.allocation-over-limit strong {
   color: var(--secondary-main);
+}
+
+.available-teammates-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.available-teammates-card input {
+  width: 100%;
+  height: 30px;
+  margin-top: 4px;
+  padding: 4px 7px;
+  border: 1px solid var(--input-border);
+  border-radius: 7px;
+  background: var(--input-bg);
+  color: var(--theme-dark);
+  font-size: 16px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.available-teammates-card input:focus {
+  outline: none;
+  border-color: var(--theme-main);
+  box-shadow: 0 0 0 3px var(--theme-focus);
+}
+
+.available-teammates-card small {
+  display: block;
+  min-height: 12px;
+  margin-top: 3px;
+  color: var(--text-soft);
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1.1;
 }
 
 .allocation-warning {
@@ -257,6 +296,71 @@
   font-size: 14px;
 }
 
+.staff-pick-allocation-row {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.staff-pick-allocation-row .staff-field-label {
+  min-height: 30px;
+  font-size: 11px;
+  text-align: center;
+}
+
+.staff-pick-allocation-row .staff-field-input {
+  height: 36px;
+  font-size: 14px;
+}
+
+.staff-allocation-top-row {
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.staff-allocation-top-row .staff-allocation-limit {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(110px, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.staff-allocation-top-row .staff-allocation-limit > div,
+.staff-allocation-top-row .available-teammates-card {
+  min-width: 0;
+  padding: 8px 9px;
+}
+
+.staff-allocation-top-row .staff-allocation-limit span,
+.staff-allocation-top-row .available-teammates-card > span {
+  font-size: 11px;
+  line-height: 1.1;
+}
+
+.staff-allocation-top-row .staff-allocation-limit strong {
+  margin-top: 3px;
+  font-size: 18px;
+  line-height: 1.1;
+}
+
+.staff-allocation-top-actions {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+  min-width: 104px;
+  margin: 0;
+}
+
+.staff-allocation-top-actions button {
+  width: 100%;
+  min-width: 104px;
+  padding: 8px 10px;
+  font-size: 13px;
+}
+
 @media (max-width: 1150px) {
   .staff-allocation-grid {
     grid-template-columns: minmax(310px, 1.5fr) minmax(190px, 1fr) minmax(190px, 1fr);
@@ -274,6 +378,22 @@
   .staff-field-input {
     font-size: 14px;
   }
+
+  .staff-pick-allocation-row {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .staff-pick-allocation-row .staff-field-label {
+    min-height: 28px;
+    font-size: 10px;
+  }
+
+  .staff-pick-allocation-row .staff-field-input {
+    height: 34px;
+    padding: 6px 4px;
+    font-size: 13px;
+  }
 }
 
 @media (max-width: 950px) {
@@ -283,6 +403,23 @@
       "pick pick"
       "freezer inbound"
       "dispatch ic";
+  }
+
+  .staff-allocation-top-row {
+    flex-direction: column;
+  }
+
+  .staff-allocation-top-row .staff-allocation-limit {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .staff-allocation-top-actions {
+    flex-direction: row;
+    min-width: 0;
+  }
+
+  .staff-allocation-top-actions button {
+    flex: 1;
   }
 }
 
@@ -314,51 +451,6 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .staff-allocation-actions {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .staff-allocation-actions button {
-    width: 100%;
-  }
-}
-
-.staff-pick-allocation-row {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.staff-pick-allocation-row .staff-field-label {
-  min-height: 30px;
-  font-size: 11px;
-  text-align: center;
-}
-
-.staff-pick-allocation-row .staff-field-input {
-  height: 36px;
-  font-size: 14px;
-}
-
-@media (max-width: 1150px) {
-  .staff-pick-allocation-row {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 6px;
-  }
-
-  .staff-pick-allocation-row .staff-field-label {
-    min-height: 28px;
-    font-size: 10px;
-  }
-
-  .staff-pick-allocation-row .staff-field-input {
-    height: 34px;
-    padding: 6px 4px;
-    font-size: 13px;
-  }
-}
-
-@media (max-width: 650px) {
   .staff-pick-allocation-row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
@@ -372,87 +464,21 @@
     height: 38px;
     font-size: 14px;
   }
-}
 
-.staff-allocation-top-row {
-  display: flex;
-  align-items: stretch;
-  gap: 12px;
-  margin-bottom: 14px;
-}
-
-.staff-allocation-top-row .staff-allocation-limit {
-  flex: 1;
-  display: grid;
-  grid-template-columns: repeat(4, minmax(110px, 1fr));
-  gap: 8px;
-  margin: 0;
-}
-
-.staff-allocation-top-row .staff-allocation-limit > div {
-  min-width: 0;
-  padding: 8px 9px;
-}
-
-.staff-allocation-top-row .staff-allocation-limit span {
-  font-size: 11px;
-  line-height: 1.1;
-}
-
-.staff-allocation-top-row .staff-allocation-limit strong {
-  margin-top: 3px;
-  font-size: 18px;
-  line-height: 1.1;
-}
-
-.staff-allocation-top-actions {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 8px;
-  min-width: 104px;
-  margin: 0;
-}
-
-.staff-allocation-top-actions button {
-  width: 100%;
-  min-width: 104px;
-  padding: 8px 10px;
-  font-size: 13px;
-}
-
-@media (max-width: 950px) {
-  .staff-allocation-top-row {
-    flex-direction: column;
-  }
-
-  .staff-allocation-top-row .staff-allocation-limit {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-
-  .staff-allocation-top-actions {
-    flex-direction: row;
-    min-width: 0;
-  }
-
-  .staff-allocation-top-actions button {
-    flex: 1;
-  }
-}
-
-@media (max-width: 650px) {
   .staff-allocation-top-row .staff-allocation-limit {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .staff-allocation-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .staff-allocation-actions button {
+    width: 100%;
+  }
+
   .staff-allocation-top-actions {
     flex-direction: column;
   }
-}
-
-.staff-over-allocation-input {
-  border-color: var(--secondary-main) !important;
-  background: var(--secondary-light) !important;
-  color: var(--secondary-dark) !important;
-  box-shadow: 0 0 0 2px var(--secondary-shadow);
 }
