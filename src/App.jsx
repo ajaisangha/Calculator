@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import Papa from "papaparse";
-import { doc, onSnapshot, setDoc } from "firebase/firestore";
+import { doc, onSnapshot, setDoc, writeBatch } from "firebase/firestore";
 import { db } from "./firebase";
 import "./App.css";
 import TotesUsedCard from "./TotesUsedCard";
@@ -15,6 +15,11 @@ import "react-responsive-carousel/lib/styles/carousel.min.css";
 
 const DATADOC = doc(db, "totes", "data");
 
+/*
+  Each listed document is overwritten with an empty object.
+  Keep names that your components use. Duplicate-safe references
+  are filtered before the Firestore batch is written.
+*/
 const CLEAR_DOCUMENTS = [
   doc(db, "totes", "data"),
   doc(db, "totes", "shiftEOS"),
@@ -22,6 +27,16 @@ const CLEAR_DOCUMENTS = [
   doc(db, "totes", "staffAllocation"),
   doc(db, "totes", "frameloadFreezer"),
   doc(db, "totes", "barcode"),
+
+  // Common alternate document names for the visible slide data.
+  doc(db, "totes", "dollies"),
+  doc(db, "totes", "dolliesUsed"),
+  doc(db, "totes", "totesUsed"),
+  doc(db, "totes", "baggedTotes"),
+  doc(db, "totes", "frameload"),
+  doc(db, "totes", "freezer"),
+  doc(db, "totes", "frameloadFreezerData"),
+  doc(db, "totes", "barcodeGenerator"),
 ];
 
 function Header({ theme, setTheme }) {
@@ -153,11 +168,6 @@ export default function App() {
   const [theme, setTheme] = useState("blue");
   const [isClearingAll, setIsClearingAll] = useState(false);
   const [clearAllMessage, setClearAllMessage] = useState("");
-
-  const [receivedAmbient, setReceivedAmbient] = useState("");
-  const [receivedChill, setReceivedChill] = useState("");
-  const [currentAmbient, setCurrentAmbient] = useState("");
-  const [currentChill, setCurrentChill] = useState("");
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
@@ -342,10 +352,34 @@ export default function App() {
     setClearAllMessage("");
 
     try {
-      await Promise.all(
-        CLEAR_DOCUMENTS.map((documentReference) =>
-          setDoc(documentReference, {}, { merge: false })
-        )
+      const uniqueDocuments = Array.from(
+        new Map(
+          CLEAR_DOCUMENTS.map((documentReference) => [
+            documentReference.path,
+            documentReference,
+          ])
+        ).values()
+      );
+
+      const batch = writeBatch(db);
+
+      uniqueDocuments.forEach((documentReference) => {
+        batch.set(documentReference, {});
+      });
+
+      await batch.commit();
+
+      /*
+        The custom event clears local state inside mounted components,
+        including inputs and tables that have not yet updated from
+        their Firestore snapshot listeners.
+      */
+      window.dispatchEvent(
+        new CustomEvent("shift-planner-clear-all", {
+          detail: {
+            clearedAt: Date.now(),
+          },
+        })
       );
 
       setRows([]);
@@ -357,11 +391,6 @@ export default function App() {
         freezer: 0,
         total: 0,
       });
-
-      setReceivedAmbient("");
-      setReceivedChill("");
-      setCurrentAmbient("");
-      setCurrentChill("");
       setDuplicateMessage("");
       setSlideIndex(0);
 
