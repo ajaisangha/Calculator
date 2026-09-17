@@ -12,10 +12,19 @@ export default function BarcodeCard() {
   const [hasBarcode, setHasBarcode] = useState(false);
   const [toast, setToast] = useState({ show: false, message: "" });
   const barcodeRef = useRef(null);
+  const toastTimerRef = useRef(null);
 
   const showToast = (message) => {
+    if (toastTimerRef.current) {
+      clearTimeout(toastTimerRef.current);
+    }
+
     setToast({ show: true, message });
-    setTimeout(() => setToast({ show: false, message: "" }), 1800);
+
+    toastTimerRef.current = setTimeout(() => {
+      setToast({ show: false, message: "" });
+      toastTimerRef.current = null;
+    }, 1800);
   };
 
   const clearSvg = () => {
@@ -33,15 +42,16 @@ export default function BarcodeCard() {
 
     try {
       clearSvg();
+
       JsBarcode(barcodeRef.current, value, {
         format: "CODE128",
         lineColor: "#1f2937",
         width: 2,
         height: 90,
-        displayValue: true,
+        displayValue: false,
         margin: 12,
-        fontSize: 18,
       });
+
       setHasBarcode(true);
     } catch (error) {
       clearSvg();
@@ -56,22 +66,25 @@ export default function BarcodeCard() {
       const svgElement = barcodeRef.current;
       const serializer = new XMLSerializer();
       const svgString = serializer.serializeToString(svgElement);
-      const svgBlob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
+      const svgBlob = new Blob([svgString], {
+        type: "image/svg+xml;charset=utf-8",
+      });
       const svgUrl = URL.createObjectURL(svgBlob);
-
       const img = new Image();
+
       img.onload = async () => {
         try {
           const canvas = document.createElement("canvas");
           const width = img.width || 600;
-          const height = img.height || 160;
+          const height = img.height || 140;
+
           canvas.width = width;
           canvas.height = height;
 
-          const ctx = canvas.getContext("2d");
-          ctx.fillStyle = "#ffffff";
-          ctx.fillRect(0, 0, width, height);
-          ctx.drawImage(img, 0, 0);
+          const context = canvas.getContext("2d");
+          context.fillStyle = "#ffffff";
+          context.fillRect(0, 0, width, height);
+          context.drawImage(img, 0, 0);
 
           canvas.toBlob(async (blob) => {
             try {
@@ -87,7 +100,7 @@ export default function BarcodeCard() {
               ]);
 
               showToast("Barcode Copied");
-            } catch (err) {
+            } catch (error) {
               showToast("Clipboard copy not supported");
             }
           }, "image/png");
@@ -108,8 +121,8 @@ export default function BarcodeCard() {
   };
 
   useEffect(() => {
-    const unsub = onSnapshot(BARCODE_DOC, (snap) => {
-      if (!snap.exists()) {
+    const unsubscribe = onSnapshot(BARCODE_DOC, (snapshot) => {
+      if (!snapshot.exists()) {
         setBarcodeText("");
         setSavedBarcodeText("");
         setHasBarcode(false);
@@ -117,7 +130,7 @@ export default function BarcodeCard() {
         return;
       }
 
-      const data = snap.data() || {};
+      const data = snapshot.data() || {};
       const savedText = data.barcodeText || "";
       const generated = data.generated || false;
 
@@ -132,11 +145,28 @@ export default function BarcodeCard() {
       }
     });
 
-    return () => unsub();
+    const handleClearAll = () => {
+      setBarcodeText("");
+      setSavedBarcodeText("");
+      setHasBarcode(false);
+      clearSvg();
+    };
+
+    window.addEventListener("shift-planner-clear-all", handleClearAll);
+
+    return () => {
+      unsubscribe();
+      window.removeEventListener("shift-planner-clear-all", handleClearAll);
+
+      if (toastTimerRef.current) {
+        clearTimeout(toastTimerRef.current);
+      }
+    };
   }, []);
 
   const handleGenerate = async () => {
     const value = barcodeText.trim();
+
     if (!value) {
       clearSvg();
       setHasBarcode(false);
@@ -145,17 +175,22 @@ export default function BarcodeCard() {
 
     renderBarcode(value);
 
-    await setDoc(
-      BARCODE_DOC,
-      {
-        barcodeText: value,
-        generated: true,
-      },
-      { merge: true }
-    );
+    try {
+      await setDoc(
+        BARCODE_DOC,
+        {
+          barcodeText: value,
+          generated: true,
+        },
+        { merge: true }
+      );
 
-    setSavedBarcodeText(value);
-    showToast("Barcode Generated");
+      setSavedBarcodeText(value);
+      showToast("Barcode Generated");
+    } catch (error) {
+      console.error("Barcode save error:", error);
+      showToast("Could not save barcode");
+    }
   };
 
   const handleClear = async () => {
@@ -164,16 +199,21 @@ export default function BarcodeCard() {
     setHasBarcode(false);
     clearSvg();
 
-    await setDoc(
-      BARCODE_DOC,
-      {
-        barcodeText: "",
-        generated: false,
-      },
-      { merge: true }
-    );
+    try {
+      await setDoc(
+        BARCODE_DOC,
+        {
+          barcodeText: "",
+          generated: false,
+        },
+        { merge: true }
+      );
 
-    showToast("Barcode Cleared");
+      showToast("Barcode Cleared");
+    } catch (error) {
+      console.error("Barcode clear error:", error);
+      showToast("Could not clear barcode");
+    }
   };
 
   return (
@@ -190,7 +230,7 @@ export default function BarcodeCard() {
             id="barcodeText"
             type="text"
             value={barcodeText}
-            onChange={(e) => setBarcodeText(e.target.value)}
+            onChange={(event) => setBarcodeText(event.target.value)}
             className="barcode-input"
             placeholder="Enter text for barcode"
           />
@@ -199,6 +239,7 @@ export default function BarcodeCard() {
             <button className="calculate-btn" onClick={handleGenerate}>
               Generate
             </button>
+
             <button className="clear-btn" onClick={handleClear}>
               Clear
             </button>
@@ -207,8 +248,11 @@ export default function BarcodeCard() {
 
         <div className="barcode-preview-box">
           {!hasBarcode && !savedBarcodeText && (
-            <div className="barcode-empty">Generated barcode will appear here</div>
+            <div className="barcode-empty">
+              Generated barcode will appear here
+            </div>
           )}
+
           <svg ref={barcodeRef} className="barcode-svg" />
         </div>
 
@@ -223,7 +267,9 @@ export default function BarcodeCard() {
         </div>
       </div>
 
-      {toast.show && <div className="toast-notification-center">{toast.message}</div>}
+      {toast.show && (
+        <div className="toast-notification-center">{toast.message}</div>
+      )}
     </section>
   );
 }
