@@ -11,6 +11,7 @@ export default function BarcodeCard() {
   const [savedBarcodeText, setSavedBarcodeText] = useState("");
   const [hasBarcode, setHasBarcode] = useState(false);
   const [toast, setToast] = useState({ show: false, message: "" });
+
   const barcodeRef = useRef(null);
   const toastTimerRef = useRef(null);
 
@@ -48,12 +49,17 @@ export default function BarcodeCard() {
         lineColor: "#1f2937",
         width: 2,
         height: 90,
-        displayValue: false,
+        displayValue: true,
+        text: value,
+        font: "monospace",
+        fontSize: 18,
+        textMargin: 6,
         margin: 12,
       });
 
       setHasBarcode(true);
     } catch (error) {
+      console.error("Barcode render error:", error);
       clearSvg();
       setHasBarcode(false);
     }
@@ -66,56 +72,65 @@ export default function BarcodeCard() {
       const svgElement = barcodeRef.current;
       const serializer = new XMLSerializer();
       const svgString = serializer.serializeToString(svgElement);
+
       const svgBlob = new Blob([svgString], {
         type: "image/svg+xml;charset=utf-8",
       });
-      const svgUrl = URL.createObjectURL(svgBlob);
-      const img = new Image();
 
-      img.onload = async () => {
+      const svgUrl = URL.createObjectURL(svgBlob);
+      const image = new Image();
+
+      image.onload = () => {
         try {
           const canvas = document.createElement("canvas");
-          const width = img.width || 600;
-          const height = img.height || 140;
+          const width = image.width || 600;
+          const height = image.height || 170;
 
           canvas.width = width;
           canvas.height = height;
 
           const context = canvas.getContext("2d");
+
           context.fillStyle = "#ffffff";
           context.fillRect(0, 0, width, height);
-          context.drawImage(img, 0, 0);
+          context.drawImage(image, 0, 0);
 
-          canvas.toBlob(async (blob) => {
-            try {
-              if (!blob) {
-                showToast("Copy failed");
-                return;
+          canvas.toBlob(
+            async (blob) => {
+              try {
+                if (!blob) {
+                  showToast("Copy failed");
+                  return;
+                }
+
+                await navigator.clipboard.write([
+                  new ClipboardItem({
+                    "image/png": blob,
+                  }),
+                ]);
+
+                showToast("Barcode Copied");
+              } catch (error) {
+                console.error("Clipboard copy error:", error);
+                showToast("Clipboard copy not supported");
               }
-
-              await navigator.clipboard.write([
-                new ClipboardItem({
-                  "image/png": blob,
-                }),
-              ]);
-
-              showToast("Barcode Copied");
-            } catch (error) {
-              showToast("Clipboard copy not supported");
-            }
-          }, "image/png");
+            },
+            "image/png",
+            1
+          );
         } finally {
           URL.revokeObjectURL(svgUrl);
         }
       };
 
-      img.onerror = () => {
+      image.onerror = () => {
         URL.revokeObjectURL(svgUrl);
         showToast("Copy failed");
       };
 
-      img.src = svgUrl;
+      image.src = svgUrl;
     } catch (error) {
+      console.error("Barcode copy error:", error);
       showToast("Copy failed");
     }
   };
