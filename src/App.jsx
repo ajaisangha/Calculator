@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Papa from "papaparse";
 import { doc, onSnapshot, setDoc, writeBatch } from "firebase/firestore";
 import { db } from "./firebase";
@@ -16,27 +16,21 @@ import "react-responsive-carousel/lib/styles/carousel.min.css";
 const DATADOC = doc(db, "totes", "data");
 
 /*
-  Each listed document is overwritten with an empty object.
-  Keep names that your components use. Duplicate-safe references
-  are filtered before the Firestore batch is written.
+  These are the exact documents used by the shown application components.
+  freezerCalc is required by FrameloadFreezer.jsx.
+  shiftEOS is required by ShiftEOSCard.jsx and StaffAllocation.jsx.
 */
 const CLEAR_DOCUMENTS = [
   doc(db, "totes", "data"),
   doc(db, "totes", "shiftEOS"),
   doc(db, "totes", "pickCalculator"),
   doc(db, "totes", "staffAllocation"),
-  doc(db, "totes", "frameloadFreezer"),
-  doc(db, "totes", "barcode"),
-
-  // Common alternate document names for the visible slide data.
+  doc(db, "totes", "freezerCalc"),
+  doc(db, "totes", "barcodeGenerator"),
   doc(db, "totes", "dollies"),
   doc(db, "totes", "dolliesUsed"),
   doc(db, "totes", "totesUsed"),
   doc(db, "totes", "baggedTotes"),
-  doc(db, "totes", "frameload"),
-  doc(db, "totes", "freezer"),
-  doc(db, "totes", "frameloadFreezerData"),
-  doc(db, "totes", "barcodeGenerator"),
 ];
 
 function Header({ theme, setTheme }) {
@@ -87,11 +81,11 @@ function parseToteCell(cell) {
 
   if (!matches) return 0;
 
-  const nums = matches
+  const numbers = matches
     .map((number) => parseInt(number, 10))
     .filter((number) => !Number.isNaN(number));
 
-  return nums.length ? Math.abs(nums[0]) : 0;
+  return numbers.length ? Math.abs(numbers[0]) : 0;
 }
 
 function getColumnKeys(headers) {
@@ -155,7 +149,6 @@ function getRouteName(row, shipmentKey, dispatchKey) {
 export default function App() {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [consignmentSet, setConsignmentSet] = useState(new Set());
   const [routesInfo, setRoutesInfo] = useState({});
   const [grandTotals, setGrandTotals] = useState({
     ambient: 0,
@@ -169,18 +162,21 @@ export default function App() {
   const [isClearingAll, setIsClearingAll] = useState(false);
   const [clearAllMessage, setClearAllMessage] = useState("");
 
+  const rowsRef = useRef([]);
+  const clearAllTimerRef = useRef(null);
+
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
   }, [theme]);
 
   useEffect(() => {
+    rowsRef.current = rows;
+  }, [rows]);
+
+  useEffect(() => {
     const unsubscribe = onSnapshot(DATADOC, (docSnap) => {
       if (docSnap.exists()) {
         const savedRows = docSnap.data().rows || [];
-
-        setRows(savedRows);
-        setConsignmentSet(new Set(savedRows.map((row) => row.consignment)));
-
         const routeMap = {};
         const grand = {
           ambient: 0,
@@ -215,18 +211,13 @@ export default function App() {
           grand.total = grand.ambient + grand.chilled + grand.freezer;
         });
 
+        setRows(savedRows);
         setRoutesInfo(routeMap);
         setGrandTotals(grand);
       } else {
         setRows([]);
-        setConsignmentSet(new Set());
         setRoutesInfo({});
-        setGrandTotals({
-          ambient: 0,
-          chilled: 0,
-          freezer: 0,
-          total: 0,
-        });
+        setGrandTotals({ ambient: 0, chilled: 0, freezer: 0, total: 0 });
       }
 
       setLoading(false);
@@ -238,11 +229,20 @@ export default function App() {
   useEffect(() => {
     if (!clearAllMessage) return undefined;
 
-    const timer = setTimeout(() => {
+    if (clearAllTimerRef.current) {
+      clearTimeout(clearAllTimerRef.current);
+    }
+
+    clearAllTimerRef.current = setTimeout(() => {
       setClearAllMessage("");
+      clearAllTimerRef.current = null;
     }, 3000);
 
-    return () => clearTimeout(timer);
+    return () => {
+      if (clearAllTimerRef.current) {
+        clearTimeout(clearAllTimerRef.current);
+      }
+    };
   }, [clearAllMessage]);
 
   const handleFiles = (files) => {
@@ -257,7 +257,6 @@ export default function App() {
           if (!dataRows.length) return;
 
           const headers = Object.keys(dataRows[0]);
-
           const {
             consignmentKey,
             ambientKey,
@@ -267,9 +266,9 @@ export default function App() {
             dispatchKey,
           } = getColumnKeys(headers);
 
-          const latestRows = rows;
+          const latestRows = rowsRef.current;
           const newRows = [];
-          const newConsignments = new Set(
+          const knownConsignments = new Set(
             latestRows.map((row) => row.consignment)
           );
 
@@ -278,18 +277,16 @@ export default function App() {
           dataRows.forEach((row) => {
             const consignment = String(row[consignmentKey] || "").trim();
 
-            if (!consignment || newConsignments.has(consignment)) {
+            if (!consignment || knownConsignments.has(consignment)) {
               if (consignment) duplicatesDetected += 1;
               return;
             }
 
-            newConsignments.add(consignment);
-
-            const route = getRouteName(row, shipmentKey, dispatchKey);
+            knownConsignments.add(consignment);
 
             newRows.push({
               consignment,
-              route,
+              route: getRouteName(row, shipmentKey, dispatchKey),
               shipment: shipmentKey
                 ? String(row[shipmentKey] || "").trim()
                 : "",
@@ -305,20 +302,18 @@ export default function App() {
                 duplicatesDetected > 1 ? "s" : ""
               } ignored`
             );
-
-            setTimeout(() => setDuplicateMessage(""), 5000);
           }
 
-          if (newRows.length) {
-            try {
-              await setDoc(
-                DATADOC,
-                { rows: [...latestRows, ...newRows] },
-                { merge: true }
-              );
-            } catch (err) {
-              console.error("Firestore upload error:", err);
-            }
+          if (!newRows.length) return;
+
+          try {
+            await setDoc(
+              DATADOC,
+              { rows: [...latestRows, ...newRows] },
+              { merge: true }
+            );
+          } catch (error) {
+            console.error("Firestore upload error:", error);
           }
         },
       });
@@ -336,8 +331,8 @@ export default function App() {
     try {
       await setDoc(DATADOC, { rows: [] }, { merge: true });
       setDuplicateMessage("");
-    } catch (err) {
-      console.error("Clear uploaded data error:", err);
+    } catch (error) {
+      console.error("Clear uploaded data error:", error);
     }
   };
 
@@ -369,50 +364,32 @@ export default function App() {
 
       await batch.commit();
 
-      /*
-        The custom event clears local state inside mounted components,
-        including inputs and tables that have not yet updated from
-        their Firestore snapshot listeners.
-      */
       window.dispatchEvent(
         new CustomEvent("shift-planner-clear-all", {
-          detail: {
-            clearedAt: Date.now(),
-          },
+          detail: { clearedAt: Date.now() },
         })
       );
 
       setRows([]);
-      setConsignmentSet(new Set());
       setRoutesInfo({});
-      setGrandTotals({
-        ambient: 0,
-        chilled: 0,
-        freezer: 0,
-        total: 0,
-      });
+      setGrandTotals({ ambient: 0, chilled: 0, freezer: 0, total: 0 });
       setDuplicateMessage("");
       setSlideIndex(0);
-
       setClearAllMessage("All slides and Firebase data cleared");
-    } catch (err) {
-      console.error("Clear all Firebase data error:", err);
+    } catch (error) {
+      console.error("Clear all Firebase data error:", error);
       setClearAllMessage("Could not clear all saved data");
     } finally {
       setIsClearingAll(false);
     }
   };
 
-  const deleteRoutesFromRoute = async (
-    routeName,
-    amount,
-    deleteAll = false
-  ) => {
+  const deleteRoutesFromRoute = async (routeName, amount, deleteAllRows = false) => {
     const routeRows = rows.filter((row) => row.route === routeName);
 
     if (!routeRows.length) return;
 
-    const numberToDelete = deleteAll
+    const numberToDelete = deleteAllRows
       ? routeRows.length
       : Math.min(
           Math.max(parseInt(amount, 10) || 0, 0),
@@ -432,8 +409,8 @@ export default function App() {
     try {
       await setDoc(DATADOC, { rows: updatedRows }, { merge: true });
       setDuplicateMessage("");
-    } catch (err) {
-      console.error("Delete route data error:", err);
+    } catch (error) {
+      console.error("Delete route data error:", error);
     }
   };
 
@@ -442,19 +419,7 @@ export default function App() {
       .trim()
       .toLowerCase();
 
-    if (!normalizedConsignment) {
-      return false;
-    }
-
-    const matchedRow = rows.find(
-      (row) =>
-        String(row.consignment || "").trim().toLowerCase() ===
-        normalizedConsignment
-    );
-
-    if (!matchedRow) {
-      return false;
-    }
+    if (!normalizedConsignment) return false;
 
     const updatedRows = rows.filter(
       (row) =>
@@ -462,12 +427,14 @@ export default function App() {
         normalizedConsignment
     );
 
+    if (updatedRows.length === rows.length) return false;
+
     try {
       await setDoc(DATADOC, { rows: updatedRows }, { merge: true });
       setDuplicateMessage("");
       return true;
-    } catch (err) {
-      console.error("Delete consignment error:", err);
+    } catch (error) {
+      console.error("Delete consignment error:", error);
       return false;
     }
   };

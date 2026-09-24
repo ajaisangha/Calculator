@@ -185,6 +185,29 @@ const saveShiftStaffing = async () => {
     );
   };
 
+  useEffect(() => {
+  const handleClearAll = () => {
+    // Reset every Shift EOS input/table state value here.
+    // Example only — use your actual setter names:
+    //
+    // setTotalHours("");
+    // setTargetProd("");
+    // setAmbInbound("");
+    // setChillInbound("");
+    // setFreezerInbound("");
+    // setOutstandingPick("");
+    // setAmbientPick("");
+    // setChillPick("");
+    // setFreezerPick("");
+  };
+
+  window.addEventListener("shift-planner-clear-all", handleClearAll);
+
+  return () => {
+    window.removeEventListener("shift-planner-clear-all", handleClearAll);
+  };
+}, []);
+
   return (
     <section className="data-card shift-eos-card" style={{ position: "relative" }}>
       <h2 className="data-title">Shift EOS Calculator</h2>

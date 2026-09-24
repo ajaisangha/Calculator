@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { db } from "./firebase";
 import { doc, onSnapshot, setDoc } from "firebase/firestore";
 import "./App.css";
@@ -16,87 +16,43 @@ export default function FrameloadFreezer({ grandTotals }) {
   const [uph, setUPH] = useState("");
   const [outstandingUPH, setOutstandingUPH] = useState("");
   const [breakUPH, setBreakUPH] = useState("");
-  const [resultUPH, setResultUPH] = useState("");
+  const [resultUPH, setResultUPH] = useState("-");
 
   const [pickersTrolly, setPickersTrolly] = useState("");
   const [trollyRate, setTrollyRate] = useState("");
   const [outstandingTrolly, setOutstandingTrolly] = useState("");
   const [breakTrolly, setBreakTrolly] = useState("");
-  const [resultTrolly, setResultTrolly] = useState("");
+  const [resultTrolly, setResultTrolly] = useState("-");
 
   const [totesLoaded, setTotesLoaded] = useState("");
   const [totesLoadedPerHour, setTotesLoadedPerHour] = useState("");
   const [totesBreak, setTotesBreak] = useState("");
   const [totesRemaining, setTotesRemaining] = useState("");
-  const [totesResult, setTotesResult] = useState("");
+  const [totesResult, setTotesResult] = useState("-");
 
   const [dolliesRemaining, setDolliesRemaining] = useState("");
   const [dolliesPerHour, setDolliesPerHour] = useState("");
   const [dolliesBreak, setDolliesBreak] = useState("");
-  const [dolliesResult, setDolliesResult] = useState("");
+  const [dolliesResult, setDolliesResult] = useState("-");
 
   const [toast, setToast] = useState({ show: false, message: "" });
-  const showToast = (msg) => {
-    setToast({ show: true, message: msg });
-    setTimeout(() => setToast({ show: false, message: "" }), 1800);
-  };
+  const toastTimerRef = useRef(null);
 
-  useEffect(() => {
-    const unsub = onSnapshot(FREEZER_DOC, (snap) => {
-      if (!snap.exists()) return;
-      const d = snap.data() || {};
+  const showToast = (message) => {
+    if (toastTimerRef.current) {
+      clearTimeout(toastTimerRef.current);
+    }
 
-      setActiveFreezerMethod(d.activeFreezerMethod || "uph");
-      setActiveFrameloadMethod(d.activeFrameloadMethod || "totes");
+    setToast({ show: true, message });
 
-      setPickersUPH(d.pickersUPH || "");
-      setUPH(d.uph || "");
-      setOutstandingUPH(d.outstandingUPH || "");
-      setBreakUPH(d.breakUPH || "");
-      setResultUPH(d.resultUPH || "");
-
-      setPickersTrolly(d.pickersTrolly || "");
-      setTrollyRate(d.trollyRate || "");
-      setOutstandingTrolly(d.outstandingTrolly || "");
-      setBreakTrolly(d.breakTrolly || "");
-      setResultTrolly(d.resultTrolly || "");
-
-      setTotesLoaded(d.totesLoaded || "");
-      setTotesLoadedPerHour(d.totesLoadedPerHour || "");
-      setTotesBreak(d.totesBreak || "");
-      setTotesRemaining(d.totesRemaining || "");
-      setTotesResult(d.totesResult || "");
-
-      setDolliesRemaining(d.dolliesRemaining || "");
-      setDolliesPerHour(d.dolliesPerHour || "");
-      setDolliesBreak(d.dolliesBreak || "");
-      setDolliesResult(d.dolliesResult || "");
-    });
-
-    return () => unsub();
-  }, []);
-
-  const saveViewState = async (nextState) => {
-    await setDoc(FREEZER_DOC, nextState, { merge: true });
-  };
-
-  const calculateFinishTime = (hours, breakMinutes) => {
-    if (!Number.isFinite(hours) || hours < 0) return "-";
-
-    const now = new Date();
-    const breakHrs = (parseFloat(breakMinutes) || 0) / 60;
-    const finalHours = hours + breakHrs;
-    const finish = new Date(now.getTime() + finalHours * 3600000);
-
-    let hh = finish.getHours();
-    const mm = finish.getMinutes().toString().padStart(2, "0");
-    const ampm = hh >= 12 ? "PM" : "AM";
-    hh = hh % 12 || 12;
-
-    return `${hh}:${mm} ${ampm}`;
+    toastTimerRef.current = setTimeout(() => {
+      setToast({ show: false, message: "" });
+      toastTimerRef.current = null;
+    }, 1800);
   };
 
   const resetFreezerState = () => {
+    setActiveFreezerMethod("uph");
     setPickersUPH("");
     setUPH("");
     setOutstandingUPH("");
@@ -111,6 +67,7 @@ export default function FrameloadFreezer({ grandTotals }) {
   };
 
   const resetFrameloadState = () => {
+    setActiveFrameloadMethod("totes");
     setTotesLoaded("");
     setTotesLoadedPerHour("");
     setTotesBreak("");
@@ -123,8 +80,86 @@ export default function FrameloadFreezer({ grandTotals }) {
     setDolliesResult("-");
   };
 
+  const resetAllLocalState = () => {
+    resetFrameloadState();
+    resetFreezerState();
+  };
+
+  useEffect(() => {
+    const unsubscribe = onSnapshot(FREEZER_DOC, (snapshot) => {
+      if (!snapshot.exists()) {
+        resetAllLocalState();
+        return;
+      }
+
+      const data = snapshot.data() || {};
+
+      setActiveFreezerMethod(data.activeFreezerMethod || "uph");
+      setActiveFrameloadMethod(data.activeFrameloadMethod || "totes");
+
+      setPickersUPH(data.pickersUPH || "");
+      setUPH(data.uph || "");
+      setOutstandingUPH(data.outstandingUPH || "");
+      setBreakUPH(data.breakUPH || "");
+      setResultUPH(data.resultUPH || "-");
+
+      setPickersTrolly(data.pickersTrolly || "");
+      setTrollyRate(data.trollyRate || "");
+      setOutstandingTrolly(data.outstandingTrolly || "");
+      setBreakTrolly(data.breakTrolly || "");
+      setResultTrolly(data.resultTrolly || "-");
+
+      setTotesLoaded(data.totesLoaded || "");
+      setTotesLoadedPerHour(data.totesLoadedPerHour || "");
+      setTotesBreak(data.totesBreak || "");
+      setTotesRemaining(data.totesRemaining || "");
+      setTotesResult(data.totesResult || "-");
+
+      setDolliesRemaining(data.dolliesRemaining || "");
+      setDolliesPerHour(data.dolliesPerHour || "");
+      setDolliesBreak(data.dolliesBreak || "");
+      setDolliesResult(data.dolliesResult || "-");
+    });
+
+    const handleClearAll = () => {
+      resetAllLocalState();
+    };
+
+    window.addEventListener("shift-planner-clear-all", handleClearAll);
+
+    return () => {
+      unsubscribe();
+      window.removeEventListener("shift-planner-clear-all", handleClearAll);
+
+      if (toastTimerRef.current) {
+        clearTimeout(toastTimerRef.current);
+      }
+    };
+  }, []);
+
+  const saveViewState = async (nextState) => {
+    await setDoc(FREEZER_DOC, nextState, { merge: true });
+  };
+
+  const calculateFinishTime = (hours, breakMinutes) => {
+    if (!Number.isFinite(hours) || hours < 0) return "-";
+
+    const now = new Date();
+    const breakHours = (parseFloat(breakMinutes) || 0) / 60;
+    const finish = new Date(now.getTime() + (hours + breakHours) * 3600000);
+
+    let hour = finish.getHours();
+    const minute = finish.getMinutes().toString().padStart(2, "0");
+    const ampm = hour >= 12 ? "PM" : "AM";
+
+    hour = hour % 12 || 12;
+
+    return `${hour}:${minute} ${ampm}`;
+  };
+
   useEffect(() => {
     const totalRate = (parseFloat(pickersUPH) || 0) * (parseFloat(uph) || 0);
+
     if (!totalRate) {
       setResultUPH("-");
       return;
@@ -137,6 +172,7 @@ export default function FrameloadFreezer({ grandTotals }) {
   useEffect(() => {
     const totalRate =
       (parseFloat(pickersTrolly) || 0) * (parseFloat(trollyRate) || 0);
+
     if (!totalRate) {
       setResultTrolly("-");
       return;
@@ -163,8 +199,7 @@ export default function FrameloadFreezer({ grandTotals }) {
       return;
     }
 
-    const hours = remaining / rate;
-    setTotesResult(calculateFinishTime(hours, totesBreak));
+    setTotesResult(calculateFinishTime(remaining / rate, totesBreak));
   }, [totalTotesValue, totesLoaded, totesLoadedPerHour, totesBreak]);
 
   useEffect(() => {
@@ -181,8 +216,7 @@ export default function FrameloadFreezer({ grandTotals }) {
       return;
     }
 
-    const hours = remaining / rate;
-    setDolliesResult(calculateFinishTime(hours, dolliesBreak));
+    setDolliesResult(calculateFinishTime(remaining / rate, dolliesBreak));
   }, [dolliesRemaining, dolliesPerHour, dolliesBreak]);
 
   const saveUPH = async () => {
@@ -330,6 +364,7 @@ export default function FrameloadFreezer({ grandTotals }) {
     await setDoc(
       FREEZER_DOC,
       {
+        activeFrameloadMethod: "totes",
         totesLoaded: "",
         totesLoadedPerHour: "",
         totesBreak: "",
@@ -352,6 +387,7 @@ export default function FrameloadFreezer({ grandTotals }) {
     await setDoc(
       FREEZER_DOC,
       {
+        activeFreezerMethod: "uph",
         pickersUPH: "",
         uph: "",
         outstandingUPH: "",
@@ -376,13 +412,20 @@ export default function FrameloadFreezer({ grandTotals }) {
       <div className="sub-card compact-sub-card">
         <div className="sub-card-header">
           <h3>Frameload</h3>
-          <button className="clear-btn subcard-clear-all-btn" onClick={clearFrameloadAll}>
+          <button
+            className="clear-btn subcard-clear-all-btn"
+            onClick={clearFrameloadAll}
+          >
             Clear All
           </button>
         </div>
 
         <div className="freezer-method-toggle freezer-sub-toggle">
-          <label className={`freezer-radio-option ${activeFrameloadMethod === "totes" ? "active" : ""}`}>
+          <label
+            className={`freezer-radio-option ${
+              activeFrameloadMethod === "totes" ? "active" : ""
+            }`}
+          >
             <input
               type="radio"
               name="frameloadMethod"
@@ -396,7 +439,11 @@ export default function FrameloadFreezer({ grandTotals }) {
             <span>Totes</span>
           </label>
 
-          <label className={`freezer-radio-option ${activeFrameloadMethod === "dolly" ? "active" : ""}`}>
+          <label
+            className={`freezer-radio-option ${
+              activeFrameloadMethod === "dolly" ? "active" : ""
+            }`}
+          >
             <input
               type="radio"
               name="frameloadMethod"
@@ -426,10 +473,10 @@ export default function FrameloadFreezer({ grandTotals }) {
             <tbody>
               <tr>
                 <td style={{ fontWeight: "bold" }}>{totalTotesValue}</td>
-                <td><input type="number" value={totesLoaded} onChange={(e) => setTotesLoaded(e.target.value)} className="tiny-input" /></td>
-                <td><input type="number" value={totesLoadedPerHour} onChange={(e) => setTotesLoadedPerHour(e.target.value)} className="tiny-input" /></td>
+                <td><input type="number" value={totesLoaded} onChange={(event) => setTotesLoaded(event.target.value)} className="tiny-input" /></td>
+                <td><input type="number" value={totesLoadedPerHour} onChange={(event) => setTotesLoadedPerHour(event.target.value)} className="tiny-input" /></td>
                 <td style={{ fontWeight: "bold" }}>{totesRemaining || "0"}</td>
-                <td><input type="number" value={totesBreak} onChange={(e) => setTotesBreak(e.target.value)} className="tiny-input" /></td>
+                <td><input type="number" value={totesBreak} onChange={(event) => setTotesBreak(event.target.value)} className="tiny-input" /></td>
                 <td style={{ fontWeight: "bold" }}>{totesResult || "-"}</td>
               </tr>
             </tbody>
@@ -448,9 +495,9 @@ export default function FrameloadFreezer({ grandTotals }) {
             </thead>
             <tbody>
               <tr>
-                <td><input type="number" value={dolliesRemaining} onChange={(e) => setDolliesRemaining(e.target.value)} className="tiny-input" /></td>
-                <td><input type="number" value={dolliesPerHour} onChange={(e) => setDolliesPerHour(e.target.value)} className="tiny-input" /></td>
-                <td><input type="number" value={dolliesBreak} onChange={(e) => setDolliesBreak(e.target.value)} className="tiny-input" /></td>
+                <td><input type="number" value={dolliesRemaining} onChange={(event) => setDolliesRemaining(event.target.value)} className="tiny-input" /></td>
+                <td><input type="number" value={dolliesPerHour} onChange={(event) => setDolliesPerHour(event.target.value)} className="tiny-input" /></td>
+                <td><input type="number" value={dolliesBreak} onChange={(event) => setDolliesBreak(event.target.value)} className="tiny-input" /></td>
                 <td style={{ fontWeight: "bold" }}>{dolliesResult || "-"}</td>
               </tr>
             </tbody>
@@ -475,13 +522,20 @@ export default function FrameloadFreezer({ grandTotals }) {
       <div className="sub-card compact-sub-card">
         <div className="sub-card-header">
           <h3>Freezer</h3>
-          <button className="clear-btn subcard-clear-all-btn" onClick={clearFreezerAll}>
+          <button
+            className="clear-btn subcard-clear-all-btn"
+            onClick={clearFreezerAll}
+          >
             Clear All
           </button>
         </div>
 
         <div className="freezer-method-toggle freezer-sub-toggle">
-          <label className={`freezer-radio-option ${activeFreezerMethod === "uph" ? "active" : ""}`}>
+          <label
+            className={`freezer-radio-option ${
+              activeFreezerMethod === "uph" ? "active" : ""
+            }`}
+          >
             <input
               type="radio"
               name="freezerMethod"
@@ -495,7 +549,11 @@ export default function FrameloadFreezer({ grandTotals }) {
             <span>UPH Method</span>
           </label>
 
-          <label className={`freezer-radio-option ${activeFreezerMethod === "trolly" ? "active" : ""}`}>
+          <label
+            className={`freezer-radio-option ${
+              activeFreezerMethod === "trolly" ? "active" : ""
+            }`}
+          >
             <input
               type="radio"
               name="freezerMethod"
@@ -523,10 +581,10 @@ export default function FrameloadFreezer({ grandTotals }) {
             </thead>
             <tbody>
               <tr>
-                <td><input type="number" value={pickersUPH} onChange={(e) => setPickersUPH(e.target.value)} className="tiny-input" /></td>
-                <td><input type="number" value={uph} onChange={(e) => setUPH(e.target.value)} className="tiny-input" /></td>
-                <td><input type="number" value={outstandingUPH} onChange={(e) => setOutstandingUPH(e.target.value)} className="tiny-input" /></td>
-                <td><input type="number" value={breakUPH} onChange={(e) => setBreakUPH(e.target.value)} className="tiny-input" /></td>
+                <td><input type="number" value={pickersUPH} onChange={(event) => setPickersUPH(event.target.value)} className="tiny-input" /></td>
+                <td><input type="number" value={uph} onChange={(event) => setUPH(event.target.value)} className="tiny-input" /></td>
+                <td><input type="number" value={outstandingUPH} onChange={(event) => setOutstandingUPH(event.target.value)} className="tiny-input" /></td>
+                <td><input type="number" value={breakUPH} onChange={(event) => setBreakUPH(event.target.value)} className="tiny-input" /></td>
                 <td style={{ fontWeight: "bold" }}>{resultUPH || "-"}</td>
               </tr>
             </tbody>
@@ -546,10 +604,10 @@ export default function FrameloadFreezer({ grandTotals }) {
             </thead>
             <tbody>
               <tr>
-                <td><input type="number" value={pickersTrolly} onChange={(e) => setPickersTrolly(e.target.value)} className="tiny-input" /></td>
-                <td><input type="number" value={trollyRate} onChange={(e) => setTrollyRate(e.target.value)} className="tiny-input" /></td>
-                <td><input type="number" value={outstandingTrolly} onChange={(e) => setOutstandingTrolly(e.target.value)} className="tiny-input" /></td>
-                <td><input type="number" value={breakTrolly} onChange={(e) => setBreakTrolly(e.target.value)} className="tiny-input" /></td>
+                <td><input type="number" value={pickersTrolly} onChange={(event) => setPickersTrolly(event.target.value)} className="tiny-input" /></td>
+                <td><input type="number" value={trollyRate} onChange={(event) => setTrollyRate(event.target.value)} className="tiny-input" /></td>
+                <td><input type="number" value={outstandingTrolly} onChange={(event) => setOutstandingTrolly(event.target.value)} className="tiny-input" /></td>
+                <td><input type="number" value={breakTrolly} onChange={(event) => setBreakTrolly(event.target.value)} className="tiny-input" /></td>
                 <td style={{ fontWeight: "bold" }}>{resultTrolly || "-"}</td>
               </tr>
             </tbody>
@@ -571,7 +629,9 @@ export default function FrameloadFreezer({ grandTotals }) {
         </div>
       </div>
 
-      {toast.show && <div className="toast-notification-center">{toast.message}</div>}
+      {toast.show && (
+        <div className="toast-notification-center">{toast.message}</div>
+      )}
     </section>
   );
 }
