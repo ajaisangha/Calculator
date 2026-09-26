@@ -16,9 +16,9 @@ import "react-responsive-carousel/lib/styles/carousel.min.css";
 const DATADOC = doc(db, "totes", "data");
 
 /*
-  These are the exact documents used by the shown application components.
-  freezerCalc is required by FrameloadFreezer.jsx.
-  shiftEOS is required by ShiftEOSCard.jsx and StaffAllocation.jsx.
+  Exact Firestore documents used by the visible application cards.
+  freezerCalc is used by FrameloadFreezer.jsx.
+  shiftEOS is used by ShiftEOSCard.jsx.
 */
 const CLEAR_DOCUMENTS = [
   doc(db, "totes", "data"),
@@ -60,6 +60,72 @@ function Header({ theme, setTheme }) {
         ))}
       </div>
     </header>
+  );
+}
+
+function ConfirmClearModal({ isOpen, isClearing, onCancel, onConfirm }) {
+  useEffect(() => {
+    if (!isOpen) return undefined;
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape" && !isClearing) {
+        onCancel();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, isClearing, onCancel]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div
+      className="clear-all-modal-backdrop"
+      role="presentation"
+      onMouseDown={() => {
+        if (!isClearing) onCancel();
+      }}
+    >
+      <section
+        className="clear-all-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="clear-all-modal-title"
+        aria-describedby="clear-all-modal-description"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <h2 id="clear-all-modal-title">Clear all data?</h2>
+
+        <p id="clear-all-modal-description">
+          This will clear every slide, including Shift EOS hours, Staff
+          Allocation, uploaded totes, Pick Calculator, Frameload, Freezer, and
+          Barcode data. This action cannot be undone.
+        </p>
+
+        <div className="clear-all-modal-actions">
+          <button
+            type="button"
+            className="clear-all-modal-cancel"
+            onClick={onCancel}
+            disabled={isClearing}
+          >
+            Cancel
+          </button>
+
+          <button
+            type="button"
+            className="clear-all-modal-confirm"
+            onClick={onConfirm}
+            disabled={isClearing}
+            autoFocus
+          >
+            {isClearing ? "Clearing..." : "Clear Everything"}
+          </button>
+        </div>
+      </section>
+    </div>
   );
 }
 
@@ -159,6 +225,7 @@ export default function App() {
   const [duplicateMessage, setDuplicateMessage] = useState("");
   const [slideIndex, setSlideIndex] = useState(0);
   const [theme, setTheme] = useState("blue");
+  const [isClearAllModalOpen, setIsClearAllModalOpen] = useState(false);
   const [isClearingAll, setIsClearingAll] = useState(false);
   const [clearAllMessage, setClearAllMessage] = useState("");
 
@@ -178,22 +245,12 @@ export default function App() {
       if (docSnap.exists()) {
         const savedRows = docSnap.data().rows || [];
         const routeMap = {};
-        const grand = {
-          ambient: 0,
-          chilled: 0,
-          freezer: 0,
-          total: 0,
-        };
+        const grand = { ambient: 0, chilled: 0, freezer: 0, total: 0 };
 
         savedRows.forEach((row) => {
           if (!routeMap[row.route]) {
             routeMap[row.route] = {
-              totals: {
-                ambient: 0,
-                chilled: 0,
-                freezer: 0,
-                total: 0,
-              },
+              totals: { ambient: 0, chilled: 0, freezer: 0, total: 0 },
               rows: [],
             };
           }
@@ -336,13 +393,19 @@ export default function App() {
     }
   };
 
+  const openClearAllModal = () => {
+    if (!isClearingAll) {
+      setIsClearAllModalOpen(true);
+    }
+  };
+
+  const closeClearAllModal = () => {
+    if (!isClearingAll) {
+      setIsClearAllModalOpen(false);
+    }
+  };
+
   const clearEverything = async () => {
-    const confirmed = window.confirm(
-      "Clear all slides and all saved Firebase data? This cannot be undone."
-    );
-
-    if (!confirmed) return;
-
     setIsClearingAll(true);
     setClearAllMessage("");
 
@@ -364,6 +427,10 @@ export default function App() {
 
       await batch.commit();
 
+      /*
+        Clears private local React state in each mounted card immediately.
+        The exact document state is cleared by the Firestore batch above.
+      */
       window.dispatchEvent(
         new CustomEvent("shift-planner-clear-all", {
           detail: { clearedAt: Date.now() },
@@ -375,6 +442,7 @@ export default function App() {
       setGrandTotals({ ambient: 0, chilled: 0, freezer: 0, total: 0 });
       setDuplicateMessage("");
       setSlideIndex(0);
+      setIsClearAllModalOpen(false);
       setClearAllMessage("All slides and Firebase data cleared");
     } catch (error) {
       console.error("Clear all Firebase data error:", error);
@@ -512,10 +580,10 @@ export default function App() {
               <button
                 type="button"
                 className="sidebar-clear-all-btn"
-                onClick={clearEverything}
+                onClick={openClearAllModal}
                 disabled={isClearingAll}
               >
-                {isClearingAll ? "Clearing..." : "Clear All"}
+                Clear All
               </button>
             </aside>
 
@@ -587,6 +655,13 @@ export default function App() {
           </div>
         </div>
       </main>
+
+      <ConfirmClearModal
+        isOpen={isClearAllModalOpen}
+        isClearing={isClearingAll}
+        onCancel={closeClearAllModal}
+        onConfirm={clearEverything}
+      />
 
       {clearAllMessage && (
         <div className="toast-notification-center">{clearAllMessage}</div>
