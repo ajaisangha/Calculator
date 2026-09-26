@@ -4,1061 +4,463 @@ import { db } from "./firebase";
 import "./App.css";
 import "./staffallocation.css";
 
-const SHIFT_EOS_DOC = doc(db, "totes", "shiftEOS");
+const SHIFT_DOC = doc(db, "totes", "shiftEOS");
 const PICK_DOC = doc(db, "totes", "pickCalculator");
-const STAFF_ALLOCATION_DOC = doc(db, "totes", "staffAllocation");
+const FREEZER_DOC = doc(db, "totes", "freezerCalc");
+const BAGGED_DOC = doc(db, "totes", "baggedTotes");
+const STAFF_DOC = doc(db, "totes", "staffAllocation");
 
-const emptyAllocation = {
-  ambientPick: "",
-  chillPick: "",
-  bagging: "",
-  baggingRunner: 1,
-  freezerPick: "",
-  freezerDecant: 0,
-  decant: "",
-  mhe: 1,
-  frameload: 3,
-  bt: 2,
-  vanLoad: 1,
-  dekit: 1,
-  totalIC: 2,
+const allocationDefaults = {
+  ambientPick: "", chillPick: "", bagging: "", baggingRunner: 1,
+  freezerPick: "", freezerDecant: 0, decant: "", mhe: 1,
+  frameload: 3, bt: 2, vanLoad: 1, dekit: 1, totalIC: 2,
 };
-
-const emptyWorkInputs = {
-  ambientOutstanding: "",
-  chillOutstanding: "",
-  ambientUPH: "",
-  chillUPH: "",
-  pickBreakMinutes: "",
-  pickCompletionTime: "",
-  baggingOutstanding: "",
-  baggingUPH: "",
-  baggingBreakMinutes: "",
-  baggingCompletionTime: "",
-  freezerOutstanding: "",
-  freezerUPH: "",
-  freezerBreakMinutes: "",
-  freezerCompletionTime: "",
-  inboundUPH: "",
-  inboundBreakMinutes: "",
+const inputDefaults = {
+  ambientOutstanding: "", chillOutstanding: "", ambientUPH: "", chillUPH: "",
+  pickBreakMinutes: "", pickCompletionTime: "", baggingOutstanding: "",
+  baggingUPH: "", baggingBreakMinutes: "", baggingCompletionTime: "",
+  freezerOutstanding: "", freezerUPH: "", freezerBreakMinutes: "",
+  freezerCompletionTime: "", inboundUPH: "", inboundBreakMinutes: "",
   inboundCompletionTime: "",
 };
+const calculatedFields = new Set(["ambientPick", "chillPick", "bagging", "freezerPick", "decant"]);
+const sourceFields = new Set([
+  "ambientOutstanding", "chillOutstanding", "ambientUPH", "chillUPH",
+  "pickBreakMinutes", "baggingOutstanding", "freezerOutstanding", "freezerUPH",
+]);
+const dependencies = {
+  ambientOutstanding: ["ambientPick"], ambientUPH: ["ambientPick"],
+  chillOutstanding: ["chillPick"], chillUPH: ["chillPick"],
+  pickBreakMinutes: ["ambientPick", "chillPick"],
+  pickCompletionTime: ["ambientPick", "chillPick"],
+  baggingOutstanding: ["bagging"], baggingUPH: ["bagging"],
+  baggingBreakMinutes: ["bagging"], baggingCompletionTime: ["bagging"],
+  freezerOutstanding: ["freezerPick"], freezerUPH: ["freezerPick"],
+  freezerBreakMinutes: ["freezerPick"], freezerCompletionTime: ["freezerPick"],
+  inboundUPH: ["decant"], inboundBreakMinutes: ["decant"],
+  inboundCompletionTime: ["decant"],
+};
+const number = (value) => Number(value) || 0;
+const nonnegative = (value) => value === "" ? "" : Math.max(0, number(value));
 
-const calculatedFieldKeys = [
-  "ambientPick",
-  "chillPick",
-  "bagging",
-  "freezerPick",
-  "decant",
-];
-
-const pickDerivedWorkInputKeys = [
-  "ambientOutstanding",
-  "chillOutstanding",
-  "ambientUPH",
-  "chillUPH",
-  "pickBreakMinutes",
-];
-
-function getNumber(value) {
-  return Number(value) || 0;
-}
-
-function getHoursUntilCompletion(completionTime, breakMinutes = 0) {
-  if (!completionTime) return 0;
-
-  const [hoursText, minutesText] = completionTime.split(":");
-  const hours = Number(hoursText);
-  const minutes = Number(minutesText);
-
-  if (
-    !Number.isFinite(hours) ||
-    !Number.isFinite(minutes) ||
-    hours < 0 ||
-    hours > 23 ||
-    minutes < 0 ||
-    minutes > 59
-  ) {
-    return 0;
-  }
-
+function hoursUntil(time, breakMinutes) {
+  if (!time) return 0;
+  const [hour, minute] = time.split(":").map(Number);
+  if (!Number.isInteger(hour) || !Number.isInteger(minute) ||
+      hour < 0 || hour > 23 || minute < 0 || minute > 59) return 0;
   const now = new Date();
-  const completion = new Date();
-
-  completion.setHours(hours, minutes, 0, 0);
-
-  if (completion <= now) {
-    completion.setDate(completion.getDate() + 1);
-  }
-
-  const rawHours = (completion.getTime() - now.getTime()) / 3600000;
-  const breakHours = getNumber(breakMinutes) / 60;
-
-  return Math.max(0, rawHours - breakHours);
+  const end = new Date();
+  end.setHours(hour, minute, 0, 0);
+  if (end <= now) end.setDate(end.getDate() + 1);
+  return Math.max(0, (end.getTime() - now.getTime()) / 3600000 - number(breakMinutes) / 60);
+}
+function required(outstanding, uph, time, breakMinutes) {
+  const hours = hoursUntil(time, breakMinutes);
+  return number(outstanding) > 0 && number(uph) > 0 && hours > 0
+    ? Math.ceil(number(outstanding) / (number(uph) * hours)) : 0;
 }
 
-function calculateRequiredStaff(outstanding, uph, completionTime, breakMinutes) {
-  const totalOutstanding = getNumber(outstanding);
-  const rate = getNumber(uph);
-  const hoursLeft = getHoursUntilCompletion(completionTime, breakMinutes);
-
-  if (!totalOutstanding || !rate || !hoursLeft) {
-    return 0;
-  }
-
-  return Math.ceil(totalOutstanding / (rate * hoursLeft));
-}
-
-function getTotalAllocated(allocation) {
-  return (
-    getNumber(allocation.ambientPick) +
-    getNumber(allocation.chillPick) +
-    getNumber(allocation.bagging) +
-    getNumber(allocation.baggingRunner) +
-    getNumber(allocation.freezerPick) +
-    getNumber(allocation.freezerDecant) +
-    getNumber(allocation.decant) +
-    getNumber(allocation.mhe) +
-    getNumber(allocation.frameload) +
-    getNumber(allocation.bt) +
-    getNumber(allocation.vanLoad) +
-    getNumber(allocation.dekit) +
-    getNumber(allocation.totalIC)
-  );
-}
-
-function NumberField({
-  label,
-  value,
-  onChange,
-  readOnly = false,
-  calculated = false,
-  placeholder = "0",
-}) {
+function NumberField({ label, value, onChange, category = "manual", placeholder = "0" }) {
   return (
     <label className="staff-field">
       <span className="staff-field-label">{label}</span>
-
-      <input
-        type="number"
-        min="0"
-        inputMode="numeric"
-        value={value}
-        onChange={onChange}
-        readOnly={readOnly}
-        placeholder={placeholder}
-        className={`staff-field-input ${
-          calculated ? "staff-field-calculated" : ""
-        } ${readOnly ? "staff-readonly-input" : ""}`}
-      />
+      <input type="number" min="0" inputMode="decimal" value={value}
+        onChange={onChange} placeholder={placeholder}
+        className={`staff-field-input staff-category-${category}`} />
     </label>
   );
 }
-
 function TimeField({ label, value, onChange }) {
   return (
     <label className="staff-field">
       <span className="staff-field-label">{label}</span>
-
-      <input
-        type="time"
-        value={value}
-        onChange={onChange}
-        className="staff-field-input staff-time-input"
-      />
+      <input type="time" value={value} onChange={onChange}
+        className="staff-field-input staff-time-input staff-category-manual" />
     </label>
   );
 }
 
 export default function StaffAllocation() {
-  const [allocation, setAllocation] = useState(emptyAllocation);
-  const [totalHours, setTotalHours] = useState(0);
-  const [inboundNeeded, setInboundNeeded] = useState(0);
-  const [workInputs, setWorkInputs] = useState(emptyWorkInputs);
-  const [pickDerivedValues, setPickDerivedValues] = useState({
-    ambientOutstanding: "",
-    chillOutstanding: "",
-    ambientUPH: "",
-    chillUPH: "",
-    pickBreakMinutes: "",
-  });
-  const [availableTeammatesInput, setAvailableTeammatesInput] = useState("");
-  const [manualOverrides, setManualOverrides] = useState(new Set());
-  const [toast, setToast] = useState({ show: false, message: "" });
+  const [savedAllocation, setSavedAllocation] = useState(allocationDefaults);
+  const [workInputs, setWorkInputs] = useState(inputDefaults);
+  const [manualResults, setManualResults] = useState(new Set());
+  const [manualSources, setManualSources] = useState(new Set());
+  const [shiftHours, setShiftHours] = useState(0);
+  const [shiftInbound, setShiftInbound] = useState(0);
+  const [shiftKey, setShiftKey] = useState("");
+  const [inboundOverride, setInboundOverride] = useState(null);
+  const [availableOverride, setAvailableOverride] = useState(null);
+  const [toast, setToast] = useState("");
+  const sourceRef = useRef({});
+  const manualSourceRef = useRef(new Set());
+  const editedAllocationRef = useRef(new Set());
+  const editedInputsRef = useRef(new Set());
+  const editedAvailableRef = useRef(false);
+  const editedInboundRef = useRef(false);
+  const shiftKeyRef = useRef("");
+  const toastTimer = useRef(null);
 
-  const initializedFromFirestore = useRef(false);
-  const editedWorkInputKeys = useRef(new Set());
-  const editedAllocationKeys = useRef(new Set());
-  const availableTeammatesEdited = useRef(false);
-  const toastTimerRef = useRef(null);
-
-  const showToast = (message) => {
-    if (toastTimerRef.current) {
-      clearTimeout(toastTimerRef.current);
-    }
-
-    setToast({ show: true, message });
-
-    toastTimerRef.current = setTimeout(() => {
-      setToast({ show: false, message: "" });
-      toastTimerRef.current = null;
-    }, 2500);
+  const notify = (message) => {
+    clearTimeout(toastTimer.current);
+    setToast(message);
+    toastTimer.current = setTimeout(() => setToast(""), 2500);
+  };
+  const receiveSource = (values) => {
+    sourceRef.current = { ...sourceRef.current, ...values };
+    setWorkInputs((previous) => {
+      const next = { ...previous };
+      for (const [key, value] of Object.entries(values)) {
+        if (!manualSourceRef.current.has(key)) next[key] = value;
+      }
+      return next;
+    });
   };
 
   useEffect(() => {
-    return () => {
-      if (toastTimerRef.current) {
-        clearTimeout(toastTimerRef.current);
+    const stopShift = onSnapshot(SHIFT_DOC, (snapshot) => {
+      const data = snapshot.exists() ? snapshot.data() || {} : {};
+      const hours = data.totalHours != null ? number(data.totalHours)
+        : Array.isArray(data.shiftData) ? data.shiftData.reduce(
+          (sum, row) => sum + 10 * number(row.present) + number(row.ot) - number(row.vto), 0
+        ) : 0;
+      const inbound = number(data.ambInbound) + number(data.chillInbound) +
+        number(data.freezerInbound) - number(data.outstandingPick);
+      const outbound = number(data.ambientPick) + number(data.chillPick) + number(data.freezerPick);
+      const target = data.targetProd == null ? 285 : number(data.targetProd);
+      const computed = Math.max(0, Math.round(target > 0
+        ? target / 1.13 * hours - inbound - outbound : 0));
+      const key = JSON.stringify([hours, inbound, outbound, target]);
+      if (shiftKeyRef.current && shiftKeyRef.current !== key) {
+        editedInboundRef.current = false;
+        setInboundOverride(null);
+        setManualResults((previous) => {
+          if (!previous.has("decant")) return previous;
+          const next = new Set(previous);
+          next.delete("decant");
+          return next;
+        });
       }
-    };
-  }, []);
-
-  useEffect(() => {
-    const unsubscribe = onSnapshot(SHIFT_EOS_DOC, (snapshot) => {
-      if (!snapshot.exists()) {
-        setTotalHours(0);
-        setInboundNeeded(0);
-        return;
-      }
-
-      const data = snapshot.data() || {};
-
-      const shiftTotalHours = Number(data.totalHours) || 0;
-      const targetProductivity = Number(data.targetProd) || 0;
-      const ambientInbound = Number(data.ambInbound) || 0;
-      const chillInbound = Number(data.chillInbound) || 0;
-      const freezerInbound = Number(data.freezerInbound) || 0;
-      const outstandingPick = Number(data.outstandingPick) || 0;
-      const ambientPick = Number(data.ambientPick) || 0;
-      const chillPick = Number(data.chillPick) || 0;
-      const freezerPick = Number(data.freezerPick) || 0;
-
-      const totalInbound =
-        ambientInbound + chillInbound + freezerInbound - outstandingPick;
-
-      const totalOutbound = ambientPick + chillPick + freezerPick;
-
-      const calculatedInboundNeeded =
-        targetProductivity > 0
-          ? (targetProductivity / 1.13) * shiftTotalHours -
-            (totalInbound + totalOutbound)
-          : 0;
-
-      setTotalHours(shiftTotalHours);
-      setInboundNeeded(Math.max(0, Math.round(calculatedInboundNeeded)));
+      shiftKeyRef.current = key;
+      setShiftKey(key);
+      setShiftHours(hours);
+      setShiftInbound(computed);
     });
-
-    return unsubscribe;
-  }, []);
-
-  useEffect(() => {
-    const unsubscribe = onSnapshot(PICK_DOC, (snapshot) => {
-      if (!snapshot.exists()) return;
-
-      const data = snapshot.data() || {};
-
-      const latestPickDerivedValues = {
+    const stopPick = onSnapshot(PICK_DOC, (snapshot) => {
+      const data = snapshot.exists() ? snapshot.data() || {} : {};
+      receiveSource({
         ambientOutstanding: data.ambientOutstanding ?? "",
         chillOutstanding: data.chillOutstanding ?? "",
         ambientUPH: data.ambientUPH ?? "",
         chillUPH: data.chillUPH ?? "",
         pickBreakMinutes: data.ambientBreak1 ?? "",
-      };
-
-      setPickDerivedValues(latestPickDerivedValues);
-
-      setWorkInputs((previous) => ({
-        ...previous,
-        ambientOutstanding: editedWorkInputKeys.current.has(
-          "ambientOutstanding"
-        )
-          ? previous.ambientOutstanding
-          : latestPickDerivedValues.ambientOutstanding,
-        chillOutstanding: editedWorkInputKeys.current.has("chillOutstanding")
-          ? previous.chillOutstanding
-          : latestPickDerivedValues.chillOutstanding,
-        ambientUPH: editedWorkInputKeys.current.has("ambientUPH")
-          ? previous.ambientUPH
-          : latestPickDerivedValues.ambientUPH,
-        chillUPH: editedWorkInputKeys.current.has("chillUPH")
-          ? previous.chillUPH
-          : latestPickDerivedValues.chillUPH,
-        pickBreakMinutes: editedWorkInputKeys.current.has("pickBreakMinutes")
-          ? previous.pickBreakMinutes
-          : latestPickDerivedValues.pickBreakMinutes,
-      }));
+      });
     });
-
-    return unsubscribe;
-  }, []);
-
-  useEffect(() => {
-    const unsubscribe = onSnapshot(STAFF_ALLOCATION_DOC, (snapshot) => {
+    const stopFreezer = onSnapshot(FREEZER_DOC, (snapshot) => {
       const data = snapshot.exists() ? snapshot.data() || {} : {};
-
-      if (!initializedFromFirestore.current) {
-        setAllocation({
-          ambientPick: data.ambientPick ?? "",
-          chillPick: data.chillPick ?? "",
-          bagging: data.bagging ?? "",
-          baggingRunner: data.baggingRunner ?? 1,
-          freezerPick: data.freezerPick ?? "",
-          freezerDecant: data.freezerDecant ?? 0,
-          decant: data.decant ?? "",
-          mhe: data.mhe ?? 1,
-          frameload: data.frameload ?? 3,
-          bt: data.bt ?? 2,
-          vanLoad: data.vanLoad ?? 1,
-          dekit: data.dekit ?? 1,
-          totalIC: data.totalIC ?? 2,
-        });
-
-        setWorkInputs((previous) => ({
-          ...previous,
-          ambientOutstanding:
-            data.ambientOutstanding ??
-            previous.ambientOutstanding ??
-            pickDerivedValues.ambientOutstanding,
-          chillOutstanding:
-            data.chillOutstanding ??
-            previous.chillOutstanding ??
-            pickDerivedValues.chillOutstanding,
-          ambientUPH:
-            data.ambientUPH ??
-            previous.ambientUPH ??
-            pickDerivedValues.ambientUPH,
-          chillUPH:
-            data.chillUPH ??
-            previous.chillUPH ??
-            pickDerivedValues.chillUPH,
-          pickBreakMinutes:
-            data.pickBreakMinutes ??
-            previous.pickBreakMinutes ??
-            pickDerivedValues.pickBreakMinutes,
-          pickCompletionTime: data.pickCompletionTime ?? "",
-          baggingOutstanding: data.baggingOutstanding ?? "",
-          baggingUPH: data.baggingUPH ?? "",
-          baggingBreakMinutes: data.baggingBreakMinutes ?? "",
-          baggingCompletionTime: data.baggingCompletionTime ?? "",
-          freezerOutstanding: data.freezerOutstanding ?? "",
-          freezerUPH: data.freezerUPH ?? "",
-          freezerBreakMinutes: data.freezerBreakMinutes ?? "",
-          freezerCompletionTime: data.freezerCompletionTime ?? "",
-          inboundUPH: data.inboundUPH ?? "",
-          inboundBreakMinutes: data.inboundBreakMinutes ?? "",
-          inboundCompletionTime: data.inboundCompletionTime ?? "",
-        }));
-
-        setAvailableTeammatesInput(data.availableTeammates ?? "");
-        initializedFromFirestore.current = true;
-        return;
+      receiveSource({ freezerOutstanding: data.outstandingUPH ?? "", freezerUPH: data.uph ?? "" });
+    });
+    const stopBagged = onSnapshot(BAGGED_DOC, (snapshot) => {
+      const data = snapshot.exists() ? snapshot.data() || {} : {};
+      receiveSource({
+        baggingOutstanding: data.resultAmbient == null || data.resultChill == null
+          ? "" : Math.max(0, -(number(data.resultAmbient) + number(data.resultChill))),
+      });
+    });
+    const stopStaff = onSnapshot(STAFF_DOC, (snapshot) => {
+      const data = snapshot.exists() ? snapshot.data() || {} : {};
+      const savedSourceOverrides = new Set(Array.isArray(data.manualSourceKeys)
+        ? data.manualSourceKeys.filter((key) => sourceFields.has(key)) : []);
+      for (const key of savedSourceOverrides) {
+        if (!editedInputsRef.current.has(key)) manualSourceRef.current.add(key);
       }
-
-      setAllocation((previous) => {
+      setManualSources(new Set(manualSourceRef.current));
+      setSavedAllocation((previous) => {
         const next = { ...previous };
-
-        Object.keys(emptyAllocation).forEach((key) => {
-          if (!editedAllocationKeys.current.has(key)) {
-            next[key] = data[key] ?? emptyAllocation[key];
-          }
-        });
-
+        for (const key of Object.keys(allocationDefaults)) {
+          if (!editedAllocationRef.current.has(key)) next[key] = data[key] ?? allocationDefaults[key];
+        }
         return next;
       });
-
       setWorkInputs((previous) => {
         const next = { ...previous };
-
-        Object.keys(emptyWorkInputs).forEach((key) => {
-          if (pickDerivedWorkInputKeys.includes(key)) {
-            return;
-          }
-
-          if (!editedWorkInputKeys.current.has(key)) {
-            next[key] = data[key] ?? "";
-          }
-        });
-
+        for (const key of Object.keys(inputDefaults)) {
+          if (editedInputsRef.current.has(key)) continue;
+          next[key] = sourceFields.has(key) && !manualSourceRef.current.has(key)
+            ? (sourceRef.current[key] ?? "") : (data[key] ?? "");
+        }
         return next;
       });
-
-      if (!availableTeammatesEdited.current) {
-        setAvailableTeammatesInput(data.availableTeammates ?? "");
+      setManualResults((previous) => {
+        const next = new Set(previous);
+        const savedKeys = Array.isArray(data.manualResultKeys) ? data.manualResultKeys : [];
+        for (const key of savedKeys) {
+          if (calculatedFields.has(key) && !editedAllocationRef.current.has(key)) next.add(key);
+        }
+        return next;
+      });
+      if (!editedAvailableRef.current) {
+        setAvailableOverride(data.availableTeammates === "" || data.availableTeammates == null
+          ? null : data.availableTeammates);
+      }
+      if (!editedInboundRef.current) {
+        setInboundOverride(data.inboundNeededSource === shiftKeyRef.current &&
+          data.inboundNeededOverride != null ? data.inboundNeededOverride : null);
       }
     });
-
-    return unsubscribe;
-  }, [pickDerivedValues]);
-
-  const calculatedAmbientPick = useMemo(
-    () =>
-      calculateRequiredStaff(
-        workInputs.ambientOutstanding,
-        workInputs.ambientUPH,
-        workInputs.pickCompletionTime,
-        workInputs.pickBreakMinutes
-      ),
-    [
-      workInputs.ambientOutstanding,
-      workInputs.ambientUPH,
-      workInputs.pickCompletionTime,
-      workInputs.pickBreakMinutes,
-    ]
-  );
-
-  const calculatedChillPick = useMemo(
-    () =>
-      calculateRequiredStaff(
-        workInputs.chillOutstanding,
-        workInputs.chillUPH,
-        workInputs.pickCompletionTime,
-        workInputs.pickBreakMinutes
-      ),
-    [
-      workInputs.chillOutstanding,
-      workInputs.chillUPH,
-      workInputs.pickCompletionTime,
-      workInputs.pickBreakMinutes,
-    ]
-  );
-
-  const calculatedBagging = useMemo(
-    () =>
-      calculateRequiredStaff(
-        workInputs.baggingOutstanding,
-        workInputs.baggingUPH,
-        workInputs.baggingCompletionTime,
-        workInputs.baggingBreakMinutes
-      ),
-    [
-      workInputs.baggingOutstanding,
-      workInputs.baggingUPH,
-      workInputs.baggingCompletionTime,
-      workInputs.baggingBreakMinutes,
-    ]
-  );
-
-  const calculatedFreezerPick = useMemo(
-    () =>
-      calculateRequiredStaff(
-        workInputs.freezerOutstanding,
-        workInputs.freezerUPH,
-        workInputs.freezerCompletionTime,
-        workInputs.freezerBreakMinutes
-      ),
-    [
-      workInputs.freezerOutstanding,
-      workInputs.freezerUPH,
-      workInputs.freezerCompletionTime,
-      workInputs.freezerBreakMinutes,
-    ]
-  );
-
-  const calculatedDecant = useMemo(
-    () =>
-      calculateRequiredStaff(
-        inboundNeeded,
-        workInputs.inboundUPH,
-        workInputs.inboundCompletionTime,
-        workInputs.inboundBreakMinutes
-      ),
-    [
-      inboundNeeded,
-      workInputs.inboundUPH,
-      workInputs.inboundCompletionTime,
-      workInputs.inboundBreakMinutes,
-    ]
-  );
-
-  const calculatedValues = useMemo(
-    () => ({
-      ambientPick: calculatedAmbientPick,
-      chillPick: calculatedChillPick,
-      bagging: calculatedBagging,
-      freezerPick: calculatedFreezerPick,
-      decant: calculatedDecant,
-    }),
-    [
-      calculatedAmbientPick,
-      calculatedChillPick,
-      calculatedBagging,
-      calculatedFreezerPick,
-      calculatedDecant,
-    ]
-  );
-
-  useEffect(() => {
-    setAllocation((previous) => {
-      const updated = { ...previous };
-      let hasChanges = false;
-
-      calculatedFieldKeys.forEach((key) => {
-        if (!manualOverrides.has(key) && updated[key] !== calculatedValues[key]) {
-          updated[key] = calculatedValues[key];
-          hasChanges = true;
-        }
-      });
-
-      return hasChanges ? updated : previous;
-    });
-  }, [calculatedValues, manualOverrides]);
-
-  const automaticAvailableTeammates = Math.ceil(totalHours / 10);
-
-  const availableTeammates =
-    availableTeammatesInput === ""
-      ? automaticAvailableTeammates
-      : Math.max(0, getNumber(availableTeammatesInput));
-
-  const totalAllocated = getTotalAllocated(allocation);
-  const difference = availableTeammates - totalAllocated;
-
-  const updateAvailableTeammates = (value) => {
-    availableTeammatesEdited.current = true;
-
-    if (value === "") {
-      setAvailableTeammatesInput("");
-      return;
-    }
-
-    setAvailableTeammatesInput(Math.max(0, Number(value) || 0));
-  };
-
-  const updateAllocation = (key, value) => {
-    const numericValue = value === "" ? "" : Math.max(0, Number(value) || 0);
-
-    editedAllocationKeys.current.add(key);
-
-    if (calculatedFieldKeys.includes(key)) {
-      setManualOverrides((previous) => {
-        const next = new Set(previous);
-        next.add(key);
-        return next;
-      });
-    }
-
-    setAllocation((previous) => ({
-      ...previous,
-      [key]: numericValue,
-    }));
-  };
-
-  const updateWorkInput = (key, value) => {
-    editedWorkInputKeys.current.add(key);
-
-    setWorkInputs((previous) => ({
-      ...previous,
-      [key]: value,
-    }));
-
-    const dependentCalculatedFields = {
-      ambientOutstanding: ["ambientPick"],
-      ambientUPH: ["ambientPick"],
-      chillOutstanding: ["chillPick"],
-      chillUPH: ["chillPick"],
-      pickBreakMinutes: ["ambientPick", "chillPick"],
-      pickCompletionTime: ["ambientPick", "chillPick"],
-      baggingOutstanding: ["bagging"],
-      baggingUPH: ["bagging"],
-      baggingBreakMinutes: ["bagging"],
-      baggingCompletionTime: ["bagging"],
-      freezerOutstanding: ["freezerPick"],
-      freezerUPH: ["freezerPick"],
-      freezerBreakMinutes: ["freezerPick"],
-      freezerCompletionTime: ["freezerPick"],
-      inboundUPH: ["decant"],
-      inboundBreakMinutes: ["decant"],
-      inboundCompletionTime: ["decant"],
+    const clearLocal = () => {
+      sourceRef.current = {};
+      manualSourceRef.current = new Set();
+      editedAllocationRef.current = new Set();
+      editedInputsRef.current = new Set();
+      editedAvailableRef.current = false;
+      editedInboundRef.current = false;
+      setManualResults(new Set());
+      setManualSources(new Set());
+      setSavedAllocation({ ...allocationDefaults });
+      setWorkInputs({ ...inputDefaults });
+      setAvailableOverride(null);
+      setInboundOverride(null);
     };
+    window.addEventListener("shift-planner-clear-all", clearLocal);
+    return () => {
+      stopShift(); stopPick(); stopFreezer(); stopBagged(); stopStaff();
+      window.removeEventListener("shift-planner-clear-all", clearLocal);
+      clearTimeout(toastTimer.current);
+    };
+  }, []);
 
-    const fieldsToRecalculate = dependentCalculatedFields[key] || [];
+  const inboundNeeded = inboundOverride === null ? shiftInbound : inboundOverride;
+  const calculated = useMemo(() => ({
+    ambientPick: required(workInputs.ambientOutstanding, workInputs.ambientUPH, workInputs.pickCompletionTime, workInputs.pickBreakMinutes),
+    chillPick: required(workInputs.chillOutstanding, workInputs.chillUPH, workInputs.pickCompletionTime, workInputs.pickBreakMinutes),
+    bagging: required(workInputs.baggingOutstanding, workInputs.baggingUPH, workInputs.baggingCompletionTime, workInputs.baggingBreakMinutes),
+    freezerPick: required(workInputs.freezerOutstanding, workInputs.freezerUPH, workInputs.freezerCompletionTime, workInputs.freezerBreakMinutes),
+    decant: required(inboundNeeded, workInputs.inboundUPH, workInputs.inboundCompletionTime, workInputs.inboundBreakMinutes),
+  }), [workInputs, inboundNeeded]);
+  const allocation = { ...savedAllocation };
+  for (const key of calculatedFields) {
+    if (!manualResults.has(key)) allocation[key] = calculated[key];
+  }
+  const autoAvailable = Math.ceil(shiftHours / 10);
+  const available = availableOverride === null ? autoAvailable : number(availableOverride);
+  const totalAllocated = Object.keys(allocationDefaults)
+    .reduce((sum, key) => sum + number(allocation[key]), 0);
+  const difference = available - totalAllocated;
+  const totalPick = ["ambientPick", "chillPick", "bagging", "baggingRunner"]
+    .reduce((sum, key) => sum + number(allocation[key]), 0);
+  const totalFreezer = number(allocation.freezerPick) + number(allocation.freezerDecant);
+  const totalInbound = number(allocation.decant) + number(allocation.mhe);
+  const totalDispatch = ["frameload", "bt", "vanLoad", "dekit"]
+    .reduce((sum, key) => sum + number(allocation[key]), 0);
 
-    if (fieldsToRecalculate.length > 0) {
-      setManualOverrides((previous) => {
+  const changeAllocation = (key, value) => {
+    editedAllocationRef.current.add(key);
+    if (calculatedFields.has(key)) {
+      setManualResults((previous) => new Set(previous).add(key));
+    }
+    setSavedAllocation((previous) => ({ ...previous, [key]: nonnegative(value) }));
+  };
+  const changeInput = (key, value) => {
+    editedInputsRef.current.add(key);
+    if (sourceFields.has(key)) {
+      manualSourceRef.current.add(key);
+      setManualSources(new Set(manualSourceRef.current));
+    }
+    setWorkInputs((previous) => ({ ...previous, [key]: value }));
+    if (dependencies[key]) {
+      setManualResults((previous) => {
         const next = new Set(previous);
-
-        fieldsToRecalculate.forEach((fieldKey) => {
-          next.delete(fieldKey);
-        });
-
+        dependencies[key].forEach((field) => next.delete(field));
         return next;
       });
     }
   };
-
-  useEffect(() => {
-    setManualOverrides((previous) => {
-      if (!previous.has("decant")) return previous;
-
+  const changeInbound = (value) => {
+    editedInboundRef.current = true;
+    setInboundOverride(value === "" ? null : nonnegative(value));
+    setManualResults((previous) => {
       const next = new Set(previous);
       next.delete("decant");
       return next;
     });
-  }, [inboundNeeded]);
+  };
+  const allocationField = (label, key) => (
+    <NumberField label={label} value={allocation[key]}
+      onChange={(event) => changeAllocation(key, event.target.value)}
+      category={calculatedFields.has(key) ? "calculated" : "default"} />
+  );
+  const inputField = (label, key, placeholder = "0") => (
+    <NumberField label={label} value={workInputs[key]} placeholder={placeholder}
+      onChange={(event) => changeInput(key, event.target.value)}
+      category={sourceFields.has(key) ? "extracted" : "manual"} />
+  );
+  const timeField = (label, key) => (
+    <TimeField label={label} value={workInputs[key]}
+      onChange={(event) => changeInput(key, event.target.value)} />
+  );
 
-  const totalPick =
-    getNumber(allocation.ambientPick) +
-    getNumber(allocation.chillPick) +
-    getNumber(allocation.bagging) +
-    getNumber(allocation.baggingRunner);
-
-  const totalFreezer =
-    getNumber(allocation.freezerPick) +
-    getNumber(allocation.freezerDecant);
-
-  const totalInbound =
-    getNumber(allocation.decant) + getNumber(allocation.mhe);
-
-  const totalDispatch =
-    getNumber(allocation.frameload) +
-    getNumber(allocation.bt) +
-    getNumber(allocation.vanLoad) +
-    getNumber(allocation.dekit);
-
-  const saveAllocation = async () => {
+  const save = async () => {
     try {
-      await setDoc(
-        STAFF_ALLOCATION_DOC,
-        {
-          ...allocation,
-          ...workInputs,
-          availableTeammates: availableTeammatesInput,
-        },
-        { merge: true }
-      );
-
-      showToast("Staff Allocation Saved");
+      await setDoc(STAFF_DOC, {
+        ...allocation, ...workInputs, manualResultKeys: [...manualResults],
+        manualSourceKeys: [...manualSources],
+        availableTeammates: availableOverride ?? "",
+        inboundNeededOverride: inboundOverride,
+        inboundNeededSource: inboundOverride === null ? null : shiftKey,
+      }, { merge: true });
+      notify("Staff Allocation Saved");
     } catch (error) {
-      console.error("Staff allocation save error:", error);
-      showToast("Could not save Staff Allocation");
+      console.error(error);
+      notify("Could not save Staff Allocation");
     }
   };
-
-  const clearAllocation = async () => {
+  const clear = async () => {
     try {
-      /*
-        Remove local edit tracking first. This allows the Pick slide's
-        newest Firebase values to be restored into editable input fields.
-      */
-      editedWorkInputKeys.current = new Set();
-      editedAllocationKeys.current = new Set();
-      availableTeammatesEdited.current = false;
-
-      setManualOverrides(new Set());
-      setAllocation(emptyAllocation);
-      setAvailableTeammatesInput("");
-
-      /*
-        The five Pick-derived fields are restored from PICK_DOC.
-        All other Staff Allocation workload inputs are cleared.
-      */
-      setWorkInputs({
-        ...emptyWorkInputs,
-        ...pickDerivedValues,
-      });
-
-      /*
-        Only overwrite the Staff Allocation document.
-        Nothing in the Pick Calculator document or another slide changes.
-      */
-      await setDoc(
-        STAFF_ALLOCATION_DOC,
-        {
-          ...emptyAllocation,
-          ...emptyWorkInputs,
-          availableTeammates: "",
-        },
-        { merge: true }
-      );
-
-      showToast("Staff Allocation Cleared");
+      await setDoc(STAFF_DOC, {
+        ...allocationDefaults, ...inputDefaults,
+        manualResultKeys: [], manualSourceKeys: [],
+        availableTeammates: "", inboundNeededOverride: null,
+        inboundNeededSource: null,
+      }, { merge: true });
+      editedAllocationRef.current = new Set();
+      editedInputsRef.current = new Set();
+      editedAvailableRef.current = false;
+      editedInboundRef.current = false;
+      manualSourceRef.current = new Set();
+      setManualResults(new Set());
+      setManualSources(new Set());
+      setSavedAllocation({ ...allocationDefaults });
+      setWorkInputs({ ...inputDefaults, ...sourceRef.current });
+      setAvailableOverride(null);
+      setInboundOverride(null);
+      notify("Staff Allocation Cleared");
     } catch (error) {
-      console.error("Staff allocation clear error:", error);
-      showToast("Could not clear Staff Allocation");
+      console.error(error);
+      notify("Could not clear Staff Allocation");
     }
   };
 
   return (
     <section className="data-card staff-allocation-card">
       <h2 className="data-title">Staff Allocation</h2>
-
       <div className="staff-allocation-top-row">
         <div className="staff-allocation-limit">
-          <div>
-            <span>Shift EOS Total Hours</span>
-            <strong>{totalHours.toFixed(2)}</strong>
-          </div>
-
-          <label className="available-teammates-card">
+          <div><span>Shift EOS Total Hours</span><strong>{shiftHours.toFixed(2)}</strong></div>
+          <label className="staff-available-card">
             <span>Available Teammates</span>
-
-            <input
-              type="number"
-              min="0"
-              inputMode="numeric"
-              value={availableTeammatesInput}
-              onChange={(event) =>
-                updateAvailableTeammates(event.target.value)
-              }
-              placeholder={String(automaticAvailableTeammates)}
-              aria-label="Available Teammates"
-            />
-
-            <small>
-              {availableTeammatesInput === ""
-                ? "Auto from total hours"
-                : "Manual value"}
-            </small>
+            <input type="number" min="0" inputMode="numeric" value={available}
+              onChange={(event) => {
+                editedAvailableRef.current = true;
+                setAvailableOverride(event.target.value === "" ? null : nonnegative(event.target.value));
+              }} aria-label="Available Teammates" className="staff-category-calculated" />
+            <small>{availableOverride === null ? "Calculated from total hours" : "Editable override; erase to recalculate"}</small>
           </label>
-
-          <div>
-            <span>Allocated Teammates</span>
-            <strong>{totalAllocated}</strong>
-          </div>
-
-          <div
-            className={`difference-card ${
-              difference < 0 ? "allocation-over-limit" : ""
-            }`}
-          >
-            <span>Difference</span>
-            <strong>{difference}</strong>
+          <div><span>Allocated Teammates</span><strong>{totalAllocated}</strong></div>
+          <div className={`difference-card ${difference < 0 ? "allocation-over-limit" : ""}`}>
+            <span>Difference</span><strong>{difference}</strong>
           </div>
         </div>
-
         <div className="staff-allocation-actions staff-allocation-top-actions">
-          <button className="calculate-btn" onClick={saveAllocation}>
-            Save
-          </button>
-
-          <button className="clear-btn" onClick={clearAllocation}>
-            Clear
-          </button>
+          <button type="button" className="calculate-btn" onClick={save}>Save</button>
+          <button type="button" className="clear-btn" onClick={clear}>Clear</button>
         </div>
       </div>
-
       <div className="staff-allocation-grid">
         <section className="staff-group-card pick-card">
-          <div className="staff-group-card-header">
-            <h3>Pick</h3>
-            <span>Total: {totalPick}</span>
-          </div>
-
+          <div className="staff-group-card-header"><h3>Pick</h3><span>Total: {totalPick}</span></div>
           <div className="staff-fields-grid staff-pick-allocation-row">
-            <NumberField
-              label="Ambient Pick"
-              value={allocation.ambientPick}
-              onChange={(event) =>
-                updateAllocation("ambientPick", event.target.value)
-              }
-              calculated
-            />
-
-            <NumberField
-              label="Chill Pick"
-              value={allocation.chillPick}
-              onChange={(event) =>
-                updateAllocation("chillPick", event.target.value)
-              }
-              calculated
-            />
-
-            <NumberField
-              label="Bagging"
-              value={allocation.bagging}
-              onChange={(event) =>
-                updateAllocation("bagging", event.target.value)
-              }
-              calculated
-            />
-
-            <NumberField
-              label="Bagging Runner"
-              value={allocation.baggingRunner}
-              onChange={(event) =>
-                updateAllocation("baggingRunner", event.target.value)
-              }
-            />
+            {allocationField("Ambient Pick", "ambientPick")}
+            {allocationField("Chill Pick", "chillPick")}
+            {allocationField("Bagging", "bagging")}
+            {allocationField("Bagging Runner", "baggingRunner")}
           </div>
-
           <div className="staff-group-divider">Pick workload details</div>
-
           <div className="staff-fields-grid">
-            <NumberField
-              label="Ambient Outstanding"
-              value={workInputs.ambientOutstanding}
-              onChange={(event) =>
-                updateWorkInput("ambientOutstanding", event.target.value)
-              }
-            />
-
-            <NumberField
-              label="Chill Outstanding"
-              value={workInputs.chillOutstanding}
-              onChange={(event) =>
-                updateWorkInput("chillOutstanding", event.target.value)
-              }
-            />
-
-            <NumberField
-              label="Ambient UPH"
-              value={workInputs.ambientUPH}
-              onChange={(event) =>
-                updateWorkInput("ambientUPH", event.target.value)
-              }
-            />
-
-            <NumberField
-              label="Chill UPH"
-              value={workInputs.chillUPH}
-              onChange={(event) =>
-                updateWorkInput("chillUPH", event.target.value)
-              }
-            />
-
-            <NumberField
-              label="Pick Break (min)"
-              value={workInputs.pickBreakMinutes}
-              onChange={(event) =>
-                updateWorkInput("pickBreakMinutes", event.target.value)
-              }
-              placeholder="Minutes"
-            />
-
-            <TimeField
-              label="Pick Completion"
-              value={workInputs.pickCompletionTime}
-              onChange={(event) =>
-                updateWorkInput("pickCompletionTime", event.target.value)
-              }
-            />
+            {inputField("Ambient Outstanding", "ambientOutstanding")}
+            {inputField("Chill Outstanding", "chillOutstanding")}
+            {inputField("Ambient UPH", "ambientUPH")}
+            {inputField("Chill UPH", "chillUPH")}
+            {inputField("Pick Break (min)", "pickBreakMinutes", "Minutes")}
+            {timeField("Pick Completion", "pickCompletionTime")}
           </div>
-
           <div className="staff-group-divider">Bagging workload details</div>
-
           <div className="staff-fields-grid">
-            <NumberField
-              label="Bagging Outstanding"
-              value={workInputs.baggingOutstanding}
-              onChange={(event) =>
-                updateWorkInput("baggingOutstanding", event.target.value)
-              }
-            />
-
-            <NumberField
-              label="Bagging UPH"
-              value={workInputs.baggingUPH}
-              onChange={(event) =>
-                updateWorkInput("baggingUPH", event.target.value)
-              }
-            />
-
-            <NumberField
-              label="Bagging Break (min)"
-              value={workInputs.baggingBreakMinutes}
-              onChange={(event) =>
-                updateWorkInput("baggingBreakMinutes", event.target.value)
-              }
-              placeholder="Minutes"
-            />
-
-            <TimeField
-              label="Bagging Completion"
-              value={workInputs.baggingCompletionTime}
-              onChange={(event) =>
-                updateWorkInput("baggingCompletionTime", event.target.value)
-              }
-            />
+            {inputField("Bagging Outstanding", "baggingOutstanding")}
+            {inputField("Bagging UPH", "baggingUPH")}
+            {inputField("Bagging Break (min)", "baggingBreakMinutes", "Minutes")}
+            {timeField("Bagging Completion", "baggingCompletionTime")}
           </div>
         </section>
-
         <section className="staff-group-card freezer-card">
-          <div className="staff-group-card-header">
-            <h3>Freezer</h3>
-            <span>Total: {totalFreezer}</span>
-          </div>
-
+          <div className="staff-group-card-header"><h3>Freezer</h3><span>Total: {totalFreezer}</span></div>
           <div className="staff-fields-grid">
-            <NumberField
-              label="Freezer Pick"
-              value={allocation.freezerPick}
-              onChange={(event) =>
-                updateAllocation("freezerPick", event.target.value)
-              }
-              calculated
-            />
-
-            <NumberField
-              label="Freezer Decant"
-              value={allocation.freezerDecant}
-              onChange={(event) =>
-                updateAllocation("freezerDecant", event.target.value)
-              }
-            />
+            {allocationField("Freezer Pick", "freezerPick")}
+            {allocationField("Freezer Decant", "freezerDecant")}
           </div>
-
           <div className="staff-group-divider">Freezer workload details</div>
-
           <div className="staff-fields-grid">
-            <NumberField
-              label="Outstanding Picks"
-              value={workInputs.freezerOutstanding}
-              onChange={(event) =>
-                updateWorkInput("freezerOutstanding", event.target.value)
-              }
-            />
-
-            <NumberField
-              label="Freezer UPH"
-              value={workInputs.freezerUPH}
-              onChange={(event) =>
-                updateWorkInput("freezerUPH", event.target.value)
-              }
-            />
-
-            <NumberField
-              label="Break (min)"
-              value={workInputs.freezerBreakMinutes}
-              onChange={(event) =>
-                updateWorkInput("freezerBreakMinutes", event.target.value)
-              }
-              placeholder="Minutes"
-            />
-
-            <TimeField
-              label="Completion"
-              value={workInputs.freezerCompletionTime}
-              onChange={(event) =>
-                updateWorkInput("freezerCompletionTime", event.target.value)
-              }
-            />
+            {inputField("Outstanding Picks", "freezerOutstanding")}
+            {inputField("Freezer UPH", "freezerUPH")}
+            {inputField("Break (min)", "freezerBreakMinutes", "Minutes")}
+            {timeField("Completion", "freezerCompletionTime")}
           </div>
         </section>
-
         <section className="staff-group-card inbound-card">
-          <div className="staff-group-card-header">
-            <h3>Inbound</h3>
-            <span>Total: {totalInbound}</span>
-          </div>
-
+          <div className="staff-group-card-header"><h3>Inbound</h3><span>Total: {totalInbound}</span></div>
           <div className="staff-fields-grid">
-            <NumberField
-              label="Decant"
-              value={allocation.decant}
-              onChange={(event) =>
-                updateAllocation("decant", event.target.value)
-              }
-              calculated
-            />
-
-            <NumberField
-              label="MHE"
-              value={allocation.mhe}
-              onChange={(event) =>
-                updateAllocation("mhe", event.target.value)
-              }
-            />
+            {allocationField("Decant", "decant")}
+            {allocationField("MHE", "mhe")}
           </div>
-
           <div className="staff-group-divider">Inbound workload details</div>
-
           <div className="staff-fields-grid">
-            <NumberField
-              label="Inbound Needed"
-              value={inboundNeeded}
-              readOnly
-              calculated
-            />
-
-            <NumberField
-              label="Inbound UPH"
-              value={workInputs.inboundUPH}
-              onChange={(event) =>
-                updateWorkInput("inboundUPH", event.target.value)
-              }
-            />
-
-            <NumberField
-              label="Break (min)"
-              value={workInputs.inboundBreakMinutes}
-              onChange={(event) =>
-                updateWorkInput("inboundBreakMinutes", event.target.value)
-              }
-              placeholder="Minutes"
-            />
-
-            <TimeField
-              label="Completion"
-              value={workInputs.inboundCompletionTime}
-              onChange={(event) =>
-                updateWorkInput("inboundCompletionTime", event.target.value)
-              }
-            />
+            <NumberField label="Inbound Needed" value={inboundNeeded}
+              onChange={(event) => changeInbound(event.target.value)} category="extracted" />
+            {inputField("Inbound UPH", "inboundUPH")}
+            {inputField("Break (min)", "inboundBreakMinutes", "Minutes")}
+            {timeField("Completion", "inboundCompletionTime")}
           </div>
         </section>
-
         <section className="staff-group-card dispatch-card">
-          <div className="staff-group-card-header">
-            <h3>Dispatch</h3>
-            <span>Total: {totalDispatch}</span>
-          </div>
-
+          <div className="staff-group-card-header"><h3>Dispatch</h3><span>Total: {totalDispatch}</span></div>
           <div className="staff-fields-grid">
-            <NumberField
-              label="Frameload"
-              value={allocation.frameload}
-              onChange={(event) =>
-                updateAllocation("frameload", event.target.value)
-              }
-            />
-
-            <NumberField
-              label="BT"
-              value={allocation.bt}
-              onChange={(event) =>
-                updateAllocation("bt", event.target.value)
-              }
-            />
-
-            <NumberField
-              label="Van Load"
-              value={allocation.vanLoad}
-              onChange={(event) =>
-                updateAllocation("vanLoad", event.target.value)
-              }
-            />
-
-            <NumberField
-              label="Dekit"
-              value={allocation.dekit}
-              onChange={(event) =>
-                updateAllocation("dekit", event.target.value)
-              }
-            />
+            {allocationField("Frameload", "frameload")}
+            {allocationField("BT", "bt")}
+            {allocationField("Van Load", "vanLoad")}
+            {allocationField("Dekit", "dekit")}
           </div>
         </section>
+        <div className="ic-column">
+  <section className="staff-group-card ic-card">
+    <div className="staff-group-card-header">
+      <h3>IC</h3>
+      <span>Total: {allocation.totalIC}</span>
+    </div>
 
-        <section className="staff-group-card ic-card">
-          <div className="staff-group-card-header">
-            <h3>IC</h3>
-            <span>Total: {allocation.totalIC}</span>
-          </div>
+    <div className="staff-fields-grid staff-fields-grid-single">
+      {allocationField("Total IC", "totalIC")}
+    </div>
+  </section>
 
-          <div className="staff-fields-grid staff-fields-grid-single">
-            <NumberField
-              label="Total IC"
-              value={allocation.totalIC}
-              onChange={(event) =>
-                updateAllocation("totalIC", event.target.value)
-              }
-            />
-          </div>
-        </section>
+  <div className="staff-legend-row" aria-label="Input color key">
+    <div>
+      <i className="staff-legend-swatch staff-legend-default" />&nbsp;
+      Default value
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+      <i className="staff-legend-swatch staff-legend-extracted" />&nbsp;
+      Extracted from another slide
+    </div>
+
+    <div>
+      <i className="staff-legend-swatch staff-legend-calculated" />&nbsp;
+      Calculated staff / Available Teammates
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+      <i className="staff-legend-swatch staff-legend-manual" />&nbsp;
+      Manually entered field
+    </div>
+  </div>
+</div>
       </div>
-
-      {toast.show && (
-        <div className="toast-notification-center">{toast.message}</div>
-      )}
+      {toast && <div className="toast-notification-center">{toast}</div>}
     </section>
   );
 }

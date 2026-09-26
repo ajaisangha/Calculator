@@ -1,484 +1,215 @@
-.staff-allocation-card {
-  width: 100%;
-  min-width: 0;
-  padding: 14px;
+.staff-allocation-card { width: 100%; min-width: 0; padding: 14px; }
+.staff-allocation-card .data-title { margin: 0 0 12px; font-size: 24px; }
+.staff-allocation-top-row { display: flex; align-items: stretch; gap: 12px; margin-bottom: 14px; }
+.staff-allocation-top-row .staff-allocation-limit {
+  flex: 1; display: grid; grid-template-columns: repeat(4, minmax(110px, 1fr)); gap: 8px; margin: 0;
 }
-
-.staff-allocation-card .data-title {
-  margin: 0 0 12px;
-  font-size: 24px;
+.staff-allocation-limit > div, .staff-allocation-limit > label {
+  min-width: 0; padding: 8px 9px; border: 1px solid var(--theme-border);
+  border-radius: 9px; background: var(--theme-soft); text-align: center;
 }
-
-.staff-allocation-limit {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(130px, 1fr));
-  gap: 10px;
-  margin: 0 0 14px;
+.staff-allocation-limit span, .staff-available-card > span {
+  display: block; color: var(--text-muted); font-size: 11px; font-weight: 700; line-height: 1.1;
 }
-
-.staff-allocation-limit > div,
-.available-teammates-card {
-  min-width: 0;
-  padding: 9px 10px;
-  border: 1px solid var(--theme-border);
-  border-radius: 9px;
-  background: var(--theme-soft);
-  text-align: center;
-}
-
-.staff-allocation-limit span,
-.available-teammates-card > span {
-  display: block;
-  color: var(--text-muted);
-  font-size: 12px;
-  font-weight: 700;
-  line-height: 1.15;
-}
-
 .staff-allocation-limit strong {
-  display: block;
-  margin-top: 3px;
-  color: var(--theme-dark);
-  font-size: 20px;
-  font-weight: 800;
-  line-height: 1.15;
+  display: block; margin-top: 3px; color: var(--theme-dark);
+  font-size: 18px; font-weight: 800; line-height: 1.1;
 }
-
-/* Only the Difference card is red when the allocation is negative. */
 .staff-allocation-limit .difference-card.allocation-over-limit {
-  border-color: var(--secondary-main);
-  background: var(--secondary-light);
+  border-color: var(--secondary-main); background: var(--secondary-light);
 }
-
-.staff-allocation-limit .difference-card.allocation-over-limit strong {
-  color: var(--secondary-main);
+.staff-allocation-limit .difference-card.allocation-over-limit strong { color: var(--secondary-main); }
+.staff-available-card { display: flex; flex-direction: column; justify-content: center; }
+.staff-available-card input {
+  width: 100%; height: 30px; margin-top: 4px; padding: 4px 7px; border: 1px solid var(--theme-main);
+  border-radius: 7px; background: var(--theme-light); color: var(--theme-dark);
+  font-size: 16px; font-weight: 800; text-align: center;
 }
-
-.available-teammates-card {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
+.staff-available-card small {
+  display: block; min-height: 12px; margin-top: 3px;
+  color: var(--text-soft); font-size: 9px; font-weight: 700; line-height: 1.1;
 }
-
-.available-teammates-card input {
-  width: 100%;
-  height: 30px;
-  margin-top: 4px;
-  padding: 4px 7px;
-  border: 1px solid var(--input-border);
-  border-radius: 7px;
-  background: var(--input-bg);
-  color: var(--theme-dark);
-  font-size: 16px;
-  font-weight: 800;
-  text-align: center;
+.staff-allocation-top-actions {
+  display: flex; flex-direction: column; justify-content: center;
+  gap: 8px; min-width: 104px; margin: 0;
 }
-
-.available-teammates-card input:focus {
-  outline: none;
-  border-color: var(--theme-main);
-  box-shadow: 0 0 0 3px var(--theme-focus);
-}
-
-.available-teammates-card small {
-  display: block;
-  min-height: 12px;
-  margin-top: 3px;
-  color: var(--text-soft);
-  font-size: 9px;
-  font-weight: 700;
-  line-height: 1.1;
-}
-
-.allocation-warning {
-  margin: 0 0 12px;
-  padding: 9px 12px;
-  border: 1px solid var(--secondary-border);
-  border-radius: 9px;
-  background: var(--secondary-light);
-  color: var(--secondary-dark);
-  font-size: 13px;
-  font-weight: 700;
-  text-align: center;
-}
-
+.staff-allocation-top-actions button { width: 100%; min-width: 104px; padding: 8px 10px; font-size: 13px; }
 .staff-allocation-grid {
   display: grid;
   grid-template-columns: minmax(350px, 1.65fr) minmax(210px, 1fr) minmax(210px, 1fr);
-  grid-template-areas:
-    "pick freezer inbound"
-    "pick dispatch ic";
-  gap: 12px;
-  align-items: start;
+  grid-template-areas: "pick freezer inbound" "pick dispatch ic" "legend legend legend";
+  gap: 12px; align-items: start;
 }
-
-.pick-card {
-  grid-area: pick;
-}
-
-.freezer-card {
-  grid-area: freezer;
-}
-
-.inbound-card {
-  grid-area: inbound;
-}
-
-.dispatch-card {
-  grid-area: dispatch;
-}
-
-.ic-card {
-  grid-area: ic;
-}
+.staff-allocation-card .pick-card { grid-area: pick; }
+.staff-allocation-card .freezer-card { grid-area: freezer; }
+.staff-allocation-card .inbound-card { grid-area: inbound; }
+.staff-allocation-card .dispatch-card { grid-area: dispatch; }
+.staff-allocation-card .ic-card { grid-area: ic; }
 
 .staff-group-card {
-  min-width: 0;
-  padding: 13px;
-  border: 1px solid var(--card-border);
-  border-radius: 12px;
-  background: var(--subcard-bg);
+  min-width: 0; padding: 13px; border: 1px solid var(--card-border);
+  border-radius: 12px; background: var(--subcard-bg);
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.07);
 }
-
 .staff-group-card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 10px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--table-border);
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid var(--table-border);
 }
-
-.staff-group-card-header h3 {
-  margin: 0;
-  color: var(--text-heading);
-  font-size: 18px;
-  line-height: 1.1;
-}
-
+.staff-group-card-header h3 { margin: 0; color: var(--text-heading); font-size: 18px; line-height: 1.1; }
 .staff-group-card-header span {
-  padding: 5px 8px;
-  border-radius: 999px;
-  background: var(--theme-light);
-  color: var(--theme-dark);
-  font-size: 12px;
-  font-weight: 800;
-  white-space: nowrap;
+  padding: 5px 8px; border-radius: 999px; background: var(--theme-light);
+  color: var(--theme-dark); font-size: 12px; font-weight: 800; white-space: nowrap;
 }
-
-.freezer-card .staff-group-card-header span {
-  background: var(--secondary-light);
-  color: var(--secondary-dark);
-}
-
-.inbound-card .staff-group-card-header span {
-  background: #eaf7ee;
-  color: #27643b;
-}
-
-.dispatch-card .staff-group-card-header span {
-  background: #fff3e6;
-  color: #875113;
-}
-
-.ic-card .staff-group-card-header span {
-  background: #f2edff;
-  color: #654296;
-}
-
-.staff-fields-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.staff-fields-grid-single {
-  grid-template-columns: 1fr;
-  max-width: none;
-}
-
-.staff-field {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
+.staff-allocation-card .freezer-card .staff-group-card-header span { background: var(--secondary-light); color: var(--secondary-dark); }
+.staff-allocation-card .inbound-card .staff-group-card-header span { background: #eaf7ee; color: #27643b; }
+.staff-allocation-card .dispatch-card .staff-group-card-header span { background: #fff3e6; color: #875113; }
+.staff-allocation-card .ic-card .staff-group-card-header span { background: #f2edff; color: #654296; }
+.staff-fields-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.staff-fields-grid-single { grid-template-columns: 1fr; }
+.staff-field { min-width: 0; display: flex; flex-direction: column; gap: 5px; }
 .staff-field-label {
-  min-height: 30px;
-  color: var(--text-heading);
-  font-size: 12px;
-  font-weight: 700;
-  line-height: 1.15;
-  overflow-wrap: anywhere;
+  min-height: 30px; color: var(--text-heading); font-size: 12px;
+  font-weight: 700; line-height: 1.15; overflow-wrap: anywhere;
 }
-
 .staff-field-input {
-  width: 100%;
-  min-width: 0;
-  height: 38px;
-  padding: 7px 8px;
-  border: 1px solid var(--input-border);
-  border-radius: 7px;
-  background: var(--input-bg);
-  color: var(--text-main);
-  font-size: 15px;
-  font-weight: 700;
-  text-align: center;
+  width: 100%; min-width: 0; height: 38px; padding: 7px 8px;
+  border: 1px solid var(--input-border); border-radius: 7px;
+  background: var(--input-bg); color: var(--text-main);
+  font-size: 15px; font-weight: 700; text-align: center;
 }
-
-.staff-field-input:focus {
-  outline: none;
-  border-color: var(--theme-main);
-  box-shadow: 0 0 0 3px var(--theme-focus);
+.staff-field-input:focus, .staff-available-card input:focus {
+  outline: none; box-shadow: 0 0 0 3px var(--theme-focus) !important;
 }
-
-.staff-field-calculated {
-  border-color: var(--theme-border);
-  background: var(--theme-light);
-  color: var(--theme-dark);
-  font-weight: 800;
+/* Colors denote field roles, not the last edit. */
+.staff-allocation-card .staff-field-input.staff-category-default {
+  background: #fff4dd !important; border-color: #d99b29 !important; color: #754900 !important;
 }
-
-.staff-readonly-input {
-  cursor: default;
-  opacity: 0.95;
+.staff-allocation-card .staff-field-input.staff-category-extracted {
+  background: #e8f7f1 !important; border-color: #30a37b !important; color: #126548 !important;
 }
-
-.staff-time-input {
-  min-width: 0;
-  font-size: 13px;
+.staff-allocation-card .staff-field-input.staff-category-calculated {
+  background: var(--theme-light) !important; border-color: var(--theme-main) !important;
+  color: var(--theme-dark) !important; font-weight: 800;
 }
-
-.staff-time-input::-webkit-datetime-edit {
-  padding: 0;
+.staff-allocation-card .staff-field-input.staff-category-manual {
+  background: var(--input-bg) !important; border-color: var(--input-border) !important;
+  color: var(--text-main) !important;
 }
-
+.staff-time-input { min-width: 0; font-size: 13px; }
+.staff-time-input::-webkit-datetime-edit { padding: 0; }
 .staff-time-input::-webkit-datetime-edit-hour-field,
 .staff-time-input::-webkit-datetime-edit-minute-field,
-.staff-time-input::-webkit-datetime-edit-ampm-field {
-  padding: 1px;
-}
-
+.staff-time-input::-webkit-datetime-edit-ampm-field { padding: 1px; }
 .staff-time-input::-webkit-calendar-picker-indicator {
-  width: 18px;
-  height: 18px;
-  margin: 0;
-  cursor: pointer;
-  opacity: 0.85;
+  width: 18px; height: 18px; margin: 0; cursor: pointer; opacity: 0.85;
 }
-
 .staff-group-divider {
-  margin: 14px 0 10px;
-  padding-top: 10px;
-  border-top: 1px solid var(--table-border);
-  color: var(--text-muted);
-  font-size: 11px;
-  font-weight: 800;
-  line-height: 1.15;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
+  margin: 14px 0 10px; padding-top: 10px; border-top: 1px solid var(--table-border);
+  color: var(--text-muted); font-size: 11px; font-weight: 800;
+  line-height: 1.15; text-transform: uppercase; letter-spacing: 0.03em;
 }
-
-.staff-allocation-actions {
+.staff-allocation-actions { display: flex; justify-content: center; align-items: center; gap: 12px; }
+.staff-pick-allocation-row { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.staff-pick-allocation-row .staff-field-label { min-height: 30px; font-size: 11px; text-align: center; }
+.staff-pick-allocation-row .staff-field-input { height: 36px; font-size: 14px; }
+.staff-legend-row {
   display: flex;
-  justify-content: center;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
-  margin-top: 16px;
+  gap: 12px 20px;
+  padding: 4px 2px;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.25;
 }
-
-.staff-allocation-actions button {
-  min-width: 120px;
-  padding: 8px 14px;
-  font-size: 14px;
+.staff-legend-row > span { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
+.staff-legend-swatch {
+  display: inline-block; width: 14px; height: 14px; flex: none;
+  border: 1px solid var(--input-border); border-radius: 3px;
 }
-
-.staff-pick-allocation-row {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.staff-pick-allocation-row .staff-field-label {
-  min-height: 30px;
-  font-size: 11px;
-  text-align: center;
-}
-
-.staff-pick-allocation-row .staff-field-input {
-  height: 36px;
-  font-size: 14px;
-}
-
-.staff-allocation-top-row {
-  display: flex;
-  align-items: stretch;
-  gap: 12px;
-  margin-bottom: 14px;
-}
-
-.staff-allocation-top-row .staff-allocation-limit {
-  flex: 1;
-  display: grid;
-  grid-template-columns: repeat(4, minmax(110px, 1fr));
-  gap: 8px;
-  margin: 0;
-}
-
-.staff-allocation-top-row .staff-allocation-limit > div,
-.staff-allocation-top-row .available-teammates-card {
-  min-width: 0;
-  padding: 8px 9px;
-}
-
-.staff-allocation-top-row .staff-allocation-limit span,
-.staff-allocation-top-row .available-teammates-card > span {
-  font-size: 11px;
-  line-height: 1.1;
-}
-
-.staff-allocation-top-row .staff-allocation-limit strong {
-  margin-top: 3px;
-  font-size: 18px;
-  line-height: 1.1;
-}
-
-.staff-allocation-top-actions {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 8px;
-  min-width: 104px;
-  margin: 0;
-}
-
-.staff-allocation-top-actions button {
-  width: 100%;
-  min-width: 104px;
-  padding: 8px 10px;
-  font-size: 13px;
-}
-
+.staff-legend-default { background: #fff4dd; border-color: #d99b29; }
+.staff-legend-extracted { background: #e8f7f1; border-color: #30a37b; }
+.staff-legend-calculated { background: var(--theme-light); border-color: var(--theme-main); }
+.staff-legend-manual { background: var(--input-bg); border-color: var(--input-border); }
 @media (max-width: 1150px) {
   .staff-allocation-grid {
     grid-template-columns: minmax(310px, 1.5fr) minmax(190px, 1fr) minmax(190px, 1fr);
     gap: 10px;
   }
-
-  .staff-group-card {
-    padding: 11px;
-  }
-
-  .staff-field-label {
-    font-size: 11px;
-  }
-
-  .staff-field-input {
-    font-size: 14px;
-  }
-
-  .staff-pick-allocation-row {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 6px;
-  }
-
-  .staff-pick-allocation-row .staff-field-label {
-    min-height: 28px;
-    font-size: 10px;
-  }
-
-  .staff-pick-allocation-row .staff-field-input {
-    height: 34px;
-    padding: 6px 4px;
-    font-size: 13px;
-  }
+  .staff-group-card { padding: 11px; }
+  .staff-field-label { font-size: 11px; }
+  .staff-field-input { font-size: 14px; }
+  .staff-pick-allocation-row { gap: 6px; }
+  .staff-pick-allocation-row .staff-field-label { min-height: 28px; font-size: 10px; }
+  .staff-pick-allocation-row .staff-field-input { height: 34px; padding: 6px 4px; font-size: 13px; }
 }
-
 @media (max-width: 950px) {
   .staff-allocation-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-template-areas:
-      "pick pick"
-      "freezer inbound"
-      "dispatch ic";
+    grid-template-areas: "pick pick" "freezer inbound" "dispatch ic" "legend legend";
   }
-
-  .staff-allocation-top-row {
-    flex-direction: column;
-  }
-
-  .staff-allocation-top-row .staff-allocation-limit {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-
-  .staff-allocation-top-actions {
-    flex-direction: row;
-    min-width: 0;
-  }
-
-  .staff-allocation-top-actions button {
-    flex: 1;
-  }
+  .staff-allocation-top-row { flex-direction: column; }
+  .staff-allocation-top-row .staff-allocation-limit { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .staff-allocation-top-actions { flex-direction: row; min-width: 0; }
+  .staff-allocation-top-actions button { flex: 1; }
 }
-
 @media (max-width: 650px) {
-  .staff-allocation-card {
-    padding: 12px;
-  }
-
-  .staff-allocation-limit {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-  }
-
+  .staff-allocation-card { padding: 12px; }
   .staff-allocation-grid {
     grid-template-columns: 1fr;
-    grid-template-areas:
-      "pick"
-      "freezer"
-      "dispatch"
-      "inbound"
-      "ic";
+    grid-template-areas: "pick" "freezer" "dispatch" "inbound" "ic" "legend";
   }
+  .staff-group-card { padding: 12px; }
+  .staff-pick-allocation-row { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .staff-pick-allocation-row .staff-field-label { font-size: 12px; }
+  .staff-pick-allocation-row .staff-field-input { height: 38px; font-size: 14px; }
+  .staff-allocation-top-row .staff-allocation-limit { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .staff-allocation-top-actions { flex-direction: column; }
+  .staff-allocation-top-actions button { width: 100%; }
+  .staff-legend-row > span { white-space: normal; }
+}
 
-  .staff-group-card {
-    padding: 12px;
-  }
+/* Keep the color indicators directly below the IC card. */
+.staff-allocation-card .ic-column {
+  grid-area: ic;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
 
-  .staff-fields-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+/* The IC card is now inside .ic-column, so it must not claim
+   its own parent-grid area. */
+.staff-allocation-card .ic-column .ic-card {
+  grid-area: auto;
+}
 
-  .staff-pick-allocation-row {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-  }
+/* The legend remains plain text—no card, table, border, or background. */
+.staff-allocation-card .ic-column .staff-legend-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+  min-width: 0;
+  padding: 2px 3px;
+  color: var(--text-muted);
+  font-size: 10px;
+  line-height: 1.2;
+}
 
-  .staff-pick-allocation-row .staff-field-label {
-    font-size: 12px;
-  }
+/* Allow text to wrap in the same narrow IC-column width. */
+.staff-allocation-card .ic-column .staff-legend-row > span {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr);
+  align-items: start;
+  gap: 6px;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
 
-  .staff-pick-allocation-row .staff-field-input {
-    height: 38px;
-    font-size: 14px;
-  }
-
-  .staff-allocation-top-row .staff-allocation-limit {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .staff-allocation-actions {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .staff-allocation-actions button {
-    width: 100%;
-  }
-
-  .staff-allocation-top-actions {
-    flex-direction: column;
-  }
+.staff-allocation-card .ic-column .staff-legend-swatch {
+  width: 12px;
+  height: 12px;
+  margin-top: 1px;
 }
