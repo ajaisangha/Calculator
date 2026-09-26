@@ -367,7 +367,7 @@ export default function StaffAllocation() {
       </div>
       <div className="staff-allocation-grid">
         <section className="staff-group-card pick-card">
-          <div className="staff-group-card-header"><h3>Pick</h3><span>Total: {totalPick}</span></div>
+          <div className="staff-group-card-header"><h3>Pick / Bag</h3><span>Total: {totalPick}</span></div>
           <div className="staff-fields-grid staff-pick-allocation-row">
             {allocationField("Ambient Pick", "ambientPick")}
             {allocationField("Chill Pick", "chillPick")}
