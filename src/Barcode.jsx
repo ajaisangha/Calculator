@@ -65,11 +65,13 @@ export default function BarcodeCard() {
     }
   };
 
-  const copyBarcode = async () => {
-    if (!barcodeRef.current || !hasBarcode) return;
+  const copySvgAsPng = async (svgElement, successMessage) => {
+    if (!svgElement) {
+      showToast("Copy failed");
+      return;
+    }
 
     try {
-      const svgElement = barcodeRef.current;
       const serializer = new XMLSerializer();
       const svgString = serializer.serializeToString(svgElement);
 
@@ -109,7 +111,7 @@ export default function BarcodeCard() {
                   }),
                 ]);
 
-                showToast("Barcode Copied");
+                showToast(successMessage);
               } catch (error) {
                 console.error("Clipboard copy error:", error);
                 showToast("Clipboard copy not supported");
@@ -131,6 +133,43 @@ export default function BarcodeCard() {
       image.src = svgUrl;
     } catch (error) {
       console.error("Barcode copy error:", error);
+      showToast("Copy failed");
+    }
+  };
+
+  const copyBarcodeWithText = async () => {
+    if (!barcodeRef.current || !hasBarcode) return;
+
+    await copySvgAsPng(barcodeRef.current, "Barcode With Text Copied");
+  };
+
+  const copyBarcodeOnly = async () => {
+    const value = savedBarcodeText.trim();
+
+    if (!value) return;
+
+    try {
+      /*
+        Create a separate SVG only for copying.
+        The visible preview remains unchanged and continues showing text.
+      */
+      const barcodeOnlySvg = document.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "svg"
+      );
+
+      JsBarcode(barcodeOnlySvg, value, {
+        format: "CODE128",
+        lineColor: "#1f2937",
+        width: 2,
+        height: 90,
+        displayValue: false,
+        margin: 12,
+      });
+
+      await copySvgAsPng(barcodeOnlySvg, "Barcode Only Copied");
+    } catch (error) {
+      console.error("Barcode-only copy error:", error);
       showToast("Copy failed");
     }
   };
@@ -251,11 +290,19 @@ export default function BarcodeCard() {
           />
 
           <div className="barcode-button-row">
-            <button className="calculate-btn" onClick={handleGenerate}>
+            <button
+              type="button"
+              className="calculate-btn"
+              onClick={handleGenerate}
+            >
               Generate
             </button>
 
-            <button className="clear-btn" onClick={handleClear}>
+            <button
+              type="button"
+              className="clear-btn"
+              onClick={handleClear}
+            >
               Clear
             </button>
           </div>
@@ -273,11 +320,21 @@ export default function BarcodeCard() {
 
         <div className="barcode-copy-row">
           <button
+            type="button"
             className="calculate-btn copy-btn"
-            onClick={copyBarcode}
+            onClick={copyBarcodeWithText}
             disabled={!hasBarcode}
           >
-            Copy
+            Copy With Text
+          </button>
+
+          <button
+            type="button"
+            className="barcode-only-copy-btn"
+            onClick={copyBarcodeOnly}
+            disabled={!hasBarcode}
+          >
+            Copy Barcode Only
           </button>
         </div>
       </div>

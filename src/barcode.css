@@ -50,7 +50,11 @@
   min-height: 220px;
   border: 2px dashed rgba(90, 120, 160, 0.28);
   border-radius: 14px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(245, 249, 255, 0.96));
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.96),
+    rgba(245, 249, 255, 0.96)
+  );
   display: flex;
   align-items: center;
   justify-content: center;
@@ -61,7 +65,9 @@
 .barcode-copy-row {
   display: flex;
   justify-content: flex-end;
+  gap: 12px;
   margin-top: 10px;
+  flex-wrap: wrap;
 }
 
 .barcode-empty {
@@ -75,7 +81,20 @@
   height: auto;
 }
 
-.copy-btn:disabled {
+.barcode-only-copy-btn {
+  background: var(--theme-soft) !important;
+  color: var(--theme-dark) !important;
+  border: 1px solid var(--theme-border) !important;
+  box-shadow: 0 8px 16px var(--theme-shadow-soft);
+}
+
+.barcode-only-copy-btn:hover:not(:disabled) {
+  background: var(--theme-light) !important;
+  border-color: var(--theme-main) !important;
+}
+
+.copy-btn:disabled,
+.barcode-only-copy-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
@@ -99,9 +118,11 @@
 
   .barcode-copy-row {
     justify-content: stretch;
+    flex-direction: column;
   }
 
-  .barcode-copy-row .copy-btn {
+  .barcode-copy-row .copy-btn,
+  .barcode-copy-row .barcode-only-copy-btn {
     width: 100%;
   }
 
