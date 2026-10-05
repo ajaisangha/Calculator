@@ -15,11 +15,6 @@ import "react-responsive-carousel/lib/styles/carousel.min.css";
 
 const DATADOC = doc(db, "totes", "data");
 
-/*
-  Exact Firestore documents used by the visible application cards.
-  freezerCalc is used by FrameloadFreezer.jsx.
-  shiftEOS is used by ShiftEOSCard.jsx.
-*/
 const CLEAR_DOCUMENTS = [
   doc(db, "totes", "data"),
   doc(db, "totes", "shiftEOS"),
@@ -63,72 +58,6 @@ function Header({ theme, setTheme }) {
   );
 }
 
-function ConfirmClearModal({ isOpen, isClearing, onCancel, onConfirm }) {
-  useEffect(() => {
-    if (!isOpen) return undefined;
-
-    const handleKeyDown = (event) => {
-      if (event.key === "Escape" && !isClearing) {
-        onCancel();
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, isClearing, onCancel]);
-
-  if (!isOpen) return null;
-
-  return (
-    <div
-      className="clear-all-modal-backdrop"
-      role="presentation"
-      onMouseDown={() => {
-        if (!isClearing) onCancel();
-      }}
-    >
-      <section
-        className="clear-all-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="clear-all-modal-title"
-        aria-describedby="clear-all-modal-description"
-        onMouseDown={(event) => event.stopPropagation()}
-      >
-        <h2 id="clear-all-modal-title">Clear all data?</h2>
-
-        <p id="clear-all-modal-description">
-          This will clear every slide, including Shift EOS hours, Staff
-          Allocation, uploaded totes, Pick Calculator, Frameload, Freezer, and
-          Barcode data. This action cannot be undone.
-        </p>
-
-        <div className="clear-all-modal-actions">
-          <button
-            type="button"
-            className="clear-all-modal-cancel"
-            onClick={onCancel}
-            disabled={isClearing}
-          >
-            Cancel
-          </button>
-
-          <button
-            type="button"
-            className="clear-all-modal-confirm"
-            onClick={onConfirm}
-            disabled={isClearing}
-            autoFocus
-          >
-            {isClearing ? "Clearing..." : "Clear Everything"}
-          </button>
-        </div>
-      </section>
-    </div>
-  );
-}
-
 function parseToteCell(cell) {
   if (!cell && cell !== 0) return 0;
 
@@ -148,68 +77,149 @@ function parseToteCell(cell) {
   if (!matches) return 0;
 
   const numbers = matches
-    .map((number) => parseInt(number, 10))
-    .filter((number) => !Number.isNaN(number));
+    .map((value) => parseInt(value, 10))
+    .filter((value) => !Number.isNaN(value));
 
   return numbers.length ? Math.abs(numbers[0]) : 0;
 }
 
+function normaliseHeader(header) {
+  return String(header || "")
+    .replace(/\uFEFF/g, "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+}
+
 function getColumnKeys(headers) {
-  const pickCol = (pattern) =>
-    headers.find((header) => new RegExp(pattern, "i").test(header));
+  const headerMap = {};
+
+  headers.forEach((header) => {
+    headerMap[normaliseHeader(header)] = header;
+  });
+
+  const findHeader = (...names) => {
+    for (const name of names) {
+      const found = headerMap[normaliseHeader(name)];
+
+      if (found) return found;
+    }
+
+    return undefined;
+  };
+
+  const findMatchingHeader = (pattern) =>
+    headers.find((header) => pattern.test(normaliseHeader(header)));
 
   return {
-    consignmentKey: pickCol("^Consignment$") || pickCol("consignment"),
-    ambientKey: pickCol("Completed.*Totes.*Ambient") || pickCol("ambient"),
+    consignmentKey:
+      findHeader("Consignment") ||
+      findMatchingHeader(/consignment/i),
+
+    ambientKey:
+      findHeader("Completed Totes - Ambient") ||
+      findMatchingHeader(/completed totes.*ambient/i) ||
+      findMatchingHeader(/ambient/i),
+
     chilledKey:
-      pickCol("Completed.*Totes.*Chill") || pickCol("chill|chilled"),
-    freezerKey: pickCol("Completed.*Totes.*Freezer") || pickCol("freezer"),
-    shipmentKey: pickCol("^Shipment$") || pickCol("shipment"),
+      findHeader("Completed Totes - Chilled") ||
+      findMatchingHeader(/completed totes.*chill/i) ||
+      findMatchingHeader(/chill|chilled/i),
+
+    freezerKey:
+      findHeader("Completed Totes - Freezer") ||
+      findMatchingHeader(/completed totes.*freezer/i) ||
+      findMatchingHeader(/freezer/i),
+
+    shipmentKey:
+      findHeader("Shipment") ||
+      findMatchingHeader(/^shipment$/i),
+
+    shipmentTypeKey:
+      findHeader("Shipment type") ||
+      findMatchingHeader(/^shipment type$/i),
+
     dispatchKey:
-      pickCol("Dispatch time") ||
-      pickCol("dispatch time") ||
-      pickCol("Dispatch Time"),
+      findHeader("Dispatch time") ||
+      findMatchingHeader(/^dispatch time$/i) ||
+      findMatchingHeader(/dispatch.*time/i),
   };
 }
 
-function getRouteName(row, shipmentKey, dispatchKey) {
+function getRouteName(row, shipmentKey, shipmentTypeKey, dispatchKey) {
   const shipment = String(row[shipmentKey] || "").trim();
+  const shipmentType = String(row[shipmentTypeKey] || "").trim();
   const dispatch = String(row[dispatchKey] || "").trim();
 
-  if (/route[-\s]?/i.test(shipment) || /\bvans?\b/i.test(shipment)) {
+  /*
+    CSV direct deliveries have Shipment values such as:
+    route-741362
+
+    These must stay in the Vans group, even when they have
+    a time that could otherwise match a spoke.
+  */
+  if (
+    /^route[-\s]?\d+/i.test(shipment) ||
+    /\broute[-\s]?\d+/i.test(shipment) ||
+    /\bdirect\b/i.test(shipmentType)
+  ) {
     return "Vans";
   }
 
-  const timeMatch = dispatch.match(/(?:,\s*)?(\d{1,2}:\d{2})\s*$/);
-  const dispatchTime = timeMatch ? timeMatch[1] : null;
+  /*
+    Spoke rows in the CSV are identified as:
+    Transfer (Etobicoke Voila Spoke)
 
-  if (!dispatchTime) return "Spoke";
+    The time is included in Dispatch time, for example:
+    2026-10-05, 03:30
+    2026-10-05, 04:40
+  */
+  const isSpokeTransfer =
+    /\bspoke\b/i.test(shipmentType) ||
+    /\btransfer\b/i.test(shipmentType);
 
-  if (["23:15", "23:16", "23:17"].includes(dispatchTime)) {
-    return "Ottawa Spoke";
+  const allTimes = dispatch.match(/\b\d{1,2}:\d{2}\b/g);
+  const rawTime = allTimes?.[allTimes.length - 1];
+
+  if (!rawTime) {
+    return isSpokeTransfer ? "Spoke" : "Vans";
   }
 
-  if (dispatchTime === "02:30" || dispatchTime === "2:30") {
-    return "2:30 Etobicoke Spoke";
+  const [hourText, minuteText] = rawTime.split(":");
+  const hour = Number(hourText);
+  const minute = Number(minuteText);
+
+  if (
+    !Number.isInteger(hour) ||
+    !Number.isInteger(minute) ||
+    hour < 0 ||
+    hour > 23 ||
+    minute < 0 ||
+    minute > 59
+  ) {
+    return isSpokeTransfer ? "Spoke" : "Vans";
   }
 
-  if (dispatchTime === "03:00" || dispatchTime === "3:00") {
-    return "3:00 Etobicoke Spoke";
+  const time = `${String(hour).padStart(2, "0")}:${String(
+    minute
+  ).padStart(2, "0")}`;
+
+  const spokeTimes = {
+    "23:15": "Ottawa Spoke",
+    "23:16": "Ottawa Spoke",
+    "23:17": "Ottawa Spoke",
+    "02:30": "2:30 Etobicoke Spoke",
+    "03:30": "3:30 Etobicoke Spoke",
+    "04:40": "4:40 Etobicoke Spoke",
+    "09:30": "9:30 Etobicoke Spoke",
+    "10:00": "10:00 Etobicoke Spoke",
+  };
+
+  if (spokeTimes[time]) {
+    return spokeTimes[time];
   }
 
-  if (dispatchTime === "05:30" || dispatchTime === "5:30") {
-    return "5:30 Etobicoke Spoke";
-  }
-
-  if (dispatchTime === "09:30" || dispatchTime === "9:30") {
-    return "9:30 Etobicoke Spoke";
-  }
-
-  if (dispatchTime === "10:00") {
-    return "10:00 Etobicoke Spoke";
-  }
-
-  return "Spoke";
+  return isSpokeTransfer ? "Spoke" : "Vans";
 }
 
 export default function App() {
@@ -225,7 +235,6 @@ export default function App() {
   const [duplicateMessage, setDuplicateMessage] = useState("");
   const [slideIndex, setSlideIndex] = useState(0);
   const [theme, setTheme] = useState("blue");
-  const [isClearAllModalOpen, setIsClearAllModalOpen] = useState(false);
   const [isClearingAll, setIsClearingAll] = useState(false);
   const [clearAllMessage, setClearAllMessage] = useState("");
 
@@ -241,42 +250,52 @@ export default function App() {
   }, [rows]);
 
   useEffect(() => {
-    const unsubscribe = onSnapshot(DATADOC, (docSnap) => {
-      if (docSnap.exists()) {
-        const savedRows = docSnap.data().rows || [];
-        const routeMap = {};
-        const grand = { ambient: 0, chilled: 0, freezer: 0, total: 0 };
+    const unsubscribe = onSnapshot(DATADOC, (snapshot) => {
+      const savedRows = snapshot.exists() ? snapshot.data().rows || [] : [];
 
-        savedRows.forEach((row) => {
-          if (!routeMap[row.route]) {
-            routeMap[row.route] = {
-              totals: { ambient: 0, chilled: 0, freezer: 0, total: 0 },
-              rows: [],
-            };
-          }
+      const nextRoutesInfo = {};
+      const nextGrandTotals = {
+        ambient: 0,
+        chilled: 0,
+        freezer: 0,
+        total: 0,
+      };
 
-          routeMap[row.route].totals.ambient += row.ambient;
-          routeMap[row.route].totals.chilled += row.chilled;
-          routeMap[row.route].totals.freezer += row.freezer;
-          routeMap[row.route].totals.total +=
-            row.ambient + row.chilled + row.freezer;
-          routeMap[row.route].rows.push(row);
+      savedRows.forEach((row) => {
+        const route = row.route || "Spoke";
 
-          grand.ambient += row.ambient;
-          grand.chilled += row.chilled;
-          grand.freezer += row.freezer;
-          grand.total = grand.ambient + grand.chilled + grand.freezer;
-        });
+        if (!nextRoutesInfo[route]) {
+          nextRoutesInfo[route] = {
+            totals: {
+              ambient: 0,
+              chilled: 0,
+              freezer: 0,
+              total: 0,
+            },
+            rows: [],
+          };
+        }
 
-        setRows(savedRows);
-        setRoutesInfo(routeMap);
-        setGrandTotals(grand);
-      } else {
-        setRows([]);
-        setRoutesInfo({});
-        setGrandTotals({ ambient: 0, chilled: 0, freezer: 0, total: 0 });
-      }
+        const ambient = Number(row.ambient) || 0;
+        const chilled = Number(row.chilled) || 0;
+        const freezer = Number(row.freezer) || 0;
+        const total = ambient + chilled + freezer;
 
+        nextRoutesInfo[route].totals.ambient += ambient;
+        nextRoutesInfo[route].totals.chilled += chilled;
+        nextRoutesInfo[route].totals.freezer += freezer;
+        nextRoutesInfo[route].totals.total += total;
+        nextRoutesInfo[route].rows.push(row);
+
+        nextGrandTotals.ambient += ambient;
+        nextGrandTotals.chilled += chilled;
+        nextGrandTotals.freezer += freezer;
+        nextGrandTotals.total += total;
+      });
+
+      setRows(savedRows);
+      setRoutesInfo(nextRoutesInfo);
+      setGrandTotals(nextGrandTotals);
       setLoading(false);
     });
 
@@ -307,46 +326,77 @@ export default function App() {
       Papa.parse(file, {
         header: true,
         skipEmptyLines: true,
-        transformHeader: (header) => header.trim(),
+        transformHeader: (header) => header.replace(/\uFEFF/g, "").trim(),
+
         complete: async (results) => {
-          const dataRows = results.data;
+          const dataRows = results.data || [];
 
           if (!dataRows.length) return;
 
           const headers = Object.keys(dataRows[0]);
+
           const {
             consignmentKey,
             ambientKey,
             chilledKey,
             freezerKey,
             shipmentKey,
+            shipmentTypeKey,
             dispatchKey,
           } = getColumnKeys(headers);
 
+          /*
+            Important validation. If this message appears, the CSV header
+            has changed and we can immediately see which column is missing.
+          */
+          if (!consignmentKey || !dispatchKey) {
+            console.error("CSV headers found:", headers);
+
+            setDuplicateMessage(
+              "CSV could not find Consignment or Dispatch time column"
+            );
+
+            return;
+          }
+
           const latestRows = rowsRef.current;
-          const newRows = [];
           const knownConsignments = new Set(
-            latestRows.map((row) => row.consignment)
+            latestRows.map((row) =>
+              String(row.consignment || "").trim().toLowerCase()
+            )
           );
 
+          const newRows = [];
           let duplicatesDetected = 0;
 
           dataRows.forEach((row) => {
             const consignment = String(row[consignmentKey] || "").trim();
+            const consignmentKeyNormalised = consignment.toLowerCase();
 
-            if (!consignment || knownConsignments.has(consignment)) {
+            if (!consignment || knownConsignments.has(consignmentKeyNormalised)) {
               if (consignment) duplicatesDetected += 1;
               return;
             }
 
-            knownConsignments.add(consignment);
+            knownConsignments.add(consignmentKeyNormalised);
+
+            const route = getRouteName(
+              row,
+              shipmentKey,
+              shipmentTypeKey,
+              dispatchKey
+            );
 
             newRows.push({
               consignment,
-              route: getRouteName(row, shipmentKey, dispatchKey),
+              route,
               shipment: shipmentKey
                 ? String(row[shipmentKey] || "").trim()
                 : "",
+              shipmentType: shipmentTypeKey
+                ? String(row[shipmentTypeKey] || "").trim()
+                : "",
+              dispatchTime: String(row[dispatchKey] || "").trim(),
               ambient: ambientKey ? parseToteCell(row[ambientKey]) : 0,
               chilled: chilledKey ? parseToteCell(row[chilledKey]) : 0,
               freezer: freezerKey ? parseToteCell(row[freezerKey]) : 0,
@@ -366,12 +416,19 @@ export default function App() {
           try {
             await setDoc(
               DATADOC,
-              { rows: [...latestRows, ...newRows] },
+              {
+                rows: [...latestRows, ...newRows],
+              },
               { merge: true }
             );
           } catch (error) {
             console.error("Firestore upload error:", error);
           }
+        },
+
+        error: (error) => {
+          console.error("CSV parsing error:", error);
+          setDuplicateMessage("Could not read CSV file");
         },
       });
     });
@@ -393,19 +450,13 @@ export default function App() {
     }
   };
 
-  const openClearAllModal = () => {
-    if (!isClearingAll) {
-      setIsClearAllModalOpen(true);
-    }
-  };
-
-  const closeClearAllModal = () => {
-    if (!isClearingAll) {
-      setIsClearAllModalOpen(false);
-    }
-  };
-
   const clearEverything = async () => {
+    const confirmed = window.confirm(
+      "Clear all slides and all saved Firebase data? This cannot be undone."
+    );
+
+    if (!confirmed) return;
+
     setIsClearingAll(true);
     setClearAllMessage("");
 
@@ -427,22 +478,24 @@ export default function App() {
 
       await batch.commit();
 
-      /*
-        Clears private local React state in each mounted card immediately.
-        The exact document state is cleared by the Firestore batch above.
-      */
       window.dispatchEvent(
         new CustomEvent("shift-planner-clear-all", {
-          detail: { clearedAt: Date.now() },
+          detail: {
+            clearedAt: Date.now(),
+          },
         })
       );
 
       setRows([]);
       setRoutesInfo({});
-      setGrandTotals({ ambient: 0, chilled: 0, freezer: 0, total: 0 });
+      setGrandTotals({
+        ambient: 0,
+        chilled: 0,
+        freezer: 0,
+        total: 0,
+      });
       setDuplicateMessage("");
       setSlideIndex(0);
-      setIsClearAllModalOpen(false);
       setClearAllMessage("All slides and Firebase data cleared");
     } catch (error) {
       console.error("Clear all Firebase data error:", error);
@@ -452,7 +505,11 @@ export default function App() {
     }
   };
 
-  const deleteRoutesFromRoute = async (routeName, amount, deleteAllRows = false) => {
+  const deleteRoutesFromRoute = async (
+    routeName,
+    amount,
+    deleteAllRows = false
+  ) => {
     const routeRows = rows.filter((row) => row.route === routeName);
 
     if (!routeRows.length) return;
@@ -483,16 +540,13 @@ export default function App() {
   };
 
   const deleteConsignment = async (consignment) => {
-    const normalizedConsignment = String(consignment || "")
-      .trim()
-      .toLowerCase();
+    const normalised = String(consignment || "").trim().toLowerCase();
 
-    if (!normalizedConsignment) return false;
+    if (!normalised) return false;
 
     const updatedRows = rows.filter(
       (row) =>
-        String(row.consignment || "").trim().toLowerCase() !==
-        normalizedConsignment
+        String(row.consignment || "").trim().toLowerCase() !== normalised
     );
 
     if (updatedRows.length === rows.length) return false;
@@ -580,10 +634,10 @@ export default function App() {
               <button
                 type="button"
                 className="sidebar-clear-all-btn"
-                onClick={openClearAllModal}
+                onClick={clearEverything}
                 disabled={isClearingAll}
               >
-                Clear All
+                {isClearingAll ? "Clearing..." : "Clear All"}
               </button>
             </aside>
 
@@ -655,13 +709,6 @@ export default function App() {
           </div>
         </div>
       </main>
-
-      <ConfirmClearModal
-        isOpen={isClearAllModalOpen}
-        isClearing={isClearingAll}
-        onCancel={closeClearAllModal}
-        onConfirm={clearEverything}
-      />
 
       {clearAllMessage && (
         <div className="toast-notification-center">{clearAllMessage}</div>

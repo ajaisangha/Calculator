@@ -142,15 +142,15 @@ export default function TotesUsedCard({
     showToast("Dollies difference cleared");
   };
 
-  const routeOrder = [
-    { key: "Ottawa Spoke", short: "Ottawa" },
-    { key: "2:30 Etobicoke Spoke", short: "2:30 ES" },
-    { key: "3:00 Etobicoke Spoke", short: "3:00 ES" },
-    { key: "5:30 Etobicoke Spoke", short: "5:30 ES" },
-    { key: "Vans", short: "Vans" },
-    { key: "9:30 Etobicoke Spoke", short: "9:30 ES" },
-    { key: "10:00 Etobicoke Spoke", short: "10:00 ES" },
-  ];
+const routeOrder = [
+  { key: "Ottawa Spoke", short: "Ottawa" },
+  { key: "2:30 Etobicoke Spoke", short: "2:30 ES" },
+  { key: "3:30 Etobicoke Spoke", short: "3:30 ES" },
+  { key: "4:40 Etobicoke Spoke", short: "4:40 ES" },
+  { key: "Vans", short: "Vans" },
+  { key: "9:30 Etobicoke Spoke", short: "9:30 ES" },
+  { key: "10:00 Etobicoke Spoke", short: "10:00 ES" },
+];
 
   const getRowOvercapacity = (row) => {
     const ambientOver = (row.ambient || 0) > 40 ? (row.ambient || 0) - 40 : 0;
