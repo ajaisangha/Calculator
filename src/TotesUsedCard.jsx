@@ -148,6 +148,7 @@ const routeOrder = [
   { key: "3:30 Etobicoke Spoke", short: "3:30 ES" },
   { key: "4:40 Etobicoke Spoke", short: "4:40 ES" },
   { key: "Vans", short: "Vans" },
+  { key: "8:00 Etobicoke Spoke", short: "8:00 ES" },
   { key: "9:30 Etobicoke Spoke", short: "9:30 ES" },
   { key: "10:00 Etobicoke Spoke", short: "10:00 ES" },
 ];

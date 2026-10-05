@@ -211,6 +211,7 @@ function getRouteName(row, shipmentKey, shipmentTypeKey, dispatchKey) {
     "02:30": "2:30 Etobicoke Spoke",
     "03:30": "3:30 Etobicoke Spoke",
     "04:40": "4:40 Etobicoke Spoke",
+    "08:00": "8:00 Etobicoke Spoke",
     "09:30": "9:30 Etobicoke Spoke",
     "10:00": "10:00 Etobicoke Spoke",
   };
