@@ -1368,3 +1368,153 @@ input:focus {
     transition: none;
   }
 }
+
+/* ==========================================
+   HEADER CONTROLS — SHARED BY 2D AND 3D
+========================================== */
+
+.header-controls {
+  position: absolute;
+  top: 50%;
+  right: 18px;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+/* Override the existing absolute theme-picker position
+   when it is inside the new controls wrapper. */
+
+.header-controls .theme-picker {
+  position: static;
+  top: auto;
+  right: auto;
+  transform: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.appearance-toggle {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.appearance-toggle__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 42px;
+  min-height: 34px;
+  margin: 0;
+  padding: 7px 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.appearance-toggle__button:hover {
+  transform: none;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.appearance-toggle__button.active {
+  background: #ffffff;
+  color: var(--theme-dark);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+
+.appearance-toggle__button:focus-visible,
+.header-controls .theme-dot:focus-visible {
+  outline: 3px solid #ffffff;
+  outline-offset: 3px;
+}
+
+/* Move the title left before controls can overlap it. */
+
+@media (min-width: 761px) and (max-width: 1100px) {
+  .header {
+    justify-content: flex-start;
+    padding-left: 24px;
+  }
+}
+
+/* Two-row header on tablets and phones. */
+
+@media (max-width: 760px) {
+  :root {
+    --header-height: 116px;
+  }
+
+  .header {
+    height: var(--header-height);
+    flex-direction: column;
+    justify-content: center;
+    gap: 10px;
+    padding: 10px 12px;
+  }
+
+  .header-title {
+    margin: 0;
+    font-size: 24px;
+    line-height: 1.2;
+    text-align: center;
+  }
+
+  .header-controls {
+    position: static;
+    top: auto;
+    right: auto;
+    transform: none;
+    justify-content: center;
+    gap: 16px;
+  }
+
+  .header-controls .theme-picker {
+    gap: 8px;
+  }
+
+  .app-main {
+    padding-top: calc(var(--header-height) + 14px);
+  }
+}
+
+@media (max-width: 380px) {
+  .header-controls {
+    gap: 10px;
+  }
+
+  .header-controls .theme-picker {
+    gap: 6px;
+  }
+
+  .header-controls .theme-dot {
+    width: 18px;
+    height: 18px;
+    min-width: 18px;
+  }
+
+  .appearance-toggle__button {
+    min-width: 36px;
+    padding: 7px 8px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .appearance-toggle__button {
+    transition: none;
+  }
+}

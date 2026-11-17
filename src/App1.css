@@ -1,0 +1,616 @@
+/* ==========================================
+   SHIFT PLANNER — 3D APPEARANCE
+
+   Active only when the root element has:
+   data-appearance="3d"
+
+   Existing theme colors come from App.css.
+========================================== */
+
+/* ==========================================
+   3D TOKENS
+========================================== */
+
+:root[data-appearance="3d"] {
+  --depth-highlight: rgba(255, 255, 255, 0.92);
+  --depth-highlight-soft: rgba(255, 255, 255, 0.55);
+  --depth-shadow: rgba(15, 23, 42, 0.17);
+  --depth-shadow-heavy: rgba(15, 23, 42, 0.24);
+
+  --depth-button-shadow:
+    0 5px 0 var(--theme-dark),
+    0 10px 16px var(--theme-shadow);
+
+  --depth-card-shadow:
+    inset 0 2px 0 var(--depth-highlight),
+    inset 0 -2px 0 rgba(15, 23, 42, 0.05),
+    0 8px 0 var(--theme-border),
+    0 20px 32px var(--depth-shadow);
+}
+
+/* ==========================================
+   PAGE BACKGROUND
+========================================== */
+
+:root[data-appearance="3d"] body,
+:root[data-appearance="3d"] .app-container {
+  background:
+    radial-gradient(
+      ellipse at 15% 10%,
+      var(--theme-shadow),
+      transparent 45%
+    ),
+    radial-gradient(
+      ellipse at 85% 85%,
+      var(--theme-shadow-soft),
+      transparent 45%
+    ),
+    linear-gradient(
+      145deg,
+      var(--page-bg-start),
+      var(--page-bg-end)
+    );
+}
+
+/* ==========================================
+   HEADER
+========================================== */
+
+:root[data-appearance="3d"] .header {
+  border-bottom: 1px solid var(--theme-dark);
+  background: linear-gradient(
+    155deg,
+    var(--theme-header-end) 0%,
+    var(--theme-header-start) 48%,
+    var(--theme-dark) 100%
+  );
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.12),
+    0 5px 0 var(--theme-dark),
+    0 12px 24px var(--depth-shadow);
+}
+
+:root[data-appearance="3d"] .header-title {
+  text-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.14),
+    0 2px 0 rgba(0, 0, 0, 0.12),
+    0 4px 6px rgba(0, 0, 0, 0.22);
+}
+
+/* ==========================================
+   COLOR PICKER
+========================================== */
+
+:root[data-appearance="3d"] .theme-dot {
+  background-image: radial-gradient(
+    circle at 30% 25%,
+    rgba(255, 255, 255, 0.72),
+    transparent 65%
+  );
+  box-shadow:
+    inset 0 2px 2px rgba(255, 255, 255, 0.75),
+    inset 0 -3px 4px rgba(0, 0, 0, 0.2),
+    0 3px 0 rgba(0, 0, 0, 0.2),
+    0 6px 10px rgba(0, 0, 0, 0.22);
+}
+
+:root[data-appearance="3d"] .theme-dot.active {
+  box-shadow:
+    inset 0 2px 2px rgba(255, 255, 255, 0.75),
+    inset 0 -3px 4px rgba(0, 0, 0, 0.18),
+    0 0 0 3px rgba(255, 255, 255, 0.45),
+    0 4px 0 rgba(0, 0, 0, 0.16),
+    0 8px 14px rgba(0, 0, 0, 0.24);
+}
+
+/* ==========================================
+   2D / 3D TOGGLE
+========================================== */
+
+:root[data-appearance="3d"] .appearance-toggle {
+  border-color: rgba(255, 255, 255, 0.45);
+  background: rgba(0, 0, 0, 0.15);
+  box-shadow:
+    inset 0 2px 5px rgba(0, 0, 0, 0.24),
+    0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+:root[data-appearance="3d"] .appearance-toggle__button.active {
+  background: linear-gradient(180deg, #ffffff, #e8edf5);
+  color: var(--theme-dark);
+  box-shadow:
+    inset 0 1px 0 #ffffff,
+    0 3px 0 rgba(0, 0, 0, 0.16),
+    0 5px 9px rgba(0, 0, 0, 0.18);
+}
+
+/* ==========================================
+   SIDEBAR NAVIGATION
+========================================== */
+
+:root[data-appearance="3d"] .carousel-links {
+  gap: 16px;
+}
+
+:root[data-appearance="3d"] .carousel-links button {
+  position: relative;
+  background: linear-gradient(
+    160deg,
+    var(--subcard-bg),
+    var(--theme-soft-2)
+  ) !important;
+  color: var(--theme-dark) !important;
+  border: 1px solid var(--theme-border) !important;
+  box-shadow:
+    inset 0 2px 0 var(--depth-highlight),
+    0 5px 0 var(--theme-border),
+    0 10px 16px var(--theme-shadow-soft);
+  transition:
+    transform 150ms ease,
+    box-shadow 150ms ease,
+    background 150ms ease;
+}
+
+:root[data-appearance="3d"] .carousel-links button:hover,
+:root[data-appearance="3d"] .carousel-links button.active {
+  background: linear-gradient(
+    155deg,
+    var(--theme-header-end),
+    var(--theme-main)
+  ) !important;
+  color: var(--text-on-theme) !important;
+  border-color: var(--theme-dark) !important;
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.4),
+    0 5px 0 var(--theme-dark),
+    0 12px 20px var(--theme-shadow);
+}
+
+:root[data-appearance="3d"] .carousel-links button:hover {
+  transform: translateY(-2px);
+}
+
+:root[data-appearance="3d"] .carousel-links button:active {
+  transform: translateY(4px);
+  box-shadow:
+    inset 0 2px 3px rgba(0, 0, 0, 0.12),
+    0 1px 0 var(--theme-dark),
+    0 3px 6px var(--theme-shadow-soft);
+}
+
+/* ==========================================
+   CAROUSEL FRAME
+========================================== */
+
+:root[data-appearance="3d"] .carousel-container {
+  padding: 12px;
+  border: 1px solid var(--theme-border);
+  border-radius: 24px;
+  background: linear-gradient(
+    145deg,
+    var(--theme-soft),
+    var(--theme-soft-2)
+  );
+  box-shadow:
+    inset 3px 3px 7px rgba(15, 23, 42, 0.1),
+    inset -3px -3px 7px var(--depth-highlight),
+    0 3px 0 var(--theme-border),
+    0 12px 24px var(--theme-shadow-soft);
+}
+
+/* Space for card shadows inside the scroll area. */
+
+:root[data-appearance="3d"] .slide-scroll-area {
+  padding: 8px 10px 28px;
+}
+
+/* ==========================================
+   CARDS
+========================================== */
+
+:root[data-appearance="3d"] .data-card {
+  position: relative;
+  border: 1px solid var(--card-border);
+  border-radius: 20px;
+  background: linear-gradient(
+    145deg,
+    var(--card-bg-start) 0%,
+    var(--theme-soft) 45%,
+    var(--card-bg-end) 100%
+  );
+  box-shadow: var(--depth-card-shadow);
+  transform: none;
+  transition:
+    box-shadow 180ms ease,
+    border-color 180ms ease;
+}
+
+:root[data-appearance="3d"] .data-card:hover {
+  transform: none;
+  border-color: var(--theme-border);
+  box-shadow:
+    inset 0 2px 0 var(--depth-highlight),
+    inset 0 -2px 0 rgba(15, 23, 42, 0.05),
+    0 8px 0 var(--theme-border),
+    0 24px 38px var(--depth-shadow-heavy);
+}
+
+/* Applies to components using these shared subcard classes. */
+
+:root[data-appearance="3d"] .subcard,
+:root[data-appearance="3d"] .sub-card {
+  border: 1px solid var(--theme-border);
+  border-radius: 14px;
+  background: linear-gradient(
+    145deg,
+    var(--subcard-bg),
+    var(--theme-soft)
+  );
+  box-shadow:
+    inset 0 1px 0 var(--depth-highlight),
+    0 4px 0 var(--theme-border),
+    0 8px 14px var(--theme-shadow-soft);
+}
+
+/* ==========================================
+   TABLES
+========================================== */
+
+:root[data-appearance="3d"] .table-container {
+  border-radius: 12px;
+}
+
+:root[data-appearance="3d"] .data-table {
+  border: 1px solid var(--table-border);
+  border-radius: 12px;
+  box-shadow:
+    0 4px 0 var(--theme-border),
+    0 8px 18px var(--theme-shadow-soft);
+}
+
+:root[data-appearance="3d"] .data-table thead th {
+  background: linear-gradient(
+    180deg,
+    var(--theme-soft),
+    var(--table-head-bg)
+  );
+  box-shadow:
+    inset 0 2px 0 var(--depth-highlight),
+    inset 0 -2px 0 var(--theme-border);
+}
+
+:root[data-appearance="3d"] .data-table td {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
+}
+
+/* ==========================================
+   PRIMARY BUTTONS
+========================================== */
+
+:root[data-appearance="3d"] .calculate-btn,
+:root[data-appearance="3d"] .save-btn,
+:root[data-appearance="3d"] .primary-btn {
+  border: 1px solid var(--theme-dark);
+  background: linear-gradient(
+    160deg,
+    var(--theme-header-end),
+    var(--theme-main)
+  ) !important;
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.38),
+    var(--depth-button-shadow);
+}
+
+:root[data-appearance="3d"] .calculate-btn:hover:not(:disabled),
+:root[data-appearance="3d"] .save-btn:hover:not(:disabled),
+:root[data-appearance="3d"] .primary-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.4),
+    0 7px 0 var(--theme-dark),
+    0 14px 20px var(--theme-shadow);
+}
+
+:root[data-appearance="3d"] .calculate-btn:active:not(:disabled),
+:root[data-appearance="3d"] .save-btn:active:not(:disabled),
+:root[data-appearance="3d"] .primary-btn:active:not(:disabled) {
+  transform: translateY(4px);
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.15),
+    0 1px 0 var(--theme-dark);
+}
+
+/* ==========================================
+   CLEAR BUTTONS
+========================================== */
+
+:root[data-appearance="3d"] .clear-btn,
+:root[data-appearance="3d"] .sidebar-clear-all-btn {
+  background: linear-gradient(
+    155deg,
+    var(--secondary-main),
+    var(--secondary-dark)
+  ) !important;
+  border: 1px solid var(--secondary-dark) !important;
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.3),
+    0 5px 0 var(--secondary-dark),
+    0 12px 18px var(--secondary-shadow);
+}
+
+:root[data-appearance="3d"] .clear-btn:hover:not(:disabled),
+:root[data-appearance="3d"] .sidebar-clear-all-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.3),
+    0 7px 0 var(--secondary-dark),
+    0 15px 22px var(--secondary-shadow);
+}
+
+:root[data-appearance="3d"] .clear-btn:active:not(:disabled),
+:root[data-appearance="3d"] .sidebar-clear-all-btn:active:not(:disabled) {
+  transform: translateY(4px);
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.15),
+    0 1px 0 var(--secondary-dark);
+}
+
+/* ==========================================
+   INPUTS
+========================================== */
+
+:root[data-appearance="3d"] input[type="number"],
+:root[data-appearance="3d"] input[type="time"],
+:root[data-appearance="3d"] input[type="text"],
+:root[data-appearance="3d"] .break-input,
+:root[data-appearance="3d"] .time-input {
+  box-shadow:
+    inset 2px 2px 5px rgba(15, 23, 42, 0.1),
+    inset -2px -2px 4px rgba(255, 255, 255, 0.75),
+    0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+:root[data-appearance="3d"] input:focus {
+  box-shadow:
+    inset 1px 1px 3px rgba(15, 23, 42, 0.07),
+    0 0 0 3px var(--theme-focus);
+}
+
+/* ==========================================
+   CLEAR ALL DIALOG
+========================================== */
+
+:root[data-appearance="3d"] .sp-clear-dialog {
+  border: 1px solid var(--theme-border);
+  background: linear-gradient(
+    145deg,
+    var(--card-bg-start),
+    var(--card-bg-end)
+  );
+  color: var(--text-main);
+  box-shadow:
+    inset 0 2px 0 var(--depth-highlight),
+    0 8px 0 var(--theme-border),
+    0 30px 70px rgba(0, 0, 0, 0.36);
+}
+
+:root[data-appearance="3d"] .sp-clear-dialog::backdrop {
+  background: rgba(12, 24, 42, 0.65);
+  backdrop-filter: blur(6px);
+}
+
+:root[data-appearance="3d"] .sp-clear-dialog__label {
+  border: 1px solid var(--theme-border);
+  background: var(--theme-soft);
+  color: var(--theme-dark);
+  box-shadow:
+    inset 0 1px 0 var(--depth-highlight),
+    0 2px 0 var(--theme-border);
+}
+
+:root[data-appearance="3d"] .sp-clear-dialog__actions {
+  border-top-color: var(--theme-border);
+  background: var(--theme-soft-2);
+  box-shadow: inset 0 1px 0 var(--depth-highlight);
+}
+
+:root[data-appearance="3d"] .sp-clear-dialog__button--cancel {
+  border-color: var(--theme-border);
+  background: linear-gradient(
+    180deg,
+    var(--subcard-bg),
+    var(--theme-soft)
+  );
+  color: var(--theme-dark);
+  box-shadow:
+    inset 0 1px 0 var(--depth-highlight),
+    0 4px 0 var(--theme-border),
+    0 8px 12px var(--theme-shadow-soft);
+}
+
+:root[data-appearance="3d"]
+  .sp-clear-dialog__button--cancel:hover:not(:disabled) {
+  background: var(--theme-light);
+  border-color: var(--theme-main);
+}
+
+:root[data-appearance="3d"] .sp-clear-dialog__button--danger {
+  border-color: #991b1b;
+  background: linear-gradient(160deg, #ef4444, #dc2626);
+  color: #ffffff;
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.3),
+    0 4px 0 #991b1b,
+    0 10px 16px rgba(185, 28, 28, 0.22);
+}
+
+:root[data-appearance="3d"]
+  .sp-clear-dialog__button--danger:hover:not(:disabled) {
+  background: linear-gradient(160deg, #dc2626, #b91c1c);
+}
+
+:root[data-appearance="3d"]
+  .sp-clear-dialog__button:active:not(:disabled) {
+  transform: translateY(3px);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+/* ==========================================
+   TOAST
+========================================== */
+
+:root[data-appearance="3d"] .toast-notification-center {
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  background: linear-gradient(
+    145deg,
+    var(--theme-header-start),
+    var(--theme-dark)
+  );
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.35),
+    0 5px 0 var(--theme-dark),
+    0 20px 36px rgba(0, 0, 0, 0.25);
+}
+
+/* ==========================================
+   DISABLED CONTROLS
+========================================== */
+
+:root[data-appearance="3d"] button:disabled {
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* ==========================================
+   RESPONSIVE
+========================================== */
+
+@media (max-width: 980px) {
+  :root[data-appearance="3d"] .carousel-links {
+    gap: 12px;
+    padding-top: 4px;
+    padding-bottom: 12px;
+  }
+
+  :root[data-appearance="3d"] .carousel-container {
+    padding: 8px;
+  }
+
+  :root[data-appearance="3d"] .slide-scroll-area {
+    padding: 6px 6px 24px;
+  }
+}
+
+@media (max-width: 520px) {
+  :root[data-appearance="3d"] .carousel-container {
+    border-radius: 18px;
+    padding: 6px;
+  }
+
+  :root[data-appearance="3d"] .data-card {
+    border-radius: 16px;
+  }
+}
+
+/* ==========================================
+   REDUCED MOTION
+========================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  :root[data-appearance="3d"] *,
+  :root[data-appearance="3d"] *::before,
+  :root[data-appearance="3d"] *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  :root[data-appearance="3d"] button:hover,
+  :root[data-appearance="3d"] button:active {
+    transform: none;
+  }
+}
+
+/* ==========================================
+   CAROUSEL SLIDE WIDTH FIX
+
+   Each slide must occupy the full viewport
+   of the carousel, not shrink beside others.
+========================================== */
+
+:root[data-appearance="3d"]
+  .carousel
+  .slider-wrapper.axis-horizontal
+  .slider {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+}
+
+:root[data-appearance="3d"]
+  .carousel
+  .slider-wrapper.axis-horizontal
+  .slider > .slide {
+  flex: 0 0 100%;
+  width: 100%;
+  min-width: 100%;
+  max-width: 100%;
+  margin: 0;
+  box-sizing: border-box;
+}
+
+/* Inner content can shrink to fit its slide.
+   Do not apply min-width: 0 to .slide itself. */
+
+:root[data-appearance="3d"] .carousel-slide,
+:root[data-appearance="3d"] .slide-scroll-area {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Keep the carousel viewport contained.
+   Navigation still moves the slider normally. */
+
+:root[data-appearance="3d"] .carousel .slider-wrapper {
+  overflow: hidden !important;
+}
+
+/* Preserve the original spacing.
+   No additional 3D padding or fixed card height. */
+
+:root[data-appearance="3d"] .carousel-container {
+  padding: 8px;
+}
+
+:root[data-appearance="3d"] .slide-scroll-area {
+  padding: 0 4px 0 0;
+}
+
+/* Desktop: only the active slide's content
+   area scrolls vertically when needed. */
+
+@media (min-width: 981px) {
+  :root[data-appearance="3d"] .slide-scroll-area {
+    min-height: 0;
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+}
+
+/* Tablet and mobile: allow the page to grow
+   with content instead of nesting scroll areas. */
+
+@media (max-width: 980px) {
+  :root[data-appearance="3d"] .carousel-slide,
+  :root[data-appearance="3d"] .slide-scroll-area {
+    height: auto;
+    min-height: 0;
+  }
+
+  :root[data-appearance="3d"] .slide-scroll-area {
+    overflow: visible;
+  }
+}

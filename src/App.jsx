@@ -3,6 +3,7 @@ import Papa from "papaparse";
 import { doc, onSnapshot, setDoc, writeBatch } from "firebase/firestore";
 import { db } from "./firebase";
 import "./App.css";
+import "./App1.css";
 import TotesUsedCard from "./TotesUsedCard";
 import BaggedTotesCard from "./BaggedTotesCard";
 import PickAndBaggedCombinedCard from "./PickCard";
@@ -28,7 +29,7 @@ const CLEAR_DOCUMENTS = [
   doc(db, "totes", "baggedTotes"),
 ];
 
-function Header({ theme, setTheme }) {
+function Header({ theme, setTheme, appearance, setAppearance }) {
   const themeOptions = [
     { name: "blue", color: "#4a90e2" },
     { name: "red", color: "#d9534f" },
@@ -41,18 +42,51 @@ function Header({ theme, setTheme }) {
     <header className="header">
       <h1 className="header-title">Shift Planner</h1>
 
-      <div className="theme-picker">
-        {themeOptions.map((item) => (
+      <div className="header-controls">
+        <div
+          className="appearance-toggle"
+          role="group"
+          aria-label="Display appearance"
+        >
           <button
-            key={item.name}
             type="button"
-            className={`theme-dot ${theme === item.name ? "active" : ""}`}
-            style={{ backgroundColor: item.color }}
-            onClick={() => setTheme(item.name)}
-            aria-label={`Switch to ${item.name} theme`}
-            title={item.name}
-          />
-        ))}
+            className={`appearance-toggle__button ${
+              appearance === "2d" ? "active" : ""
+            }`}
+            aria-pressed={appearance === "2d"}
+            onClick={() => setAppearance("2d")}
+          >
+            2D
+          </button>
+
+          <button
+            type="button"
+            className={`appearance-toggle__button ${
+              appearance === "3d" ? "active" : ""
+            }`}
+            aria-pressed={appearance === "3d"}
+            onClick={() => setAppearance("3d")}
+          >
+            3D
+          </button>
+        </div>
+
+        <div className="theme-picker">
+          {themeOptions.map((item) => (
+            <button
+              key={item.name}
+              type="button"
+              className={`theme-dot ${
+                theme === item.name ? "active" : ""
+              }`}
+              style={{ backgroundColor: item.color }}
+              onClick={() => setTheme(item.name)}
+              aria-label={`Switch to ${item.name} theme`}
+              aria-pressed={theme === item.name}
+              title={item.name}
+            />
+          ))}
+        </div>
       </div>
     </header>
   );
@@ -222,6 +256,15 @@ export default function App() {
   const [duplicateMessage, setDuplicateMessage] = useState("");
   const [slideIndex, setSlideIndex] = useState(0);
   const [theme, setTheme] = useState("blue");
+  const [appearance, setAppearance] = useState(() => {
+  try {
+    return localStorage.getItem("shift-planner-appearance") === "3d"
+      ? "3d"
+      : "2d";
+  } catch {
+    return "2d";
+  }
+});
   const [isClearingAll, setIsClearingAll] = useState(false);
   const [clearAllMessage, setClearAllMessage] = useState("");
   const [clearDialogError, setClearDialogError] = useState("");
@@ -235,6 +278,20 @@ export default function App() {
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
   }, [theme]);
+
+  useEffect(() => {
+  document.documentElement.setAttribute(
+    "data-appearance",
+    appearance
+  );
+
+  try {
+    localStorage.setItem("shift-planner-appearance", appearance);
+  } catch {
+    // Appearance still works if browser storage is unavailable.
+  }
+}, [appearance]);
+
 
   useEffect(() => {
     rowsRef.current = rows;
@@ -588,7 +645,12 @@ export default function App() {
 
   return (
     <div className="app-container">
-      <Header theme={theme} setTheme={setTheme} />
+      <Header
+        theme={theme}
+        setTheme={setTheme}
+        appearance={appearance}
+        setAppearance={setAppearance}
+      />
 
       <main className="app-main">
         <div className="app-shell">
