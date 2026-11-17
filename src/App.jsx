@@ -151,13 +151,6 @@ function getRouteName(row, shipmentKey, shipmentTypeKey, dispatchKey) {
   const shipmentType = String(row[shipmentTypeKey] || "").trim();
   const dispatch = String(row[dispatchKey] || "").trim();
 
-  /*
-    CSV direct deliveries have Shipment values such as:
-    route-741362
-
-    These must stay in the Vans group, even when they have
-    a time that could otherwise match a spoke.
-  */
   if (
     /^route[-\s]?\d+/i.test(shipment) ||
     /\broute[-\s]?\d+/i.test(shipment) ||
@@ -166,14 +159,6 @@ function getRouteName(row, shipmentKey, shipmentTypeKey, dispatchKey) {
     return "Vans";
   }
 
-  /*
-    Spoke rows in the CSV are identified as:
-    Transfer (Etobicoke Voila Spoke)
-
-    The time is included in Dispatch time, for example:
-    2026-10-05, 03:30
-    2026-10-05, 04:40
-  */
   const isSpokeTransfer =
     /\bspoke\b/i.test(shipmentType) ||
     /\btransfer\b/i.test(shipmentType);
@@ -233,14 +218,19 @@ export default function App() {
     freezer: 0,
     total: 0,
   });
+
   const [duplicateMessage, setDuplicateMessage] = useState("");
   const [slideIndex, setSlideIndex] = useState(0);
   const [theme, setTheme] = useState("blue");
   const [isClearingAll, setIsClearingAll] = useState(false);
   const [clearAllMessage, setClearAllMessage] = useState("");
+  const [clearDialogError, setClearDialogError] = useState("");
 
   const rowsRef = useRef([]);
   const clearAllTimerRef = useRef(null);
+  const clearDialogRef = useRef(null);
+  const cancelClearButtonRef = useRef(null);
+  const clearInProgressRef = useRef(false);
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
@@ -318,9 +308,36 @@ export default function App() {
     return () => {
       if (clearAllTimerRef.current) {
         clearTimeout(clearAllTimerRef.current);
+        clearAllTimerRef.current = null;
       }
     };
   }, [clearAllMessage]);
+
+  const openClearDialog = () => {
+    if (clearInProgressRef.current) return;
+
+    setClearDialogError("");
+
+    const dialog = clearDialogRef.current;
+
+    if (dialog && !dialog.open) {
+      dialog.showModal();
+      cancelClearButtonRef.current?.focus();
+    }
+  };
+
+  const closeClearDialog = () => {
+    if (clearInProgressRef.current) return;
+
+    clearDialogRef.current?.close();
+    setClearDialogError("");
+  };
+
+  const handleClearDialogCancel = (event) => {
+    if (clearInProgressRef.current) {
+      event.preventDefault();
+    }
+  };
 
   const handleFiles = (files) => {
     Array.from(files).forEach((file) => {
@@ -346,10 +363,6 @@ export default function App() {
             dispatchKey,
           } = getColumnKeys(headers);
 
-          /*
-            Important validation. If this message appears, the CSV header
-            has changed and we can immediately see which column is missing.
-          */
           if (!consignmentKey || !dispatchKey) {
             console.error("CSV headers found:", headers);
 
@@ -452,13 +465,11 @@ export default function App() {
   };
 
   const clearEverything = async () => {
-    const confirmed = window.confirm(
-      "Clear all slides and all saved Firebase data? This cannot be undone."
-    );
+    if (clearInProgressRef.current) return;
 
-    if (!confirmed) return;
-
+    clearInProgressRef.current = true;
     setIsClearingAll(true);
+    setClearDialogError("");
     setClearAllMessage("");
 
     try {
@@ -479,6 +490,8 @@ export default function App() {
 
       await batch.commit();
 
+      rowsRef.current = [];
+
       window.dispatchEvent(
         new CustomEvent("shift-planner-clear-all", {
           detail: {
@@ -497,11 +510,18 @@ export default function App() {
       });
       setDuplicateMessage("");
       setSlideIndex(0);
-      setClearAllMessage("All slides and Firebase data cleared");
+
+      clearDialogRef.current?.close();
+
+      setClearAllMessage("All configured slide data cleared");
     } catch (error) {
       console.error("Clear all Firebase data error:", error);
-      setClearAllMessage("Could not clear all saved data");
+
+      setClearDialogError(
+        "Could not clear the saved data. Check your connection and permissions, then try again."
+      );
     } finally {
+      clearInProgressRef.current = false;
       setIsClearingAll(false);
     }
   };
@@ -635,8 +655,10 @@ export default function App() {
               <button
                 type="button"
                 className="sidebar-clear-all-btn"
-                onClick={clearEverything}
+                onClick={openClearDialog}
                 disabled={isClearingAll}
+                aria-haspopup="dialog"
+                aria-controls="clear-all-dialog"
               >
                 {isClearingAll ? "Clearing..." : "Clear All"}
               </button>
@@ -711,8 +733,73 @@ export default function App() {
         </div>
       </main>
 
+      <dialog
+        ref={clearDialogRef}
+        id="clear-all-dialog"
+        className="sp-clear-dialog"
+        aria-labelledby="clear-all-dialog-title"
+        aria-describedby="clear-all-dialog-description"
+        aria-busy={isClearingAll}
+        onCancel={handleClearDialogCancel}
+      >
+        <div className="sp-clear-dialog__header">
+          <span className="sp-clear-dialog__label">Reset saved data</span>
+
+          <h2 id="clear-all-dialog-title">Clear all slide data?</h2>
+        </div>
+
+        <div className="sp-clear-dialog__body">
+          <p id="clear-all-dialog-description">
+            This will reset the saved Firebase documents configured for this
+            app, including uploaded consignments, Shift EOS, Staff Allocation,
+            Pick Calculator, freezer calculations, barcode data, dollies,
+            Totes Used, and Bagged Totes.
+          </p>
+
+          <p className="sp-clear-dialog__warning">
+            This affects shared saved data, not just this screen. This action
+            cannot be undone.
+          </p>
+
+          {clearDialogError && (
+            <p className="sp-clear-dialog__error" role="alert">
+              {clearDialogError}
+            </p>
+          )}
+
+          {isClearingAll && (
+            <p className="sp-clear-dialog__progress" role="status">
+              Clearing saved data. Please wait...
+            </p>
+          )}
+        </div>
+
+        <div className="sp-clear-dialog__actions">
+          <button
+            ref={cancelClearButtonRef}
+            type="button"
+            className="sp-clear-dialog__button sp-clear-dialog__button--cancel"
+            onClick={closeClearDialog}
+            disabled={isClearingAll}
+          >
+            Cancel
+          </button>
+
+          <button
+            type="button"
+            className="sp-clear-dialog__button sp-clear-dialog__button--danger"
+            onClick={clearEverything}
+            disabled={isClearingAll}
+          >
+            {isClearingAll ? "Clearing..." : "Clear Everything"}
+          </button>
+        </div>
+      </dialog>
+
       {clearAllMessage && (
-        <div className="toast-notification-center">{clearAllMessage}</div>
+        <div className="toast-notification-center" role="status">
+          {clearAllMessage}
+        </div>
       )}
     </div>
   );
